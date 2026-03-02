@@ -79,13 +79,13 @@
 
 > **NOTE: 先寫測試，確保失敗後再實作**
 
-- [ ] T014 [P] [US2] 撰寫 C/C++ Generator 單元測試（單一積木產生程式碼、巢狀積木、#include 收集、運算子優先順序括號）in tests/unit/cpp-generator.test.ts
-- [ ] T015 [P] [US2] 撰寫 Generator 整合測試（完整程式產生、多積木組合、編譯驗證）in tests/integration/cpp-generator.test.ts
+- [x] T014 [P] [US2] 撰寫 C/C++ Generator 單元測試（單一積木產生程式碼、巢狀積木、#include 收集、運算子優先順序括號）in tests/unit/cpp-generator.test.ts
+- [x] T015 [P] [US2] 撰寫 Generator 整合測試（完整程式產生、多積木組合、編譯驗證）in tests/integration/cpp-generator.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] 實作 C/C++ Generator Module（依據 codeTemplate 產生程式碼，處理 imports 收集、運算子優先順序）in src/languages/cpp/generator.ts
-- [ ] T017 [US2] 實作 Converter 的 blocksToCode 方法 in src/core/converter.ts
+- [x] T016 [US2] 實作 C/C++ Generator Module（依據 codeTemplate 產生程式碼，處理 imports 收集、運算子優先順序）in src/languages/cpp/generator.ts
+- [x] T017 [US2] 實作 Converter 的 blocksToCode 方法 in src/core/converter.ts
 
 **Checkpoint**: Block → Code 方向可正常運作，產出可編譯的 C/C++ 程式碼
 
