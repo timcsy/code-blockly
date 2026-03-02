@@ -17,9 +17,9 @@
 
 **Purpose**: 專案初始化與基礎結構
 
-- [ ] T001 使用 Vite 初始化 TypeScript 專案，安裝依賴（blockly, web-tree-sitter, codemirror, @codemirror/lang-cpp, vitest, happy-dom），建立 src/ 和 tests/ 目錄結構
-- [ ] T002 設定 Vitest 設定檔（vitest.config.ts），配置 happy-dom 環境
-- [ ] T003 [P] 設定 tree-sitter WASM 檔案的靜態資源處理（Vite public/ 目錄配置）
+- [x] T001 使用 Vite 初始化 TypeScript 專案，安裝依賴（blockly, web-tree-sitter, codemirror, @codemirror/lang-cpp, vitest, happy-dom），建立 src/ 和 tests/ 目錄結構
+- [x] T002 設定 Vitest 設定檔（vitest.config.ts），配置 happy-dom 環境
+- [x] T003 [P] 設定 tree-sitter WASM 檔案的靜態資源處理（Vite public/ 目錄配置）
 
 ---
 
