@@ -147,9 +147,9 @@
 
 **Purpose**: 品質確認與最終驗證
 
-- [ ] T034 執行 quickstart.md 驗證（按照快速開始文件操作，確認流程正確）
-- [ ] T035 效能驗證（Block→Code < 1s, Code→Block < 2s）
-- [ ] T036 移除 Vite 腳手架產生的未使用樣板程式碼
+- [x] T034 執行 quickstart.md 驗證（按照快速開始文件操作，確認流程正確）
+- [x] T035 效能驗證（Block→Code < 1s, Code→Block < 2s）
+- [x] T036 移除 Vite 腳手架產生的未使用樣板程式碼
 
 ---
 

@@ -1,6 +1,4 @@
 import { Parser, Language, type Tree } from 'web-tree-sitter'
-import { resolve, dirname } from 'path'
-import { fileURLToPath } from 'url'
 
 export type { Tree }
 
@@ -23,13 +21,13 @@ export class CppParser {
 
     await Parser.init({
       locateFile: (scriptName: string) => {
-        return resolve(resolvedWasmDir, scriptName)
+        return this.joinPath(resolvedWasmDir, scriptName)
       },
     })
 
     this.parser = new Parser()
 
-    const langPath = resolve(resolvedWasmDir, 'tree-sitter-c.wasm')
+    const langPath = this.joinPath(resolvedWasmDir, 'tree-sitter-c.wasm')
     const language = await Language.load(langPath)
     this.parser.setLanguage(language)
     this.initialized = true
@@ -43,12 +41,16 @@ export class CppParser {
   }
 
   private getDefaultWasmDir(): string {
-    try {
-      const currentFile = fileURLToPath(import.meta.url)
-      const currentDir = dirname(currentFile)
-      return resolve(currentDir, '../../../public')
-    } catch {
-      return resolve(process.cwd(), 'public')
+    // Browser environment: WASM files served from root
+    if (typeof process === 'undefined' || !process.cwd) {
+      return ''
     }
+    // Node.js / test environment: resolve from project root
+    return process.cwd() + '/public'
+  }
+
+  private joinPath(dir: string, file: string): string {
+    if (!dir) return file
+    return dir.endsWith('/') ? dir + file : dir + '/' + file
   }
 }
