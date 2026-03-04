@@ -133,14 +133,14 @@
 
 ### 測試先行
 
-- [ ] T037 [P] [US4] 撰寫 VariablePanel 單元測試在 tests/unit/variable-panel.test.ts（更新顯示、值變化偵測、scope 層級顯示、函式回傳清除）
+- [X] T037 [P] [US4] 撰寫 VariablePanel 單元測試在 tests/unit/variable-panel.test.ts（更新顯示、值變化偵測、scope 層級顯示、函式回傳清除）
 
 ### 實作
 
-- [ ] T038 [US4] 實作 VariablePanel 類別在 src/ui/variable-panel.ts（update(scope)、clear、getElement、值變化 flash 動畫）
-- [ ] T039 [US4] 修改 index.html — 在 #code-panel 內 #console-panel 上方或旁邊加入 #variable-panel 容器
-- [ ] T040 [US4] 新增 variable-panel CSS 樣式在 src/style.css（表格佈局、值變化 flash 動畫、scope 層級標示）
-- [ ] T041 [US4] 修改 src/ui/App.ts — 每步執行後呼叫 VariablePanel.update(currentScope)、執行結束時清除
+- [X] T038 [US4] 實作 VariablePanel 類別在 src/ui/variable-panel.ts（update(scope)、clear、getElement、值變化 flash 動畫）
+- [X] T039 [US4] 修改 index.html — 在 #code-panel 內 #console-panel 上方或旁邊加入 #variable-panel 容器
+- [X] T040 [US4] 新增 variable-panel CSS 樣式在 src/style.css（表格佈局、值變化 flash 動畫、scope 層級標示）
+- [X] T041 [US4] 修改 src/ui/App.ts — 每步執行後呼叫 VariablePanel.update(currentScope)、執行結束時清除
 
 **檢查點**: 變數面板測試通過，瀏覽器中逐步執行可看到變數即時更新
 

@@ -15,6 +15,7 @@ import { SemanticInterpreter } from '../interpreter/interpreter'
 import { RuntimeError } from '../interpreter/errors'
 import { ConsolePanel } from './console-panel'
 import { StepController } from './step-controller'
+import { VariablePanel } from './variable-panel'
 import type { StepInfo } from '../interpreter/types'
 import { StyleManagerImpl } from '../languages/style'
 import type { StylePresetId } from '../languages/style'
@@ -47,6 +48,7 @@ export class App {
   private consolePanel: ConsolePanel | null = null
   private stdinTextarea: HTMLTextAreaElement | null = null
   private stepController: StepController
+  private variablePanel: VariablePanel | null = null
   private stepRecords: StepInfo[] = []
   private currentStepIndex = 0
 
@@ -520,6 +522,11 @@ export class App {
       this.stdinTextarea = this.consolePanel.getStdinTextarea()
     }
 
+    const variableContainer = document.getElementById('variable-panel')
+    if (variableContainer) {
+      this.variablePanel = new VariablePanel(variableContainer)
+    }
+
     const runBtn = document.getElementById('run-btn')
     const stopBtn = document.getElementById('stop-btn')
     const stepBtn = document.getElementById('step-btn')
@@ -676,6 +683,9 @@ export class App {
       this.codeEditor.addHighlight(step.sourceRange.start, step.sourceRange.end)
     }
 
+    // Update variable panel
+    this.variablePanel?.update(this.interpreter.getScope())
+
     this.consolePanel?.setStatus(
       this.stepController.getStatus() === 'completed' ? 'completed' : 'running'
     )
@@ -689,6 +699,7 @@ export class App {
     // Clear highlights
     this.blocklyEditor?.highlightBlock(null)
     this.codeEditor?.clearHighlight()
+    this.variablePanel?.clear()
     this.stepRecords = []
     this.currentStepIndex = 0
     this.consolePanel?.setStatus('idle')

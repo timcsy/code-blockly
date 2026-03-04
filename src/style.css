@@ -188,6 +188,88 @@ html, body {
   overflow: auto;
 }
 
+/* Variable Panel */
+#variable-panel {
+  border-top: 2px solid #ddd;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  max-height: 120px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+#variable-panel:empty {
+  display: none;
+}
+
+.variable-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.variable-panel-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #cccccc;
+}
+
+.variable-table-header {
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr;
+  padding: 2px 10px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #3c3c3c;
+  font-size: 11px;
+  color: #888;
+}
+
+.variable-header-cell {
+  padding: 2px 4px;
+}
+
+.variable-table {
+  padding: 2px 0;
+}
+
+.variable-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr;
+  padding: 1px 10px;
+  transition: background 0.3s;
+}
+
+.variable-row:hover {
+  background: #2a2d2e;
+}
+
+.variable-row.value-changed {
+  background: rgba(78, 154, 6, 0.3);
+  animation: var-flash 0.8s ease-out;
+}
+
+@keyframes var-flash {
+  0% { background: rgba(78, 154, 6, 0.6); }
+  100% { background: transparent; }
+}
+
+.variable-cell {
+  padding: 2px 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.variable-value {
+  color: #ce9178;
+}
+
 /* Console Panel */
 #console-panel {
   height: 180px;
