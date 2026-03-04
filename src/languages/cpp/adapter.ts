@@ -854,10 +854,10 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
         break
     }
 
-    // 從 tree-sitter 節點提取 sourceRange（行號從 1 開始）
+    // 從 tree-sitter 節點提取 sourceRange（0-based 行號，與 SourceMapping 一致）
     const metadata: Record<string, unknown> = {}
     if (node.startPosition && node.endPosition) {
-      metadata.sourceRange = { start: node.startPosition.row + 1, end: node.endPosition.row + 1 }
+      metadata.sourceRange = { start: node.startPosition.row, end: node.endPosition.row }
     }
     return createNode(concept, props, children, Object.keys(metadata).length > 0 ? metadata as any : undefined)
   }

@@ -1,7 +1,7 @@
 import { EditorView, basicSetup } from 'codemirror'
 import { cpp } from '@codemirror/lang-cpp'
-import { EditorState, type Extension, StateEffect, StateField, type Range } from '@codemirror/state'
-import { Decoration, type DecorationSet, type ViewUpdate } from '@codemirror/view'
+import { EditorState, type Extension, StateEffect, StateField, type Range, RangeSet } from '@codemirror/state'
+import { Decoration, type DecorationSet, type ViewUpdate, gutter, GutterMarker } from '@codemirror/view'
 
 // Effect to set or clear highlight
 const setHighlight = StateEffect.define<{ from: number; to: number } | null>()
@@ -33,6 +33,38 @@ const highlightField = StateField.define<DecorationSet>({
   provide: f => EditorView.decorations.from(f),
 })
 
+// --- Breakpoint support ---
+
+const toggleBreakpoint = StateEffect.define<{ pos: number; on: boolean }>()
+
+class BreakpointMarker extends GutterMarker {
+  toDOM() {
+    const el = document.createElement('div')
+    el.className = 'cm-breakpoint-marker'
+    el.textContent = '\u25CF'
+    return el
+  }
+}
+
+const breakpointMarker = new BreakpointMarker()
+
+const breakpointState = StateField.define<RangeSet<GutterMarker>>({
+  create() { return RangeSet.empty },
+  update(set, tr) {
+    set = set.map(tr.changes)
+    for (const e of tr.effects) {
+      if (e.is(toggleBreakpoint)) {
+        if (e.value.on) {
+          set = set.update({ add: [breakpointMarker.range(e.value.pos)] })
+        } else {
+          set = set.update({ filter: (from) => from !== e.value.pos })
+        }
+      }
+    }
+    return set
+  },
+})
+
 export class CodeEditor {
   private view: EditorView | null = null
   private container: HTMLElement
@@ -40,13 +72,41 @@ export class CodeEditor {
   private onCursorChangeCallback: ((line: number) => void) | null = null
   private suppressChange = false
   private extensions: Extension[] = []
+  private breakpoints = new Set<number>() // 0-based line numbers
 
   constructor(container: HTMLElement) {
     this.container = container
   }
 
   init(): void {
+    const self = this
+
+    const bpGutter = gutter({
+      class: 'cm-breakpoint-gutter',
+      markers: v => v.state.field(breakpointState),
+      initialSpacer: () => breakpointMarker,
+      domEventHandlers: {
+        mousedown(view, line) {
+          const lineNum = view.state.doc.lineAt(line.from).number - 1 // 0-based
+          const bps = view.state.field(breakpointState)
+          let has = false
+          bps.between(line.from, line.from, () => { has = true })
+          view.dispatch({
+            effects: toggleBreakpoint.of({ pos: line.from, on: !has }),
+          })
+          if (has) {
+            self.breakpoints.delete(lineNum)
+          } else {
+            self.breakpoints.add(lineNum)
+          }
+          return true
+        },
+      },
+    })
+
     this.extensions = [
+      breakpointState,
+      bpGutter,
       basicSetup,
       cpp(),
       highlightField,
@@ -92,6 +152,7 @@ export class CodeEditor {
       doc: code,
       extensions: this.extensions,
     }))
+    this.reapplyBreakpoints()
     this.suppressChange = false
   }
 
@@ -110,6 +171,31 @@ export class CodeEditor {
     this.view.dispatch({
       effects: setHighlight.of(null),
     })
+  }
+
+  /** Get all breakpoint lines (0-based) */
+  getBreakpoints(): Set<number> {
+    return this.breakpoints
+  }
+
+  /** Check if a line has a breakpoint (0-based) */
+  hasBreakpoint(line: number): boolean {
+    return this.breakpoints.has(line)
+  }
+
+  private reapplyBreakpoints(): void {
+    if (!this.view) return
+    const effects: StateEffect<{ pos: number; on: boolean }>[] = []
+    for (const line of this.breakpoints) {
+      const cmLine = line + 1 // 1-based
+      if (cmLine <= this.view.state.doc.lines) {
+        const lineObj = this.view.state.doc.line(cmLine)
+        effects.push(toggleBreakpoint.of({ pos: lineObj.from, on: true }))
+      }
+    }
+    if (effects.length > 0) {
+      this.view.dispatch({ effects })
+    }
   }
 
   dispose(): void {

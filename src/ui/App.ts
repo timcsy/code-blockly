@@ -562,6 +562,10 @@ export class App {
   private async runProgram(): Promise<void> {
     if (!this.consolePanel || !this.syncController) return
 
+    // Reset previous state
+    this.stepController.stop()
+    this.interpreter.reset()
+
     // Get semantic model
     let model = this.syncController.getCurrentModel()
     if (!model) {
@@ -584,16 +588,14 @@ export class App {
       return
     }
 
-    // Update UI state
+    // Use step-based execution for highlighting + breakpoints
     this.consolePanel.clear()
     this.consolePanel.setStatus('running')
-    this.updateExecButtons(true)
 
     try {
-      this.interpreter.execute(model.program)
-      const output = this.interpreter.getOutput()
-      this.consolePanel.appendOutput(output.join(''))
-      this.consolePanel.setStatus('completed')
+      this.stepRecords = this.interpreter.executeWithSteps(model.program)
+      this.currentStepIndex = -1
+      this.fullOutput = this.interpreter.getOutput()
     } catch (e) {
       if (e instanceof RuntimeError) {
         const output = this.interpreter.getOutput()
@@ -603,16 +605,36 @@ export class App {
       } else {
         this.consolePanel.setStatus('error', '未預期的錯誤')
       }
-    } finally {
-      this.updateExecButtons(false)
+      return
     }
+
+    if (this.stepRecords.length === 0) {
+      this.consolePanel.appendOutput(this.fullOutput.join(''))
+      this.consolePanel.setStatus('completed')
+      return
+    }
+
+    // Auto-run through steps with highlighting
+    this.stepController.setStepFn(() => {
+      this.currentStepIndex++
+      return this.currentStepIndex < this.stepRecords.length - 1
+    })
+    this.updateExecButtons(true)
+    this.stepController.run()
   }
 
   private async stepProgram(): Promise<void> {
     if (!this.consolePanel || !this.syncController) return
 
-    // If we don't have step records yet, prepare them
-    if (this.stepRecords.length === 0 || this.stepController.getStatus() === 'idle') {
+    // Re-initialize if no records or execution finished
+    const needsInit = this.stepRecords.length === 0 ||
+      this.stepController.getStatus() === 'idle' ||
+      this.stepController.getStatus() === 'completed'
+
+    if (needsInit) {
+      this.stepController.stop()
+      this.interpreter.reset()
+
       let model = this.syncController.getCurrentModel()
       if (!model) {
         const code = this.codeEditor?.getCode()
@@ -645,7 +667,6 @@ export class App {
         throw e
       }
 
-      // Configure step function for StepController
       this.stepController.setStepFn(() => {
         this.currentStepIndex++
         return this.currentStepIndex < this.stepRecords.length - 1
@@ -661,9 +682,19 @@ export class App {
     if (this.currentStepIndex < 0 || this.currentStepIndex >= this.stepRecords.length) return
     const step = this.stepRecords[this.currentStepIndex]
 
+    // Look up blockId from sourceMappings if not directly available
+    let blockId = step.blockId
+    if (!blockId && step.sourceRange && this.syncController) {
+      const mappings = this.syncController.getSourceMappings()
+      const mapping = mappings.find(
+        m => step.sourceRange!.start >= m.startLine && step.sourceRange!.start <= m.endLine
+      )
+      if (mapping) blockId = mapping.blockId
+    }
+
     // Highlight block
-    if (step.blockId && this.blocklyEditor) {
-      this.blocklyEditor.highlightBlock(step.blockId)
+    if (blockId && this.blocklyEditor) {
+      this.blocklyEditor.highlightBlock(blockId)
     }
     // Highlight code lines
     if (step.sourceRange && this.codeEditor) {
@@ -683,13 +714,32 @@ export class App {
       this.variablePanel.updateFromSnapshot(step.scopeSnapshot)
     }
 
-    this.consolePanel?.setStatus(
-      this.stepController.getStatus() === 'completed' ? 'completed' : 'running'
-    )
-
+    // Check if completed
     if (this.stepController.getStatus() === 'completed') {
+      // Show full output and clean up
+      if (this.consolePanel) {
+        this.consolePanel.clear()
+        this.consolePanel.appendOutput(this.fullOutput.join(''))
+      }
+      this.consolePanel?.setStatus('completed')
       this.updateExecButtons(false)
+      this.blocklyEditor?.highlightBlock(null)
+      this.codeEditor?.clearHighlight()
+      return
     }
+
+    // Check breakpoints — pause if current step hits a breakpoint
+    if (step.sourceRange && this.codeEditor?.hasBreakpoint(step.sourceRange.start)) {
+      if (this.stepController.getStatus() === 'running') {
+        this.stepController.pause()
+        const pauseBtn = document.getElementById('pause-btn') as HTMLButtonElement | null
+        if (pauseBtn) pauseBtn.textContent = '▶ 繼續'
+        this.consolePanel?.setStatus('paused')
+        return
+      }
+    }
+
+    this.consolePanel?.setStatus('running')
   }
 
   private onStepStopped(): void {
@@ -710,7 +760,10 @@ export class App {
     if (execControls) {
       execControls.classList.toggle('hidden', !running)
     }
-    if (pauseBtn) pauseBtn.textContent = '⏸ 暫停'
+    if (pauseBtn) {
+      pauseBtn.disabled = !running
+      pauseBtn.textContent = '⏸ 暫停'
+    }
   }
 
   private stopProgram(): void {

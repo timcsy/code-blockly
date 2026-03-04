@@ -45,14 +45,16 @@ export class StepController {
     if (this.status === 'completed') return
 
     const hasMore = this.stepFn()
-    this.stepCallback?.()
 
+    // Set status BEFORE callback so callback sees correct state
     if (!hasMore) {
       this.status = 'completed'
       this.clearTimer()
     } else if (this.status === 'idle') {
       this.status = 'stepping'
     }
+
+    this.stepCallback?.()
   }
 
   run(): void {
@@ -87,10 +89,12 @@ export class StepController {
     this.timerId = setTimeout(() => {
       if (this.status !== 'running' || !this.stepFn) return
       const hasMore = this.stepFn()
-      this.stepCallback?.()
+      // Set status BEFORE callback so callback sees correct state
       if (!hasMore) {
         this.status = 'completed'
-      } else {
+      }
+      this.stepCallback?.()
+      if (hasMore) {
         this.scheduleNext()
       }
     }, SPEED_DELAY[this.speed])

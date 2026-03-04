@@ -86,7 +86,7 @@ export class ConsolePanel {
         this.statusEl.classList.add('status-running')
         break
       case 'paused':
-        this.statusEl.textContent = '等待輸入'
+        this.statusEl.textContent = '已暫停'
         this.statusEl.classList.add('status-paused')
         break
       case 'completed':
