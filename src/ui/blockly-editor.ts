@@ -219,7 +219,7 @@ export class BlocklyEditor {
 
     // u_func_def: dynamic parameter rows with +/- buttons
     if (!Blockly.Blocks['u_func_def']) {
-      const TYPE_OPTIONS = [['int','int'],['float','float'],['double','double'],['char','char'],['bool','bool'],['string','string'],['void','void']]
+      const TYPE_OPTIONS = [['int（整數）','int'],['float（小數）','float'],['double（精確小數）','double'],['char（字元）','char'],['bool（是/否）','bool'],['string（文字）','string'],['void（無回傳）','void']]
       /* eslint-disable @typescript-eslint/no-explicit-any */
       Blockly.Blocks['u_func_def'] = {
         paramCount_: 0,
@@ -229,13 +229,13 @@ export class BlocklyEditor {
           this.setColour(60)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setTooltip('定義一個函式')
+          this.setTooltip('定義一個函式（可重複使用的程式片段）。選擇 void（無回傳）表示不需要回傳結果')
 
           this.appendDummyInput('HEADER')
             .appendField('定義函式')
             .appendField(new Blockly.FieldTextInput('myFunc'), 'NAME')
             .appendField('回傳')
-            .appendField(new Blockly.FieldDropdown([['void','void'],['int','int'],['float','float'],['double','double'],['char','char'],['long long','long long'],['string','string'],['bool','bool']]), 'RETURN_TYPE')
+            .appendField(new Blockly.FieldDropdown([['void（無回傳）','void'],['int（整數）','int'],['float（小數）','float'],['double（精確小數）','double'],['char（字元）','char'],['long long（大整數）','long long'],['string（文字）','string'],['bool（是/否）','bool']]), 'RETURN_TYPE')
           this.appendDummyInput('PARAMS_LABEL')
             .appendField('參數')
             .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plus_()))
@@ -297,11 +297,11 @@ export class BlocklyEditor {
           this.argCount_ = 0
           this.setColour(60)
           this.setOutput(true, 'Expression')
-          this.setTooltip('呼叫一個函式')
+          this.setTooltip('執行指定的函式，可以傳入參數')
           this.setInputsInline(true)
 
           this.appendDummyInput('LABEL')
-            .appendField('呼叫')
+            .appendField('呼叫函式')
             .appendField(new Blockly.FieldTextInput('func'), 'NAME')
             .appendField('(')
           this.appendDummyInput('TAIL')
@@ -363,11 +363,11 @@ export class BlocklyEditor {
           this.setColour(180)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setTooltip('從鍵盤讀取一個或多個變數')
+          this.setTooltip('從鍵盤讀取一個或多個值到變數中')
           this.setInputsInline(true)
 
           this.appendDummyInput('LABEL')
-            .appendField('輸入')
+            .appendField('讀取輸入 → 變數')
           this.appendDummyInput('VAR_0')
             .appendField(new Blockly.FieldTextInput('x'), 'NAME_0')
           this.appendDummyInput('TAIL')
@@ -427,7 +427,7 @@ export class BlocklyEditor {
           this.customName_ = ''
           this.setColour(330)
           this.setOutput(true, 'Expression')
-          this.setTooltip('取得變數的值')
+          this.setTooltip('使用這個變數目前存放的值')
 
           this.appendDummyInput('MAIN')
             .appendField(new Blockly.FieldDropdown(
@@ -512,11 +512,11 @@ export class BlocklyEditor {
           this.setColour(330)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setTooltip('宣告一個變數')
+          this.setTooltip('建立一個新的變數，可以選擇型別和初始值。變數就像一個有名字的盒子，用來存放資料')
 
           this.appendDummyInput('DECL')
             .appendField(new Blockly.FieldDropdown(
-              [['int','int'],['float','float'],['double','double'],['char','char'],['bool','bool'],['string','string'],['long long','long long']],
+              [['int（整數）','int'],['float（小數）','float'],['double（精確小數）','double'],['char（字元）','char'],['bool（是/否）','bool'],['string（文字）','string'],['long long（大整數）','long long']],
             ), 'TYPE')
             .appendField(new Blockly.FieldTextInput('x'), 'NAME')
             .appendField(new Blockly.FieldDropdown(

@@ -405,10 +405,11 @@ describe('BlockRegistry', () => {
       expect(labels).toContain('餘數')
     })
 
-    it('u_array_access message0 should use bracket notation', () => {
+    it('u_array_access message0 should use Chinese-friendly format with bracket notation', () => {
       const spec = fullRegistry.get('u_array_access')!
+      expect(spec.blockDef.message0).toContain('陣列')
       expect(spec.blockDef.message0).toContain('[ %2 ]')
-      expect(spec.blockDef.message0).not.toContain('的第')
+      expect(spec.blockDef.message0).toContain('格')
     })
   })
 

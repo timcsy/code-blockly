@@ -24,9 +24,9 @@ npm test && npm run lint
 TypeScript 5.x: Follow standard conventions
 
 ## Recent Changes
+- 005-block-i18n-friendly: Added TypeScript 5.x + Blockly 12.4.1, web-tree-sitter 0.26.6, CodeMirror 6.0.2
 - 004-deep-ux-improve: Added TypeScript 5.x + Blockly 12.4.1, web-tree-sitter 0.26.6, CodeMirror 6.0.2
 - 003-polish-block-ux: Added TypeScript 5.x + Blockly 12.4.1, web-tree-sitter 0.26.6, CodeMirror 6.0.2
-- 002-concept-blocks-redesign: Added TypeScript 5.x + Blockly 12.x, web-tree-sitter 0.26.x, CodeMirror 6.x
 
 
 <!-- MANUAL ADDITIONS START -->

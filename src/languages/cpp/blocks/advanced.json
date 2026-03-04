@@ -6,15 +6,15 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_pointer_declare",
-      "message0": "%1 * %2 ;",
+      "message0": "建立 %1 指標變數 %2",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int","int"],["float","float"],["double","double"],["char","char"],["void","void"]] },
+        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"],["void（無回傳）","void"]] },
         { "type": "field_input", "name": "NAME", "text": "ptr" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 280,
-      "tooltip": "指標宣告"
+      "tooltip": "建立一個指標變數。指標是一個記住其他變數位址的變數，就像寫著地址的紙條"
     },
     "codeTemplate": {
       "pattern": "${TYPE}* ${NAME};",
@@ -33,14 +33,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_pointer_deref",
-      "message0": "* %1",
+      "message0": "取出 %1 指向的值",
       "args0": [
         { "type": "input_value", "name": "PTR", "check": "Expression" }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 280,
-      "tooltip": "指標解參考"
+      "tooltip": "根據指標記住的位址，取出那個位置存放的值"
     },
     "codeTemplate": {
       "pattern": "*${PTR}",
@@ -59,14 +59,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_address_of",
-      "message0": "& %1",
+      "message0": "取得 %1 的位址",
       "args0": [
         { "type": "input_value", "name": "VAR", "check": "Expression" }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 280,
-      "tooltip": "取址運算"
+      "tooltip": "取得變數在記憶體中的位址，可以存到指標裡"
     },
     "codeTemplate": {
       "pattern": "&${VAR}",
@@ -85,16 +85,16 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_malloc",
-      "message0": "(%1 *) malloc ( %2 * sizeof(%3) )",
+      "message0": "配置 %2 個 %3 的記憶體空間（%1 指標）",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int","int"],["float","float"],["double","double"],["char","char"]] },
+        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"]] },
         { "type": "input_value", "name": "SIZE", "check": "Expression" },
-        { "type": "field_dropdown", "name": "SIZEOF_TYPE", "options": [["int","int"],["float","float"],["double","double"],["char","char"]] }
+        { "type": "field_dropdown", "name": "SIZEOF_TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"]] }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 280,
-      "tooltip": "malloc 動態配置"
+      "tooltip": "向系統要一塊記憶體空間來使用，用完記得用 free 歸還"
     },
     "codeTemplate": {
       "pattern": "(${TYPE}*)malloc(${SIZE} * sizeof(${SIZEOF_TYPE}))",
@@ -113,14 +113,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_free",
-      "message0": "free ( %1 ) ;",
+      "message0": "釋放記憶體 %1",
       "args0": [
         { "type": "input_value", "name": "PTR", "check": "Expression" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 280,
-      "tooltip": "free 釋放記憶體"
+      "tooltip": "把之前用 malloc 要來的記憶體歸還給系統"
     },
     "codeTemplate": {
       "pattern": "free(${PTR});",
@@ -139,7 +139,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_struct_declare",
-      "message0": "struct %1",
+      "message0": "定義結構 %1",
       "args0": [
         { "type": "field_input", "name": "NAME", "text": "MyStruct" }
       ],
@@ -148,7 +148,7 @@
         { "type": "input_statement", "name": "MEMBERS", "check": "Statement" }
       ],
       "colour": 20,
-      "tooltip": "結構體宣告"
+      "tooltip": "定義一個結構，把多個相關的變數組合在一起，像是一張有多個欄位的表格"
     },
     "codeTemplate": {
       "pattern": "struct ${NAME} {\n${MEMBERS}\n};",
@@ -167,7 +167,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_struct_member_access",
-      "message0": "%1 . %2",
+      "message0": "結構 %1 的欄位 %2",
       "args0": [
         { "type": "field_input", "name": "OBJ", "text": "obj" },
         { "type": "field_input", "name": "MEMBER", "text": "field" }
@@ -175,7 +175,7 @@
       "inputsInline": true,
       "output": "Expression",
       "colour": 20,
-      "tooltip": "結構體成員存取"
+      "tooltip": "取得或設定結構裡某個欄位的值"
     },
     "codeTemplate": {
       "pattern": "${OBJ}.${MEMBER}",
@@ -194,7 +194,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_struct_pointer_access",
-      "message0": "%1 -> %2",
+      "message0": "指標 %1 的欄位 %2",
       "args0": [
         { "type": "field_input", "name": "PTR", "text": "ptr" },
         { "type": "field_input", "name": "MEMBER", "text": "field" }
@@ -202,7 +202,7 @@
       "inputsInline": true,
       "output": "Expression",
       "colour": 20,
-      "tooltip": "指標結構體成員存取"
+      "tooltip": "透過指標來取得或設定結構裡某個欄位的值"
     },
     "codeTemplate": {
       "pattern": "${PTR}->${MEMBER}",
@@ -221,14 +221,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_strlen",
-      "message0": "strlen ( %1 )",
+      "message0": "文字長度（ %1 ）",
       "args0": [
         { "type": "input_value", "name": "STR", "check": "Expression" }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 160,
-      "tooltip": "字串長度"
+      "tooltip": "計算文字有幾個字元（不含結尾符號）"
     },
     "codeTemplate": {
       "pattern": "strlen(${STR})",
@@ -247,7 +247,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_strcmp",
-      "message0": "strcmp ( %1 , %2 )",
+      "message0": "比較文字（ %1 , %2 ）",
       "args0": [
         { "type": "input_value", "name": "S1", "check": "Expression" },
         { "type": "input_value", "name": "S2", "check": "Expression" }
@@ -255,7 +255,7 @@
       "inputsInline": true,
       "output": "Expression",
       "colour": 160,
-      "tooltip": "字串比較"
+      "tooltip": "比較兩段文字是否相同。回傳 0 表示一樣，其他數字表示不同"
     },
     "codeTemplate": {
       "pattern": "strcmp(${S1}, ${S2})",
@@ -274,7 +274,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_strcpy",
-      "message0": "strcpy ( %1 , %2 ) ;",
+      "message0": "複製文字 %2 到 %1",
       "args0": [
         { "type": "input_value", "name": "DEST", "check": "Expression" },
         { "type": "input_value", "name": "SRC", "check": "Expression" }
@@ -282,7 +282,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 160,
-      "tooltip": "字串複製"
+      "tooltip": "把一段文字複製到另一個位置"
     },
     "codeTemplate": {
       "pattern": "strcpy(${DEST}, ${SRC});",
@@ -301,15 +301,15 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_vector_declare",
-      "message0": "vector < %1 > %2 ;",
+      "message0": "建立 %1 列表變數 %2",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int","int"],["float","float"],["double","double"],["char","char"],["string","std::string"],["long long","long long"]] },
+        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"],["string（文字）","std::string"],["long long（大整數）","long long"]] },
         { "type": "field_input", "name": "NAME", "text": "vec" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "vector 容器宣告"
+      "tooltip": "建立一個列表（可變長度的陣列），可以隨時加入或移除元素"
     },
     "codeTemplate": {
       "pattern": "std::vector<${TYPE}> ${NAME};",
@@ -328,7 +328,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_vector_push_back",
-      "message0": "%1 .push_back ( %2 ) ;",
+      "message0": "在列表 %1 尾端加入 %2",
       "args0": [
         { "type": "field_input", "name": "VECTOR", "text": "vec" },
         { "type": "input_value", "name": "VALUE", "check": "Expression" }
@@ -336,7 +336,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "vector 加入元素"
+      "tooltip": "在列表的最後面加入一個新元素"
     },
     "codeTemplate": {
       "pattern": "${VECTOR}.push_back(${VALUE});",
@@ -355,14 +355,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_vector_size",
-      "message0": "%1 .size()",
+      "message0": "列表 %1 的長度",
       "args0": [
         { "type": "field_input", "name": "VECTOR", "text": "vec" }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 200,
-      "tooltip": "vector 取得大小"
+      "tooltip": "取得列表裡有幾個元素"
     },
     "codeTemplate": {
       "pattern": "${VECTOR}.size()",
@@ -381,16 +381,16 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_map_declare",
-      "message0": "map < %1 , %2 > %3 ;",
+      "message0": "建立對照表變數 %3（鍵 %1 值 %2）",
       "args0": [
-        { "type": "field_dropdown", "name": "KEY_TYPE", "options": [["int","int"],["string","std::string"],["char","char"]] },
-        { "type": "field_dropdown", "name": "VALUE_TYPE", "options": [["int","int"],["float","float"],["double","double"],["string","std::string"]] },
+        { "type": "field_dropdown", "name": "KEY_TYPE", "options": [["int（整數）","int"],["string（文字）","std::string"],["char（字元）","char"]] },
+        { "type": "field_dropdown", "name": "VALUE_TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["string（文字）","std::string"]] },
         { "type": "field_input", "name": "NAME", "text": "mp" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "map 容器宣告"
+      "tooltip": "建立一個對照表，用一個「鍵」來查詢對應的「值」，像字典一樣"
     },
     "codeTemplate": {
       "pattern": "std::map<${KEY_TYPE}, ${VALUE_TYPE}> ${NAME};",
@@ -409,14 +409,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_string_declare",
-      "message0": "string %1 ;",
+      "message0": "建立文字變數 %1",
       "args0": [
         { "type": "field_input", "name": "NAME", "text": "str" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "C++ string 宣告"
+      "tooltip": "建立一個文字變數，可以存放和處理一段文字"
     },
     "codeTemplate": {
       "pattern": "std::string ${NAME};",
@@ -435,7 +435,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_sort",
-      "message0": "sort ( %1 , %2 ) ;",
+      "message0": "排序（ %1 到 %2 ）",
       "args0": [
         { "type": "input_value", "name": "BEGIN", "check": "Expression" },
         { "type": "input_value", "name": "END", "check": "Expression" }
@@ -443,7 +443,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "排序"
+      "tooltip": "把指定範圍內的元素從小到大排好"
     },
     "codeTemplate": {
       "pattern": "std::sort(${BEGIN}, ${END});",
@@ -462,20 +462,20 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_class_def",
-      "message0": "class %1",
+      "message0": "定義類別 %1",
       "args0": [
         { "type": "field_input", "name": "NAME", "text": "MyClass" }
       ],
-      "message1": "public: %1",
+      "message1": "公開： %1",
       "args1": [
         { "type": "input_statement", "name": "PUBLIC", "check": "Statement" }
       ],
-      "message2": "private: %1",
+      "message2": "私有： %1",
       "args2": [
         { "type": "input_statement", "name": "PRIVATE", "check": "Statement" }
       ],
       "colour": 140,
-      "tooltip": "類別定義"
+      "tooltip": "定義一個類別，把資料和操作包裝在一起。公開的部分外面可以用，私有的只有內部能用"
     },
     "codeTemplate": {
       "pattern": "class ${NAME} {\npublic:\n${PUBLIC}\nprivate:\n${PRIVATE}\n};",
@@ -494,7 +494,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_new",
-      "message0": "new %1 ( %2 )",
+      "message0": "建立新物件 %1（ %2 ）",
       "args0": [
         { "type": "field_input", "name": "TYPE", "text": "MyClass" },
         { "type": "field_input", "name": "ARGS", "text": "" }
@@ -502,7 +502,7 @@
       "inputsInline": true,
       "output": "Expression",
       "colour": 140,
-      "tooltip": "new 運算子"
+      "tooltip": "建立一個新的物件，並配置記憶體空間"
     },
     "codeTemplate": {
       "pattern": "new ${TYPE}(${ARGS})",
@@ -521,14 +521,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_delete",
-      "message0": "delete %1 ;",
+      "message0": "刪除物件 %1",
       "args0": [
         { "type": "input_value", "name": "PTR", "check": "Expression" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 140,
-      "tooltip": "delete 運算子"
+      "tooltip": "刪除用 new 建立的物件，歸還記憶體空間"
     },
     "codeTemplate": {
       "pattern": "delete ${PTR};",
@@ -547,7 +547,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_template_function",
-      "message0": "template < typename %1 >",
+      "message0": "樣板：讓 %1 代表任意型別",
       "args0": [
         { "type": "field_input", "name": "T", "text": "T" }
       ],
@@ -563,7 +563,7 @@
         { "type": "input_statement", "name": "BODY", "check": "Statement" }
       ],
       "colour": 140,
-      "tooltip": "樣板函式"
+      "tooltip": "建立一個樣板函式，可以處理不同型別的資料，不用重複寫很多版本"
     },
     "codeTemplate": {
       "pattern": "template<typename ${T}>\n${RETURN_TYPE} ${FUNC_NAME}(${PARAM_TYPE} ${PARAM_NAME}) {\n${BODY}\n}",
@@ -582,15 +582,15 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_stack_declare",
-      "message0": "stack < %1 > %2 ;",
+      "message0": "建立 %1 堆疊變數 %2",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int","int"],["float","float"],["string","std::string"],["char","char"]] },
+        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["string（文字）","std::string"],["char（字元）","char"]] },
         { "type": "field_input", "name": "NAME", "text": "stk" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "stack 容器宣告"
+      "tooltip": "建立一個堆疊，像疊盤子一樣，最後放的最先拿出來（後進先出）"
     },
     "codeTemplate": {
       "pattern": "std::stack<${TYPE}> ${NAME};",
@@ -609,15 +609,15 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_queue_declare",
-      "message0": "queue < %1 > %2 ;",
+      "message0": "建立 %1 佇列變數 %2",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int","int"],["float","float"],["string","std::string"],["char","char"]] },
+        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["string（文字）","std::string"],["char（字元）","char"]] },
         { "type": "field_input", "name": "NAME", "text": "que" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "queue 容器宣告"
+      "tooltip": "建立一個佇列，像排隊一樣，最先來的最先處理（先進先出）"
     },
     "codeTemplate": {
       "pattern": "std::queue<${TYPE}> ${NAME};",
@@ -636,15 +636,15 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_set_declare",
-      "message0": "set < %1 > %2 ;",
+      "message0": "建立 %1 集合變數 %2",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int","int"],["float","float"],["string","std::string"],["char","char"]] },
+        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["string（文字）","std::string"],["char（字元）","char"]] },
         { "type": "field_input", "name": "NAME", "text": "s" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "set 容器宣告"
+      "tooltip": "建立一個集合，裡面的元素不會重複，而且會自動排序"
     },
     "codeTemplate": {
       "pattern": "std::set<${TYPE}> ${NAME};",
@@ -663,7 +663,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_method_call",
-      "message0": "%1 . %2 ( %3 ) ;",
+      "message0": "對 %1 執行 %2（ %3 ）",
       "args0": [
         { "type": "field_input", "name": "OBJ", "text": "obj" },
         { "type": "field_input", "name": "METHOD", "text": "push_back" },
@@ -672,7 +672,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "方法呼叫"
+      "tooltip": "對物件執行一個操作（方法），可以傳入參數"
     },
     "codeTemplate": {
       "pattern": "${OBJ}.${METHOD}(${ARGS});",
@@ -691,7 +691,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_method_call_expr",
-      "message0": "%1 . %2 ( %3 )",
+      "message0": "對 %1 執行 %2（ %3 ）的結果",
       "args0": [
         { "type": "field_input", "name": "OBJ", "text": "obj" },
         { "type": "field_input", "name": "METHOD", "text": "size" },
@@ -700,7 +700,7 @@
       "inputsInline": true,
       "output": "Expression",
       "colour": 200,
-      "tooltip": "方法呼叫（回傳值）"
+      "tooltip": "對物件執行一個操作（方法），並取得結果"
     },
     "codeTemplate": {
       "pattern": "${OBJ}.${METHOD}(${ARGS})",

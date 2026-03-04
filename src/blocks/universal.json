@@ -8,7 +8,7 @@
       "type": "u_var_declare",
       "message0": "建立 %1 變數 %2 = %3",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int","int"],["float","float"],["double","double"],["char","char"],["long long","long long"],["string","string"],["bool","bool"]] },
+        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"],["long long（大整數）","long long"],["string（文字）","string"],["bool（是/否）","bool"]] },
         { "type": "field_input", "name": "NAME", "text": "x" },
         { "type": "input_value", "name": "INIT", "check": "Expression" }
       ],
@@ -16,7 +16,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 330,
-      "tooltip": "建立一個新變數並設定初始值"
+      "tooltip": "建立一個新的變數，可以選擇型別和初始值。變數就像一個有名字的盒子，用來存放資料"
     }
   },
   {
@@ -26,7 +26,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_var_assign",
-      "message0": "把 %1 設成 %2",
+      "message0": "把變數 %1 設成 %2",
       "args0": [
         { "type": "field_input", "name": "NAME", "text": "x" },
         { "type": "input_value", "name": "VALUE", "check": "Expression" }
@@ -35,7 +35,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 330,
-      "tooltip": "將變數設定為新的值"
+      "tooltip": "把已經建立的變數改成新的值"
     }
   },
   {
@@ -51,7 +51,7 @@
       ],
       "output": "Expression",
       "colour": 330,
-      "tooltip": "取得變數的值"
+      "tooltip": "使用這個變數目前存放的值"
     }
   },
   {
@@ -67,7 +67,7 @@
       ],
       "output": "Expression",
       "colour": 330,
-      "tooltip": "數字常數"
+      "tooltip": "輸入一個數字，可以用在計算或比較中"
     }
   },
   {
@@ -83,7 +83,7 @@
       ],
       "output": "Expression",
       "colour": 330,
-      "tooltip": "字串常數"
+      "tooltip": "輸入一段文字內容，前後會自動加上引號"
     }
   },
   {
@@ -102,7 +102,7 @@
       "inputsInline": true,
       "output": "Expression",
       "colour": 210,
-      "tooltip": "算術運算"
+      "tooltip": "把兩個數字做加、減、乘、除或取餘數的計算"
     }
   },
   {
@@ -121,7 +121,7 @@
       "inputsInline": true,
       "output": "Expression",
       "colour": 210,
-      "tooltip": "比較運算"
+      "tooltip": "比較兩個值的大小或是否相等，結果是「是」或「否」"
     }
   },
   {
@@ -140,7 +140,7 @@
       "inputsInline": true,
       "output": "Expression",
       "colour": 210,
-      "tooltip": "邏輯運算（而且 / 或者）"
+      "tooltip": "組合兩個條件：「而且」表示兩個都要成立，「或者」表示只要一個成立就行"
     }
   },
   {
@@ -157,7 +157,7 @@
       "inputsInline": true,
       "output": "Expression",
       "colour": 210,
-      "tooltip": "邏輯否定"
+      "tooltip": "把條件反過來：「是」變「否」，「否」變「是」"
     }
   },
   {
@@ -228,7 +228,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 120,
-      "tooltip": "計數式重複迴圈"
+      "tooltip": "讓程式重複執行：變數會從起始值一直數到結束值，每次加 1"
     }
   },
   {
@@ -263,7 +263,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 120,
-      "tooltip": "跳出目前的迴圈"
+      "tooltip": "立刻停止迴圈，不再重複"
     }
   },
   {
@@ -291,7 +291,7 @@
       "args0": [
         { "type": "field_input", "name": "NAME", "text": "myFunc" },
         { "type": "field_input", "name": "PARAMS", "text": "" },
-        { "type": "field_dropdown", "name": "RETURN_TYPE", "options": [["void","void"],["int","int"],["float","float"],["double","double"],["char","char"],["long long","long long"],["string","string"],["bool","bool"]] }
+        { "type": "field_dropdown", "name": "RETURN_TYPE", "options": [["void（無回傳）","void"],["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"],["long long（大整數）","long long"],["string（文字）","string"],["bool（是/否）","bool"]] }
       ],
       "message1": "%1",
       "args1": [
@@ -300,7 +300,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 60,
-      "tooltip": "定義一個函式"
+      "tooltip": "定義一個函式（可重複使用的程式片段）。選擇 void（無回傳）表示不需要回傳結果"
     }
   },
   {
@@ -310,7 +310,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_func_call",
-      "message0": "呼叫 %1（%2）",
+      "message0": "呼叫函式 %1（%2）",
       "args0": [
         { "type": "field_input", "name": "NAME", "text": "func" },
         { "type": "field_input", "name": "ARGS", "text": "" }
@@ -318,7 +318,7 @@
       "inputsInline": true,
       "output": "Expression",
       "colour": 60,
-      "tooltip": "呼叫一個函式"
+      "tooltip": "執行指定的函式，可以傳入參數"
     }
   },
   {
@@ -335,7 +335,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 60,
-      "tooltip": "從函式回傳一個值"
+      "tooltip": "結束函式的執行，並把結果送回去給呼叫的地方"
     }
   },
   {
@@ -366,7 +366,7 @@
       "message0": "換行",
       "output": "Expression",
       "colour": 180,
-      "tooltip": "輸出換行符號"
+      "tooltip": "讓輸出內容換到下一行"
     }
   },
   {
@@ -376,7 +376,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_input",
-      "message0": "讀取輸入 → %1",
+      "message0": "讀取輸入 → 變數 %1",
       "args0": [
         { "type": "field_input", "name": "NAME", "text": "x" }
       ],
@@ -395,7 +395,7 @@
       "type": "u_array_declare",
       "message0": "建立 %1 陣列 %2 大小 %3",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int","int"],["float","float"],["double","double"],["char","char"],["long long","long long"]] },
+        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"],["long long（大整數）","long long"]] },
         { "type": "field_input", "name": "NAME", "text": "arr" },
         { "type": "input_value", "name": "SIZE", "check": "Expression" }
       ],
@@ -403,7 +403,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 260,
-      "tooltip": "建立一個固定大小的陣列"
+      "tooltip": "建立一個固定大小的陣列（一排連續的格子），索引從 0 開始"
     }
   },
   {
@@ -413,7 +413,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_array_access",
-      "message0": "%1 [ %2 ]",
+      "message0": "陣列 %1 的第 [ %2 ] 格",
       "args0": [
         { "type": "field_input", "name": "ARRAY", "text": "arr" },
         { "type": "input_value", "name": "INDEX", "check": "Expression" }
@@ -421,7 +421,7 @@
       "inputsInline": true,
       "output": "Expression",
       "colour": 260,
-      "tooltip": "存取陣列中的某個元素"
+      "tooltip": "取得或設定陣列中指定位置的值，索引從 0 開始"
     }
   }
 ]

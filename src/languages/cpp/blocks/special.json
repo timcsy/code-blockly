@@ -6,14 +6,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_raw_code",
-      "message0": "code: %1",
+      "message0": "直接寫程式碼：%1",
       "args0": [
         { "type": "field_input", "name": "CODE", "text": "// raw code" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 0,
-      "tooltip": "原始碼積木（未知語法降級用）"
+      "tooltip": "直接輸入程式碼，不經過積木轉換。用於積木無法表達的語法"
     },
     "codeTemplate": {
       "pattern": "${CODE}",
@@ -32,13 +32,13 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_raw_expression",
-      "message0": "expr: %1",
+      "message0": "直接寫運算式：%1",
       "args0": [
         { "type": "field_input", "name": "CODE", "text": "0" }
       ],
       "output": "Expression",
       "colour": 0,
-      "tooltip": "原始碼運算式積木"
+      "tooltip": "直接輸入一個運算式，可以接到其他積木上"
     },
     "codeTemplate": {
       "pattern": "${CODE}",
@@ -57,14 +57,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_include",
-      "message0": "#include < %1 >",
+      "message0": "引入函式庫 %1",
       "args0": [
-        { "type": "field_dropdown", "name": "HEADER", "options": [["stdio.h","stdio.h"],["stdlib.h","stdlib.h"],["string.h","string.h"],["math.h","math.h"],["stdbool.h","stdbool.h"],["iostream","iostream"],["vector","vector"],["string","string"],["algorithm","algorithm"],["map","map"],["set","set"],["stack","stack"],["queue","queue"],["cmath","cmath"],["cstring","cstring"],["climits","climits"]] }
+        { "type": "field_dropdown", "name": "HEADER", "options": [["stdio.h（C 標準輸入輸出）","stdio.h"],["stdlib.h（C 標準函式庫）","stdlib.h"],["string.h（C 文字處理）","string.h"],["math.h（數學函式）","math.h"],["stdbool.h（布林型別）","stdbool.h"],["iostream（輸入輸出）","iostream"],["vector（動態列表）","vector"],["string（文字處理）","string"],["algorithm（演算法）","algorithm"],["map（對照表）","map"],["set（集合）","set"],["stack（堆疊）","stack"],["queue（佇列）","queue"],["cmath（C++ 數學函式）","cmath"],["cstring（C++ 文字處理）","cstring"],["climits（整數範圍常數）","climits"]] }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 0,
-      "tooltip": "#include 標頭檔"
+      "tooltip": "引入函式庫，讓程式可以使用裡面提供的功能"
     },
     "codeTemplate": {
       "pattern": "#include <${HEADER}>",
@@ -83,14 +83,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_include_local",
-      "message0": "#include \" %1 \"",
+      "message0": "引入自己的檔案 \" %1 \"",
       "args0": [
         { "type": "field_input", "name": "HEADER", "text": "myheader.h" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 0,
-      "tooltip": "#include 本地標頭檔"
+      "tooltip": "引入自己寫的標頭檔"
     },
     "codeTemplate": {
       "pattern": "#include \"${HEADER}\"",
@@ -109,7 +109,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_define",
-      "message0": "#define %1 %2",
+      "message0": "定義常數 %1 為 %2",
       "args0": [
         { "type": "field_input", "name": "NAME", "text": "MAX" },
         { "type": "field_input", "name": "VALUE", "text": "100" }
@@ -117,7 +117,7 @@
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 0,
-      "tooltip": "#define 巨集定義"
+      "tooltip": "定義一個常數名稱，程式中用到這個名稱時會自動替換成設定的值"
     },
     "codeTemplate": {
       "pattern": "#define ${NAME} ${VALUE}",
@@ -136,7 +136,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_ifdef",
-      "message0": "#ifdef %1",
+      "message0": "如果有定義 %1 就執行",
       "args0": [
         { "type": "field_input", "name": "CONDITION", "text": "DEBUG" }
       ],
@@ -144,11 +144,11 @@
       "args1": [
         { "type": "input_statement", "name": "BODY", "check": "Statement" }
       ],
-      "message2": "#endif",
+      "message2": "結束",
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 0,
-      "tooltip": "#ifdef 條件編譯"
+      "tooltip": "如果這個名稱已經被定義過，就執行裡面的程式"
     },
     "codeTemplate": {
       "pattern": "#ifdef ${CONDITION}\n${BODY}\n#endif",
@@ -167,7 +167,7 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_ifndef",
-      "message0": "#ifndef %1",
+      "message0": "如果沒定義 %1 就執行",
       "args0": [
         { "type": "field_input", "name": "CONDITION", "text": "HEADER_H" }
       ],
@@ -175,11 +175,11 @@
       "args1": [
         { "type": "input_statement", "name": "BODY", "check": "Statement" }
       ],
-      "message2": "#endif",
+      "message2": "結束",
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 0,
-      "tooltip": "#ifndef 條件編譯"
+      "tooltip": "如果這個名稱還沒被定義，就執行裡面的程式"
     },
     "codeTemplate": {
       "pattern": "#ifndef ${CONDITION}\n${BODY}\n#endif",
@@ -198,14 +198,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_comment_line",
-      "message0": "// %1",
+      "message0": "備註：%1",
       "args0": [
         { "type": "field_input", "name": "TEXT", "text": "comment" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 0,
-      "tooltip": "單行註解"
+      "tooltip": "寫一段備註說明，不會影響程式執行"
     },
     "codeTemplate": {
       "pattern": "// ${TEXT}",
@@ -224,14 +224,14 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_using_namespace",
-      "message0": "using namespace %1 ;",
+      "message0": "使用命名空間 %1",
       "args0": [
         { "type": "field_input", "name": "NS", "text": "std" }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 0,
-      "tooltip": "using namespace 宣告"
+      "tooltip": "讓這個命名空間裡的功能可以直接使用，不用加前綴。例如用 cout 代替 std::cout"
     },
     "codeTemplate": {
       "pattern": "using namespace ${NS};",
