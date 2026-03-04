@@ -1,6 +1,6 @@
 import type { SemanticNode } from '../core/semantic-model'
 import type { RuntimeValue, FunctionDef, ExecutionStatus } from './types'
-import { defaultValue, valueToString } from './types'
+import { defaultValue, valueToString, parseInputValue } from './types'
 import { RuntimeError, RUNTIME_ERRORS } from './errors'
 import { Scope } from './scope'
 import { IOSystem } from './io'
@@ -96,6 +96,7 @@ export class SemanticInterpreter {
       case 'func_call': return this.execFuncCall(node)
       case 'return': return this.execReturn(node)
       case 'print': return this.execPrint(node)
+      case 'input': return this.execInput(node)
       case 'endl': return { type: 'string', value: '\n' }
       case 'array_declare': return this.execArrayDeclare(node)
       case 'array_access': return this.execArrayAccess(node)
@@ -388,6 +389,15 @@ export class SemanticInterpreter {
         this.io.write(valueToString(val))
       }
     }
+  }
+
+  private execInput(node: SemanticNode): RuntimeValue {
+    const targetType = String(node.properties.type || 'string')
+    const raw = this.io.read()
+    if (raw === null) {
+      throw new RuntimeError(RUNTIME_ERRORS.TYPE_MISMATCH, { '%1': 'input exhausted' })
+    }
+    return parseInputValue(raw, targetType) ?? defaultValue(targetType)
   }
 
   private execArrayDeclare(node: SemanticNode): void {

@@ -14,7 +14,6 @@ import { serializeModel } from '../core/semantic-model'
 import { SemanticInterpreter } from '../interpreter/interpreter'
 import { RuntimeError } from '../interpreter/errors'
 import { ConsolePanel } from './console-panel'
-import { valueToString } from '../interpreter/types'
 import { StyleManagerImpl } from '../languages/style'
 import type { StylePresetId } from '../languages/style'
 import { LocaleLoader } from '../i18n/loader'
@@ -44,6 +43,7 @@ export class App {
   private lastChangedSide: 'blocks' | 'code' | null = null
   private interpreter: SemanticInterpreter
   private consolePanel: ConsolePanel | null = null
+  private stdinTextarea: HTMLTextAreaElement | null = null
 
   constructor() {
     this.storage = new Storage()
@@ -511,6 +511,7 @@ export class App {
     const consoleContainer = document.getElementById('console-panel')
     if (consoleContainer) {
       this.consolePanel = new ConsolePanel(consoleContainer)
+      this.stdinTextarea = this.consolePanel.getStdinTextarea()
     }
 
     const runBtn = document.getElementById('run-btn')
@@ -559,8 +560,14 @@ export class App {
     if (runBtn) runBtn.disabled = true
     if (stopBtn) stopBtn.disabled = false
 
+    // Collect pre-filled stdin from textarea
+    const stdinLines: string[] = []
+    if (this.stdinTextarea && this.stdinTextarea.value.trim()) {
+      stdinLines.push(...this.stdinTextarea.value.split('\n'))
+    }
+
     try {
-      this.interpreter.execute(model.program)
+      this.interpreter.execute(model.program, stdinLines)
       const output = this.interpreter.getOutput()
       this.consolePanel.appendOutput(output.join(''))
       this.consolePanel.setStatus('completed')

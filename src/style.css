@@ -251,6 +251,87 @@ html, body {
   line-height: 1.5;
 }
 
+/* Console inline input */
+.console-input-container {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: #2d2d2d;
+  border-top: 1px solid #3c3c3c;
+  flex-shrink: 0;
+}
+
+.console-input-label {
+  color: #4fc3f7;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  margin-right: 4px;
+}
+
+.console-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #d4d4d4;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  padding: 2px 0;
+}
+
+.console-input::placeholder {
+  color: #666;
+}
+
+/* Stdin textarea */
+.stdin-section {
+  border-top: 1px solid #3c3c3c;
+  flex-shrink: 0;
+}
+
+.stdin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 10px;
+  background: #252526;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stdin-header:hover {
+  background: #2a2d2e;
+}
+
+.stdin-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stdin-toggle {
+  font-size: 10px;
+  color: #888;
+}
+
+.stdin-textarea {
+  width: 100%;
+  height: 60px;
+  background: #1e1e1e;
+  border: none;
+  outline: none;
+  color: #d4d4d4;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  padding: 4px 10px;
+  resize: none;
+}
+
+.stdin-textarea::placeholder {
+  color: #555;
+}
+
 /* Run/Stop buttons in toolbar */
 .toolbar-actions button.run-btn {
   background: rgba(39, 174, 96, 0.3);

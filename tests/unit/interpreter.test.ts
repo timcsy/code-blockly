@@ -456,3 +456,71 @@ describe('Interpreter - edge cases', () => {
     expect(interp.getOutput().join('')).toBe('ok')
   })
 })
+
+// T026: 輸入概念
+describe('Interpreter - input', () => {
+  it('should read input from stdin queue', () => {
+    const interp = run([
+      createNode('var_declare', { name: 'x', type: 'int' }, {
+        initializer: createNode('input', { type: 'int' }, {})
+      }),
+      createNode('print', {}, {
+        values: [createNode('var_ref', { name: 'x' }, {})]
+      })
+    ], ['42'])
+    expect(interp.getOutput().join('')).toBe('42')
+  })
+
+  it('should convert input string to int', () => {
+    const interp = run([
+      createNode('var_declare', { name: 'n', type: 'int' }, {
+        initializer: createNode('input', { type: 'int' }, {})
+      }),
+      createNode('print', {}, {
+        values: [createNode('arithmetic', { operator: '+' }, {
+          left: createNode('var_ref', { name: 'n' }, {}),
+          right: createNode('number_literal', { value: '1' }, {}),
+        })]
+      })
+    ], ['10'])
+    expect(interp.getOutput().join('')).toBe('11')
+  })
+
+  it('should read string input', () => {
+    const interp = run([
+      createNode('var_declare', { name: 's', type: 'string' }, {
+        initializer: createNode('input', { type: 'string' }, {})
+      }),
+      createNode('print', {}, {
+        values: [createNode('var_ref', { name: 's' }, {})]
+      })
+    ], ['hello'])
+    expect(interp.getOutput().join('')).toBe('hello')
+  })
+
+  it('should read multiple inputs sequentially', () => {
+    const interp = run([
+      createNode('var_declare', { name: 'a', type: 'int' }, {
+        initializer: createNode('input', { type: 'int' }, {})
+      }),
+      createNode('var_declare', { name: 'b', type: 'int' }, {
+        initializer: createNode('input', { type: 'int' }, {})
+      }),
+      createNode('print', {}, {
+        values: [createNode('arithmetic', { operator: '+' }, {
+          left: createNode('var_ref', { name: 'a' }, {}),
+          right: createNode('var_ref', { name: 'b' }, {}),
+        })]
+      })
+    ], ['3', '7'])
+    expect(interp.getOutput().join('')).toBe('10')
+  })
+
+  it('should throw when input queue is exhausted', () => {
+    expect(() => run([
+      createNode('var_declare', { name: 'x', type: 'int' }, {
+        initializer: createNode('input', { type: 'int' }, {})
+      })
+    ], [])).toThrow(RuntimeError)
+  })
+})

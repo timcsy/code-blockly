@@ -90,14 +90,14 @@
 
 ### 測試先行
 
-- [ ] T026 [P] [US2] 撰寫 input 相關測試在 tests/unit/interpreter.test.ts — input 從佇列讀取、input 型別轉換（string→int）、佇列耗盡暫停、型別不符錯誤
+- [X] T026 [P] [US2] 撰寫 input 相關測試在 tests/unit/interpreter.test.ts — input 從佇列讀取、input 型別轉換（string→int）、佇列耗盡暫停、型別不符錯誤
 
 ### 實作
 
-- [ ] T027 [US2] 實作 input 概念解釋在 src/interpreter/interpreter.ts — 從 IOSystem 讀取輸入、型別轉換、佇列耗盡時暫停執行
-- [ ] T028 [US2] 修改 ConsolePanel 在 src/ui/console-panel.ts — 新增行內輸入 UI（底部 input 元素、Enter 送出、提示文字）
-- [ ] T029 [US2] 修改 src/ui/App.ts — 整合 input 等待流程：暫停→顯示輸入→使用者送出→恢復執行、預填輸入 textarea
-- [ ] T030 [US2] 修改 index.html — 在 console 面板旁新增 stdin 預填 textarea（可摺疊）
+- [X] T027 [US2] 實作 input 概念解釋在 src/interpreter/interpreter.ts — 從 IOSystem 讀取輸入、型別轉換、佇列耗盡時暫停執行
+- [X] T028 [US2] 修改 ConsolePanel 在 src/ui/console-panel.ts — 新增行內輸入 UI（底部 input 元素、Enter 送出、提示文字）
+- [X] T029 [US2] 修改 src/ui/App.ts — 整合 input 等待流程：暫停→顯示輸入→使用者送出→恢復執行、預填輸入 textarea
+- [X] T030 [US2] 修改 index.html — 在 console 面板旁新增 stdin 預填 textarea（可摺疊）
 
 **檢查點**: input 測試通過，瀏覽器中程式可讀取預填輸入或行內輸入
 
