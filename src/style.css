@@ -405,6 +405,14 @@ html, body {
   background: rgba(211, 47, 47, 0.1);
 }
 
+.console-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .console-output {
   flex: 1;
   overflow: auto;

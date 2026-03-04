@@ -2,29 +2,43 @@ import type { ExecutionStatus } from '../interpreter/types'
 
 export class ConsolePanel {
   private element: HTMLElement
+  private contentEl: HTMLElement
   private outputEl: HTMLElement
   private statusEl: HTMLElement
+  private toggleEl: HTMLElement
   private clearBtn: HTMLElement
   private inputEl: HTMLInputElement
   private inputContainer: HTMLElement
   private onInputResolve: ((value: string) => void) | null = null
+  private collapsed = false
 
   constructor(container: HTMLElement) {
     this.element = container
 
-    // Header with title, status, and clear button
+    // Clickable header with toggle, title, status, and clear button
     const header = document.createElement('div')
     header.className = 'console-header'
 
     const leftGroup = document.createElement('div')
     leftGroup.className = 'console-header-left'
+
+    this.toggleEl = document.createElement('span')
+    this.toggleEl.className = 'panel-toggle'
+    this.toggleEl.textContent = '▼'
+    leftGroup.appendChild(this.toggleEl)
+
     const title = document.createElement('span')
     title.className = 'console-title'
     title.textContent = '終端機'
     leftGroup.appendChild(title)
+
     this.statusEl = document.createElement('span')
     this.statusEl.className = 'console-status'
     leftGroup.appendChild(this.statusEl)
+
+    // Click on left group to toggle
+    leftGroup.style.cursor = 'pointer'
+    leftGroup.addEventListener('click', () => this.toggle())
 
     this.clearBtn = document.createElement('button')
     this.clearBtn.className = 'console-clear-btn'
@@ -36,10 +50,14 @@ export class ConsolePanel {
     header.appendChild(this.clearBtn)
     this.element.appendChild(header)
 
+    // Collapsible content wrapper
+    this.contentEl = document.createElement('div')
+    this.contentEl.className = 'console-content'
+
     // Output area
     this.outputEl = document.createElement('pre')
     this.outputEl.className = 'console-output'
-    this.element.appendChild(this.outputEl)
+    this.contentEl.appendChild(this.outputEl)
 
     // Inline input (appears at bottom of console when input is needed)
     this.inputContainer = document.createElement('div')
@@ -65,10 +83,28 @@ export class ConsolePanel {
     })
     this.inputContainer.appendChild(inputLabel)
     this.inputContainer.appendChild(this.inputEl)
-    this.element.appendChild(this.inputContainer)
+    this.contentEl.appendChild(this.inputContainer)
+
+    this.element.appendChild(this.contentEl)
+  }
+
+  private toggle(): void {
+    this.collapsed = !this.collapsed
+    this.contentEl.style.display = this.collapsed ? 'none' : ''
+    this.toggleEl.textContent = this.collapsed ? '▶' : '▼'
+  }
+
+  /** Expand the panel (called when execution produces output) */
+  expand(): void {
+    if (this.collapsed) {
+      this.collapsed = false
+      this.contentEl.style.display = ''
+      this.toggleEl.textContent = '▼'
+    }
   }
 
   appendOutput(text: string): void {
+    this.expand()
     this.outputEl.textContent += text
     this.outputEl.scrollTop = this.outputEl.scrollHeight
   }
@@ -106,6 +142,7 @@ export class ConsolePanel {
   promptInput(): Promise<string> {
     return new Promise((resolve) => {
       this.onInputResolve = resolve
+      this.expand()
       this.inputContainer.style.display = 'flex'
       this.inputEl.focus()
     })
