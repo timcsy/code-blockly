@@ -54,29 +54,29 @@
 
 ### 測試先行
 
-- [ ] T009 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 基礎概念：program、number_literal、string_literal、var_declare、var_assign、var_ref、print、endl
-- [ ] T010 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 運算概念：arithmetic（+−×÷%、整數截斷）、compare（< > <= >= == !=）、logic（&& || !）、logic_not
-- [ ] T011 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 流程控制：if（含 else_body）、count_loop、while_loop、break、continue
-- [ ] T012 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 函式：func_def、func_call、return、遞迴（factorial）、巢狀呼叫
-- [ ] T013 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 陣列：array_declare、array_access
-- [ ] T014 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 邊界情況：空程式、未宣告變數錯誤、除以零、步數超限、語言特有概念 skip
+- [X] T009 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 基礎概念：program、number_literal、string_literal、var_declare、var_assign、var_ref、print、endl
+- [X] T010 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 運算概念：arithmetic（+−×÷%、整數截斷）、compare（< > <= >= == !=）、logic（&& || !）、logic_not
+- [X] T011 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 流程控制：if（含 else_body）、count_loop、while_loop、break、continue
+- [X] T012 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 函式：func_def、func_call、return、遞迴（factorial）、巢狀呼叫
+- [X] T013 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 陣列：array_declare、array_access
+- [X] T014 [P] [US1] 撰寫直譯器核心測試在 tests/unit/interpreter.test.ts — 邊界情況：空程式、未宣告變數錯誤、除以零、步數超限、語言特有概念 skip
 
 ### 實作 — 直譯器核心
 
-- [ ] T015 [US1] 實作 SemanticInterpreter 類別骨架在 src/interpreter/interpreter.ts（execute、executeNode、reset、getState）
-- [ ] T016 [US1] 實作基礎概念解釋在 src/interpreter/interpreter.ts — program、number_literal、string_literal、var_declare、var_assign、var_ref
-- [ ] T017 [US1] 實作運算概念解釋在 src/interpreter/interpreter.ts — arithmetic、compare、logic、logic_not（含型別轉換和整數截斷）
-- [ ] T018 [US1] 實作流程控制概念解釋在 src/interpreter/interpreter.ts — if（含 else_body）、count_loop、while_loop、break、continue
-- [ ] T019 [US1] 實作函式概念解釋在 src/interpreter/interpreter.ts — func_def、func_call、return（含遞迴支援和 CallFrame 管理）
-- [ ] T020 [US1] 實作 I/O 和陣列概念解釋在 src/interpreter/interpreter.ts — print、endl、array_declare、array_access
-- [ ] T021 [US1] 實作步數限制和語言特有概念 skip 在 src/interpreter/interpreter.ts
+- [X] T015 [US1] 實作 SemanticInterpreter 類別骨架在 src/interpreter/interpreter.ts（execute、executeNode、reset、getState）
+- [X] T016 [US1] 實作基礎概念解釋在 src/interpreter/interpreter.ts — program、number_literal、string_literal、var_declare、var_assign、var_ref
+- [X] T017 [US1] 實作運算概念解釋在 src/interpreter/interpreter.ts — arithmetic、compare、logic、logic_not（含型別轉換和整數截斷）
+- [X] T018 [US1] 實作流程控制概念解釋在 src/interpreter/interpreter.ts — if（含 else_body）、count_loop、while_loop、break、continue
+- [X] T019 [US1] 實作函式概念解釋在 src/interpreter/interpreter.ts — func_def、func_call、return（含遞迴支援和 CallFrame 管理）
+- [X] T020 [US1] 實作 I/O 和陣列概念解釋在 src/interpreter/interpreter.ts — print、endl、array_declare、array_access
+- [X] T021 [US1] 實作步數限制和語言特有概念 skip 在 src/interpreter/interpreter.ts
 
 ### 實作 — UI 整合
 
-- [ ] T022 [US1] 實作 ConsolePanel 類別在 src/ui/console-panel.ts（appendOutput、clear、setStatus、getElement）
-- [ ] T023 [US1] 新增 console 面板和執行狀態的 CSS 樣式在 src/style.css（#console-panel、.console-output、.console-status）
-- [ ] T024 [US1] 修改 index.html — 在 #code-panel 內 #code-editor 下方加入 #console-panel 容器、在 toolbar 加入「執行」和「停止」按鈕
-- [ ] T025 [US1] 修改 src/ui/App.ts — 整合 SemanticInterpreter 和 ConsolePanel：setupInterpreter() 方法、Run/Stop 按鈕事件、從 SyncController.getCurrentModel() 取得 SemanticModel 並執行
+- [X] T022 [US1] 實作 ConsolePanel 類別在 src/ui/console-panel.ts（appendOutput、clear、setStatus、getElement）
+- [X] T023 [US1] 新增 console 面板和執行狀態的 CSS 樣式在 src/style.css（#console-panel、.console-output、.console-status）
+- [X] T024 [US1] 修改 index.html — 在 #code-panel 內 #code-editor 下方加入 #console-panel 容器、在 toolbar 加入「執行」和「停止」按鈕
+- [X] T025 [US1] 修改 src/ui/App.ts — 整合 SemanticInterpreter 和 ConsolePanel：setupInterpreter() 方法、Run/Stop 按鈕事件、從 SyncController.getCurrentModel() 取得 SemanticModel 並執行
 
 **檢查點**: 直譯器核心測試全部通過，瀏覽器中按「執行」可看到 console 輸出
 

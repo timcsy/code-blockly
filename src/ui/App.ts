@@ -11,6 +11,10 @@ import { CppLanguageModule } from '../languages/cpp/module'
 import { LanguageRegistryImpl } from '../core/converter'
 import { CodeToBlocksConverter } from '../core/code-to-blocks'
 import { serializeModel } from '../core/semantic-model'
+import { SemanticInterpreter } from '../interpreter/interpreter'
+import { RuntimeError } from '../interpreter/errors'
+import { ConsolePanel } from './console-panel'
+import { valueToString } from '../interpreter/types'
 import { StyleManagerImpl } from '../languages/style'
 import type { StylePresetId } from '../languages/style'
 import { LocaleLoader } from '../i18n/loader'
@@ -38,6 +42,8 @@ export class App {
   private toolboxLevel: ToolboxLevel = 'beginner'
   private diagnosticsTimer: ReturnType<typeof setTimeout> | null = null
   private lastChangedSide: 'blocks' | 'code' | null = null
+  private interpreter: SemanticInterpreter
+  private consolePanel: ConsolePanel | null = null
 
   constructor() {
     this.storage = new Storage()
@@ -48,6 +54,7 @@ export class App {
     this.localeLoader = new LocaleLoader()
     this.languageRegistry = new LanguageRegistryImpl()
     this.styleManager = new StyleManagerImpl()
+    this.interpreter = new SemanticInterpreter()
   }
 
   async init(): Promise<void> {
@@ -152,6 +159,7 @@ export class App {
     this.setupExportImportUI()
     this.setupStyleSelector()
     this.setupUndoRedo()
+    this.setupInterpreter()
   }
 
   private loadDefaultBlocks(): void {
@@ -496,6 +504,91 @@ export class App {
     if (redoBtn) {
       redoBtn.addEventListener('click', () => this.blocklyEditor?.redo())
     }
+  }
+
+  private setupInterpreter(): void {
+    // Initialize console panel
+    const consoleContainer = document.getElementById('console-panel')
+    if (consoleContainer) {
+      this.consolePanel = new ConsolePanel(consoleContainer)
+    }
+
+    const runBtn = document.getElementById('run-btn')
+    const stopBtn = document.getElementById('stop-btn')
+
+    if (runBtn) {
+      runBtn.addEventListener('click', () => this.runProgram())
+    }
+    if (stopBtn) {
+      stopBtn.addEventListener('click', () => this.stopProgram())
+    }
+  }
+
+  private async runProgram(): Promise<void> {
+    if (!this.consolePanel || !this.syncController) return
+
+    const runBtn = document.getElementById('run-btn') as HTMLButtonElement | null
+    const stopBtn = document.getElementById('stop-btn') as HTMLButtonElement | null
+
+    // Get semantic model
+    let model = this.syncController.getCurrentModel()
+    if (!model) {
+      // Try to build from current code
+      const code = this.codeEditor?.getCode()
+      if (code) {
+        try {
+          model = await this.parser.parseToModel(code, this.adapter)
+          this.syncController.setCurrentModel(model)
+        } catch {
+          this.consolePanel.clear()
+          this.consolePanel.setStatus('error', '程式碼解析失敗')
+          return
+        }
+      }
+    }
+
+    if (!model) {
+      this.consolePanel.clear()
+      this.consolePanel.setStatus('error', '無程式可執行')
+      return
+    }
+
+    // Update UI state
+    this.consolePanel.clear()
+    this.consolePanel.setStatus('running')
+    if (runBtn) runBtn.disabled = true
+    if (stopBtn) stopBtn.disabled = false
+
+    try {
+      this.interpreter.execute(model.program)
+      const output = this.interpreter.getOutput()
+      this.consolePanel.appendOutput(output.join(''))
+      this.consolePanel.setStatus('completed')
+    } catch (e) {
+      if (e instanceof RuntimeError) {
+        // Show any output produced before the error
+        const output = this.interpreter.getOutput()
+        if (output.length > 0) {
+          this.consolePanel.appendOutput(output.join(''))
+        }
+        this.consolePanel.appendOutput('\n' + e.message)
+        this.consolePanel.setStatus('error', e.message)
+      } else {
+        this.consolePanel.setStatus('error', '未預期的錯誤')
+      }
+    } finally {
+      if (runBtn) runBtn.disabled = false
+      if (stopBtn) stopBtn.disabled = true
+    }
+  }
+
+  private stopProgram(): void {
+    this.interpreter.reset()
+    this.consolePanel?.setStatus('idle')
+    const runBtn = document.getElementById('run-btn') as HTMLButtonElement | null
+    const stopBtn = document.getElementById('stop-btn') as HTMLButtonElement | null
+    if (runBtn) runBtn.disabled = false
+    if (stopBtn) stopBtn.disabled = true
   }
 
   private updateSyncHints(): void {

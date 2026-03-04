@@ -177,12 +177,97 @@ html, body {
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 #code-editor {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
+}
+
+/* Console Panel */
+#console-panel {
+  height: 180px;
+  border-top: 2px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.console-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+  flex-shrink: 0;
+}
+
+.console-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #cccccc;
+}
+
+.console-status {
+  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.console-status.status-running {
+  color: #4fc3f7;
+}
+
+.console-status.status-paused {
+  color: #ffb74d;
+}
+
+.console-status.status-completed {
+  color: #81c784;
+}
+
+.console-status.status-error {
+  color: #ef5350;
+}
+
+.console-output {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 10px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* Run/Stop buttons in toolbar */
+.toolbar-actions button.run-btn {
+  background: rgba(39, 174, 96, 0.3);
+  border-color: #27ae60;
+}
+
+.toolbar-actions button.run-btn:hover {
+  background: rgba(39, 174, 96, 0.5);
+}
+
+.toolbar-actions button.stop-btn {
+  background: rgba(231, 76, 60, 0.3);
+  border-color: #e74c3c;
+}
+
+.toolbar-actions button.stop-btn:hover {
+  background: rgba(231, 76, 60, 0.5);
 }
 
 #code-editor .cm-editor {

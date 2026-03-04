@@ -21,6 +21,9 @@
           <button id="toolbox-toggle-btn" title="切換工具箱模式" data-level="beginner">初級模式</button>
           <select id="style-selector" title="編碼風格"></select>
           <span class="toolbar-separator"></span>
+          <button id="run-btn" class="run-btn" title="執行程式">▶ 執行</button>
+          <button id="stop-btn" class="stop-btn" title="停止執行" disabled>■ 停止</button>
+          <span class="toolbar-separator"></span>
           <button id="upload-blocks-btn" title="上傳自訂積木定義">上傳積木</button>
           <input type="file" id="blocks-file-input" accept=".json" hidden />
           <button id="export-btn" title="匯出工作內容">匯出</button>
@@ -36,6 +39,7 @@
         <div id="divider"></div>
         <div id="code-panel">
           <div id="code-editor"></div>
+          <div id="console-panel"></div>
         </div>
       </main>
     </div>
