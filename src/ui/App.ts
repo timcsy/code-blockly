@@ -14,6 +14,8 @@ import { serializeModel } from '../core/semantic-model'
 import { SemanticInterpreter } from '../interpreter/interpreter'
 import { RuntimeError } from '../interpreter/errors'
 import { ConsolePanel } from './console-panel'
+import { StepController } from './step-controller'
+import type { StepInfo } from '../interpreter/types'
 import { StyleManagerImpl } from '../languages/style'
 import type { StylePresetId } from '../languages/style'
 import { LocaleLoader } from '../i18n/loader'
@@ -44,6 +46,9 @@ export class App {
   private interpreter: SemanticInterpreter
   private consolePanel: ConsolePanel | null = null
   private stdinTextarea: HTMLTextAreaElement | null = null
+  private stepController: StepController
+  private stepRecords: StepInfo[] = []
+  private currentStepIndex = 0
 
   constructor() {
     this.storage = new Storage()
@@ -55,6 +60,7 @@ export class App {
     this.languageRegistry = new LanguageRegistryImpl()
     this.styleManager = new StyleManagerImpl()
     this.interpreter = new SemanticInterpreter()
+    this.stepController = new StepController()
   }
 
   async init(): Promise<void> {
@@ -516,25 +522,43 @@ export class App {
 
     const runBtn = document.getElementById('run-btn')
     const stopBtn = document.getElementById('stop-btn')
+    const stepBtn = document.getElementById('step-btn')
+    const pauseBtn = document.getElementById('pause-btn') as HTMLButtonElement | null
+    const speedSelector = document.getElementById('speed-selector') as HTMLSelectElement | null
 
-    if (runBtn) {
-      runBtn.addEventListener('click', () => this.runProgram())
+    if (runBtn) runBtn.addEventListener('click', () => this.runProgram())
+    if (stopBtn) stopBtn.addEventListener('click', () => this.stopProgram())
+    if (stepBtn) stepBtn.addEventListener('click', () => this.stepProgram())
+    if (pauseBtn) {
+      pauseBtn.addEventListener('click', () => {
+        if (this.stepController.getStatus() === 'running') {
+          this.stepController.pause()
+          pauseBtn.textContent = '▶ 繼續'
+          this.consolePanel?.setStatus('paused')
+        } else if (this.stepController.getStatus() === 'paused') {
+          this.stepController.resume()
+          pauseBtn.textContent = '⏸ 暫停'
+          this.consolePanel?.setStatus('running')
+        }
+      })
     }
-    if (stopBtn) {
-      stopBtn.addEventListener('click', () => this.stopProgram())
+    if (speedSelector) {
+      speedSelector.addEventListener('change', () => {
+        this.stepController.setSpeed(speedSelector.value as 'slow' | 'medium' | 'fast')
+      })
     }
+
+    // Configure step controller callbacks
+    this.stepController.onStep(() => this.onStepExecuted())
+    this.stepController.onStop(() => this.onStepStopped())
   }
 
   private async runProgram(): Promise<void> {
     if (!this.consolePanel || !this.syncController) return
 
-    const runBtn = document.getElementById('run-btn') as HTMLButtonElement | null
-    const stopBtn = document.getElementById('stop-btn') as HTMLButtonElement | null
-
     // Get semantic model
     let model = this.syncController.getCurrentModel()
     if (!model) {
-      // Try to build from current code
       const code = this.codeEditor?.getCode()
       if (code) {
         try {
@@ -557,8 +581,7 @@ export class App {
     // Update UI state
     this.consolePanel.clear()
     this.consolePanel.setStatus('running')
-    if (runBtn) runBtn.disabled = true
-    if (stopBtn) stopBtn.disabled = false
+    this.updateExecButtons(true)
 
     // Collect pre-filled stdin from textarea
     const stdinLines: string[] = []
@@ -573,29 +596,122 @@ export class App {
       this.consolePanel.setStatus('completed')
     } catch (e) {
       if (e instanceof RuntimeError) {
-        // Show any output produced before the error
         const output = this.interpreter.getOutput()
-        if (output.length > 0) {
-          this.consolePanel.appendOutput(output.join(''))
-        }
+        if (output.length > 0) this.consolePanel.appendOutput(output.join(''))
         this.consolePanel.appendOutput('\n' + e.message)
         this.consolePanel.setStatus('error', e.message)
       } else {
         this.consolePanel.setStatus('error', '未預期的錯誤')
       }
     } finally {
-      if (runBtn) runBtn.disabled = false
-      if (stopBtn) stopBtn.disabled = true
+      this.updateExecButtons(false)
     }
   }
 
-  private stopProgram(): void {
-    this.interpreter.reset()
+  private async stepProgram(): Promise<void> {
+    if (!this.consolePanel || !this.syncController) return
+
+    // If we don't have step records yet, prepare them
+    if (this.stepRecords.length === 0 || this.stepController.getStatus() === 'idle') {
+      let model = this.syncController.getCurrentModel()
+      if (!model) {
+        const code = this.codeEditor?.getCode()
+        if (code) {
+          try {
+            model = await this.parser.parseToModel(code, this.adapter)
+            this.syncController.setCurrentModel(model)
+          } catch {
+            this.consolePanel.setStatus('error', '程式碼解析失敗')
+            return
+          }
+        }
+      }
+      if (!model) return
+
+      const stdinLines: string[] = []
+      if (this.stdinTextarea && this.stdinTextarea.value.trim()) {
+        stdinLines.push(...this.stdinTextarea.value.split('\n'))
+      }
+
+      try {
+        this.stepRecords = this.interpreter.executeWithSteps(model.program, stdinLines)
+        this.currentStepIndex = 0
+        const output = this.interpreter.getOutput()
+        this.consolePanel.clear()
+        this.consolePanel.appendOutput(output.join(''))
+      } catch (e) {
+        if (e instanceof RuntimeError) {
+          const output = this.interpreter.getOutput()
+          this.consolePanel.clear()
+          if (output.length > 0) this.consolePanel.appendOutput(output.join(''))
+          this.consolePanel.appendOutput('\n' + e.message)
+          this.consolePanel.setStatus('error', e.message)
+          return
+        }
+        throw e
+      }
+
+      // Configure step function for StepController
+      this.stepController.setStepFn(() => {
+        this.currentStepIndex++
+        return this.currentStepIndex < this.stepRecords.length
+      })
+
+      this.updateExecButtons(true)
+    }
+
+    this.stepController.step()
+  }
+
+  private onStepExecuted(): void {
+    if (this.currentStepIndex >= this.stepRecords.length) return
+    const step = this.stepRecords[this.currentStepIndex]
+
+    // Highlight block
+    if (step.blockId && this.blocklyEditor) {
+      this.blocklyEditor.highlightBlock(step.blockId)
+    }
+    // Highlight code lines
+    if (step.sourceRange && this.codeEditor) {
+      this.codeEditor.addHighlight(step.sourceRange.start, step.sourceRange.end)
+    }
+
+    this.consolePanel?.setStatus(
+      this.stepController.getStatus() === 'completed' ? 'completed' : 'running'
+    )
+
+    if (this.stepController.getStatus() === 'completed') {
+      this.updateExecButtons(false)
+    }
+  }
+
+  private onStepStopped(): void {
+    // Clear highlights
+    this.blocklyEditor?.highlightBlock(null)
+    this.codeEditor?.clearHighlight()
+    this.stepRecords = []
+    this.currentStepIndex = 0
     this.consolePanel?.setStatus('idle')
+    this.updateExecButtons(false)
+  }
+
+  private updateExecButtons(running: boolean): void {
     const runBtn = document.getElementById('run-btn') as HTMLButtonElement | null
     const stopBtn = document.getElementById('stop-btn') as HTMLButtonElement | null
-    if (runBtn) runBtn.disabled = false
-    if (stopBtn) stopBtn.disabled = true
+    const stepBtn = document.getElementById('step-btn') as HTMLButtonElement | null
+    const pauseBtn = document.getElementById('pause-btn') as HTMLButtonElement | null
+    if (runBtn) runBtn.disabled = running
+    if (stopBtn) stopBtn.disabled = !running
+    if (stepBtn) stepBtn.disabled = false
+    if (pauseBtn) pauseBtn.disabled = !running
+    if (pauseBtn) pauseBtn.textContent = '⏸ 暫停'
+  }
+
+  private stopProgram(): void {
+    this.stepController.stop()
+    this.interpreter.reset()
+    this.consolePanel?.setStatus('idle')
+    this.updateExecButtons(false)
   }
 
   private updateSyncHints(): void {

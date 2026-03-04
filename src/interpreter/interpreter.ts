@@ -1,5 +1,5 @@
 import type { SemanticNode } from '../core/semantic-model'
-import type { RuntimeValue, FunctionDef, ExecutionStatus } from './types'
+import type { RuntimeValue, FunctionDef, ExecutionStatus, StepInfo } from './types'
 import { defaultValue, valueToString, parseInputValue } from './types'
 import { RuntimeError, RUNTIME_ERRORS } from './errors'
 import { Scope } from './scope'
@@ -23,6 +23,8 @@ export class SemanticInterpreter {
   private status: ExecutionStatus = 'idle'
   private steps = 0
   private maxSteps: number
+  private stepRecords: StepInfo[] = []
+  private recordSteps = false
 
   constructor(options: InterpreterOptions = {}) {
     this.maxSteps = options.maxSteps ?? 100000
@@ -59,12 +61,27 @@ export class SemanticInterpreter {
     return this.scope
   }
 
+  /** Execute with step recording for replay-based stepping */
+  executeWithSteps(program: SemanticNode, stdin: string[] = []): StepInfo[] {
+    this.stepRecords = []
+    this.recordSteps = true
+    this.execute(program, stdin)
+    this.recordSteps = false
+    return [...this.stepRecords]
+  }
+
+  getStepRecords(): StepInfo[] {
+    return [...this.stepRecords]
+  }
+
   reset(): void {
     this.scope = new Scope()
     this.io.reset()
     this.functions = new Map()
     this.steps = 0
     this.status = 'idle'
+    this.stepRecords = []
+    this.recordSteps = false
   }
 
   // --- 核心分派 ---
@@ -122,8 +139,26 @@ export class SemanticInterpreter {
 
   private executeBody(nodes: SemanticNode[]): void {
     for (const child of nodes) {
+      this.recordStepInfo(child)
       this.executeNode(child)
     }
+  }
+
+  private recordStepInfo(node: SemanticNode): void {
+    if (!this.recordSteps) return
+    // Only record for statement-level concepts
+    const concept = node.concept
+    if (concept.includes(':')) return
+    const statementConcepts = new Set([
+      'var_declare', 'var_assign', 'print', 'if', 'count_loop',
+      'while_loop', 'func_def', 'func_call', 'return', 'break', 'continue',
+    ])
+    if (!statementConcepts.has(concept)) return
+    this.stepRecords.push({
+      node,
+      blockId: node.metadata?.blockId ?? null,
+      sourceRange: node.metadata?.sourceRange ?? null,
+    })
   }
 
   private execNumberLiteral(node: SemanticNode): RuntimeValue {

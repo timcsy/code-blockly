@@ -111,15 +111,15 @@
 
 ### 測試先行
 
-- [ ] T031 [P] [US3] 撰寫 StepController 單元測試在 tests/unit/step-controller.test.ts（step 模式、速度切換、暫停/繼續、停止重置）
+- [X] T031 [P] [US3] 撰寫 StepController 單元測試在 tests/unit/step-controller.test.ts（step 模式、速度切換、暫停/繼續、停止重置）
 
 ### 實作
 
-- [ ] T032 [US3] 實作 StepController 類別在 src/ui/step-controller.ts（step、run、pause、resume、stop、setSpeed、onStep callback）
-- [ ] T033 [US3] 修改 SemanticInterpreter 在 src/interpreter/interpreter.ts — 新增 stepMode：每個語句回傳目前 SemanticNode（含 metadata.blockId 和 sourceRange）供高亮使用
-- [ ] T034 [US3] 修改 index.html — 在 toolbar 加入「逐步」「暫停/繼續」按鈕和速度選擇器（慢/中/快）
-- [ ] T035 [US3] 修改 src/ui/App.ts — 整合 StepController：Step/Pause/Continue 按鈕事件、每步呼叫 highlightBlock() 和 addHighlight()、速度切換、積木修改時自動停止
-- [ ] T036 [US3] 新增逐步執行相關 CSS 樣式在 src/style.css（速度選擇器、暫停按鈕狀態切換）
+- [X] T032 [US3] 實作 StepController 類別在 src/ui/step-controller.ts（step、run、pause、resume、stop、setSpeed、onStep callback）
+- [X] T033 [US3] 修改 SemanticInterpreter 在 src/interpreter/interpreter.ts — 新增 stepMode：每個語句回傳目前 SemanticNode（含 metadata.blockId 和 sourceRange）供高亮使用
+- [X] T034 [US3] 修改 index.html — 在 toolbar 加入「逐步」「暫停/繼續」按鈕和速度選擇器（慢/中/快）
+- [X] T035 [US3] 修改 src/ui/App.ts — 整合 StepController：Step/Pause/Continue 按鈕事件、每步呼叫 highlightBlock() 和 addHighlight()、速度切換、積木修改時自動停止
+- [X] T036 [US3] 新增逐步執行相關 CSS 樣式在 src/style.css（速度選擇器、暫停按鈕狀態切換）
 
 **檢查點**: StepController 測試通過，瀏覽器中逐步執行可看到積木和程式碼行高亮
 

@@ -351,6 +351,39 @@ html, body {
   background: rgba(231, 76, 60, 0.5);
 }
 
+.toolbar-actions button.step-btn {
+  background: rgba(52, 152, 219, 0.3);
+  border-color: #3498db;
+}
+
+.toolbar-actions button.step-btn:hover {
+  background: rgba(52, 152, 219, 0.5);
+}
+
+.toolbar-actions button.pause-btn {
+  background: rgba(243, 156, 18, 0.3);
+  border-color: #f39c12;
+}
+
+.toolbar-actions button.pause-btn:hover {
+  background: rgba(243, 156, 18, 0.5);
+}
+
+#speed-selector {
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#speed-selector option {
+  background: #2c3e50;
+  color: white;
+}
+
 #code-editor .cm-editor {
   height: 100%;
 }
