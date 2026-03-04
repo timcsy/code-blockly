@@ -3,6 +3,7 @@ import { CppParser } from '../../src/languages/cpp/parser'
 import { CppLanguageAdapter } from '../../src/languages/cpp/adapter'
 import { BlockRegistry } from '../../src/core/block-registry'
 import { CodeToBlocksConverter } from '../../src/core/code-to-blocks'
+import { createNode, nodeEquals } from '../../src/core/semantic-model'
 import type { Node } from 'web-tree-sitter'
 
 /**
@@ -586,6 +587,247 @@ int main() {
     expect(types).toContain('u_if_else')
     expect(types).toContain('u_print')
     expect(types).toContain('u_return')
+  })
+})
+
+// ==========================================================
+// T009-T011: SemanticNode adapter tests
+// ==========================================================
+
+describe('T009: toSemanticNode — CST → SemanticNode', () => {
+  it('should convert translation_unit to program node', async () => {
+    const tree = await parser.parse('int x = 5;')
+    const sem = adapter.toSemanticNode(tree.rootNode)
+    expect(sem).not.toBeNull()
+    expect(sem!.concept).toBe('program')
+    expect(Array.isArray(sem!.children.body)).toBe(true)
+  })
+
+  it('should convert var_declare with initializer', async () => {
+    const tree = await parser.parse('int x = 42;')
+    const sem = adapter.toSemanticNode(tree.rootNode)
+    const body = sem!.children.body as any[]
+    const decl = body[0]
+    expect(decl.concept).toBe('var_declare')
+    expect(decl.properties.name).toBe('x')
+    expect(decl.properties.type).toBe('int')
+    expect(decl.children.initializer).toBeDefined()
+    expect(decl.children.initializer.concept).toBe('number_literal')
+    expect(decl.children.initializer.properties.value).toBe('42')
+  })
+
+  it('should convert binary expressions to arithmetic/compare/logic', async () => {
+    const node = await parseAndGetNode('int x = 3 + 5;', 'binary_expression')
+    const sem = adapter.toSemanticNode(node)
+    expect(sem).not.toBeNull()
+    expect(sem!.concept).toBe('arithmetic')
+    expect(sem!.properties.operator).toBe('+')
+    expect(sem!.children.left).toBeDefined()
+    expect(sem!.children.right).toBeDefined()
+  })
+
+  it('should convert if_statement to if concept', async () => {
+    const node = await parseAndGetNode('void f() { if (x > 0) { int a = 1; } }', 'if_statement')
+    const sem = adapter.toSemanticNode(node)
+    expect(sem).not.toBeNull()
+    expect(sem!.concept).toBe('if')
+    expect(sem!.children.condition).toBeDefined()
+    expect(Array.isArray(sem!.children.then_body)).toBe(true)
+  })
+
+  it('should convert if-else to if concept with else_body', async () => {
+    const node = await parseAndGetNode('void f() { if (x) { int a = 1; } else { int b = 2; } }', 'if_statement')
+    const sem = adapter.toSemanticNode(node)
+    expect(sem!.concept).toBe('if')
+    expect(sem!.children.else_body).toBeDefined()
+    expect(Array.isArray(sem!.children.else_body)).toBe(true)
+  })
+
+  it('should convert counting for loop to count_loop', async () => {
+    const node = await parseAndGetNode('void f() { for (int i = 0; i < 10; i++) { break; } }', 'for_statement')
+    const sem = adapter.toSemanticNode(node)
+    expect(sem!.concept).toBe('count_loop')
+    expect(sem!.properties.var_name).toBe('i')
+    expect(sem!.children.from).toBeDefined()
+    expect(sem!.children.to).toBeDefined()
+    expect(Array.isArray(sem!.children.body)).toBe(true)
+  })
+
+  it('should convert function definition', async () => {
+    const node = await parseAndGetNode('int add(int a, int b) { return a + b; }', 'function_definition')
+    const sem = adapter.toSemanticNode(node)
+    expect(sem!.concept).toBe('func_def')
+    expect(sem!.properties.name).toBe('add')
+    expect(sem!.properties.return_type).toBe('int')
+    const params = JSON.parse(sem!.properties.params as string)
+    expect(params).toEqual([{ type: 'int', name: 'a' }, { type: 'int', name: 'b' }])
+    expect(Array.isArray(sem!.children.body)).toBe(true)
+  })
+
+  it('should convert cout to print with values', async () => {
+    const node = await parseAndGetNode('void f() { cout << 42 << endl; }', 'binary_expression')
+    // Find the outermost << expression (the full cout statement)
+    const tree = await parser.parse('void f() { cout << 42 << endl; }')
+    const funcBody = tree.rootNode.namedChildren[0] // function_definition
+    const compoundStmt = funcBody.childForFieldName('body')!
+    const exprStmt = compoundStmt.namedChildren[0] // expression_statement
+    const coutExpr = exprStmt.namedChildren[0] // the binary_expression
+    const sem = adapter.toSemanticNode(coutExpr)
+    expect(sem!.concept).toBe('print')
+    const values = sem!.children.values as any[]
+    expect(values.length).toBe(2)
+    expect(values[0].concept).toBe('number_literal')
+    expect(values[1].concept).toBe('endl')
+  })
+
+  it('should convert cin to input with variable', async () => {
+    const tree = await parser.parse('void f() { cin >> x >> y; }')
+    const funcBody = tree.rootNode.namedChildren[0]
+    const compoundStmt = funcBody.childForFieldName('body')!
+    const exprStmt = compoundStmt.namedChildren[0]
+    const cinExpr = exprStmt.namedChildren[0]
+    const sem = adapter.toSemanticNode(cinExpr)
+    expect(sem!.concept).toBe('input')
+    expect(sem!.properties.variable).toBe('x,y')
+  })
+
+  it('should convert preproc_include to cpp:include', async () => {
+    const node = await parseAndGetNode('#include <iostream>', 'preproc_include')
+    const sem = adapter.toSemanticNode(node)
+    expect(sem!.concept).toBe('cpp:include')
+    expect(sem!.properties.header).toBe('iostream')
+  })
+})
+
+describe('T010: toBlockJSON — SemanticNode → BlockJSON', () => {
+  it('should convert var_declare to u_var_declare block', () => {
+
+    const init = createNode('number_literal', { value: '42' })
+    const node = createNode('var_declare', { name: 'x', type: 'int' }, { initializer: init })
+    const block = adapter.toBlockJSON(node) as any
+    expect(block.type).toBe('u_var_declare')
+    expect(block.fields.NAME).toBe('x')
+    expect(block.fields.TYPE).toBe('int')
+    expect(block.inputs.INIT.block.type).toBe('u_number')
+    expect(block.inputs.INIT.block.fields.NUM).toBe('42')
+  })
+
+  it('should convert if with else_body to u_if_else', () => {
+
+    const cond = createNode('compare', { operator: '>' }, {
+      left: createNode('var_ref', { name: 'x' }),
+      right: createNode('number_literal', { value: '0' }),
+    })
+    const node = createNode('if', {}, {
+      condition: cond,
+      then_body: [createNode('break')],
+      else_body: [createNode('continue')],
+    })
+    const block = adapter.toBlockJSON(node) as any
+    expect(block.type).toBe('u_if_else')
+    expect(block.inputs.COND).toBeDefined()
+    expect(block.inputs.THEN).toBeDefined()
+    expect(block.inputs.ELSE).toBeDefined()
+  })
+
+  it('should convert func_def with params', () => {
+
+    const ret = createNode('return', {}, { value: createNode('number_literal', { value: '0' }) })
+    const node = createNode('func_def', {
+      name: 'main',
+      return_type: 'int',
+      params: '[]',
+    }, { body: [ret] })
+    const block = adapter.toBlockJSON(node) as any
+    expect(block.type).toBe('u_func_def')
+    expect(block.fields.NAME).toBe('main')
+    expect(block.fields.RETURN_TYPE).toBe('int')
+    expect(block.inputs.BODY).toBeDefined()
+  })
+
+  it('should convert print with values to u_print with numbered EXPR inputs', () => {
+
+    const node = createNode('print', {}, {
+      values: [
+        createNode('number_literal', { value: '42' }),
+        createNode('endl'),
+      ],
+    })
+    const block = adapter.toBlockJSON(node) as any
+    expect(block.type).toBe('u_print')
+    expect(block.inputs.EXPR0.block.type).toBe('u_number')
+    expect(block.inputs.EXPR1.block.type).toBe('u_endl')
+  })
+})
+
+describe('T011: fromBlockJSON — BlockJSON → SemanticNode', () => {
+  it('should convert u_var_declare to var_declare', () => {
+    const block = {
+      type: 'u_var_declare',
+      id: 'test1',
+      fields: { NAME: 'x', TYPE: 'int', INIT_MODE: 'with_init' },
+      inputs: { INIT: { block: { type: 'u_number', id: 'test2', fields: { NUM: '42' } } } },
+    }
+    const sem = adapter.fromBlockJSON(block)
+    expect(sem).not.toBeNull()
+    expect(sem!.concept).toBe('var_declare')
+    expect(sem!.properties.name).toBe('x')
+    expect(sem!.properties.type).toBe('int')
+    expect(sem!.children.initializer).toBeDefined()
+    const init = sem!.children.initializer as any
+    expect(init.concept).toBe('number_literal')
+    expect(init.properties.value).toBe('42')
+  })
+
+  it('should convert u_if_else to if concept with else_body', () => {
+    const block = {
+      type: 'u_if_else',
+      id: 'test3',
+      inputs: {
+        COND: { block: { type: 'u_compare', id: 'c1', fields: { OP: '>' },
+          inputs: {
+            A: { block: { type: 'u_var_ref', id: 'v1', fields: { NAME: 'x' } } },
+            B: { block: { type: 'u_number', id: 'n1', fields: { NUM: '0' } } },
+          } } },
+        THEN: { block: { type: 'u_break', id: 'b1' } },
+        ELSE: { block: { type: 'u_continue', id: 'c2' } },
+      },
+    }
+    const sem = adapter.fromBlockJSON(block)
+    expect(sem!.concept).toBe('if')
+    expect(sem!.children.condition).toBeDefined()
+    expect(Array.isArray(sem!.children.then_body)).toBe(true)
+    expect(Array.isArray(sem!.children.else_body)).toBe(true)
+  })
+
+  it('should roundtrip: SemanticNode → BlockJSON → SemanticNode', () => {
+
+    const original = createNode('var_declare', { name: 'y', type: 'double' }, {
+      initializer: createNode('number_literal', { value: '3.14' }),
+    })
+    const blockJson = adapter.toBlockJSON(original)
+    const restored = adapter.fromBlockJSON(blockJson)
+    expect(restored).not.toBeNull()
+    expect(nodeEquals(original, restored!)).toBe(true)
+  })
+
+  it('should roundtrip func_call with args', () => {
+
+    const original = createNode('func_call', { name: 'add' }, {
+      args: [
+        createNode('number_literal', { value: '1' }),
+        createNode('var_ref', { name: 'x' }),
+      ],
+    })
+    const blockJson = adapter.toBlockJSON(original)
+    const restored = adapter.fromBlockJSON(blockJson)
+    expect(nodeEquals(original, restored!)).toBe(true)
+  })
+
+  it('should return null for unknown block types', () => {
+    const block = { type: 'c_raw_expression', id: 'test', fields: { CODE: 'foo' } }
+    const sem = adapter.fromBlockJSON(block)
+    expect(sem).toBeNull()
   })
 })
 

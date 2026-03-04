@@ -6,15 +6,44 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_pointer_declare",
-      "message0": "建立 %1 指標變數 %2",
+      "message0": "%{BKY_C_POINTER_DECLARE_MSG0}",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"],["void（無回傳）","void"]] },
-        { "type": "field_input", "name": "NAME", "text": "ptr" }
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [
+              "%{BKY_C_POINTER_DECLARE_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_C_POINTER_DECLARE_TYPE_FLOAT}",
+              "float"
+            ],
+            [
+              "%{BKY_C_POINTER_DECLARE_TYPE_DOUBLE}",
+              "double"
+            ],
+            [
+              "%{BKY_C_POINTER_DECLARE_TYPE_CHAR}",
+              "char"
+            ],
+            [
+              "%{BKY_C_POINTER_DECLARE_TYPE_VOID}",
+              "void"
+            ]
+          ]
+        },
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "ptr"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 280,
-      "tooltip": "建立一個指標變數。指標是一個記住其他變數位址的變數，就像寫著地址的紙條"
+      "tooltip": "%{BKY_C_POINTER_DECLARE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "${TYPE}* ${NAME};",
@@ -23,7 +52,12 @@
     },
     "astPattern": {
       "nodeType": "declaration",
-      "constraints": [{ "field": "declarator", "nodeType": "pointer_declarator" }]
+      "constraints": [
+        {
+          "field": "declarator",
+          "nodeType": "pointer_declarator"
+        }
+      ]
     }
   },
   {
@@ -33,14 +67,18 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_pointer_deref",
-      "message0": "取出 %1 指向的值",
+      "message0": "%{BKY_C_POINTER_DEREF_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "PTR", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "PTR",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 280,
-      "tooltip": "根據指標記住的位址，取出那個位置存放的值"
+      "tooltip": "%{BKY_C_POINTER_DEREF_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "*${PTR}",
@@ -49,7 +87,12 @@
     },
     "astPattern": {
       "nodeType": "pointer_expression",
-      "constraints": [{ "field": "operator", "text": "*" }]
+      "constraints": [
+        {
+          "field": "operator",
+          "text": "*"
+        }
+      ]
     }
   },
   {
@@ -59,14 +102,18 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_address_of",
-      "message0": "取得 %1 的位址",
+      "message0": "%{BKY_C_ADDRESS_OF_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "VAR", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "VAR",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 280,
-      "tooltip": "取得變數在記憶體中的位址，可以存到指標裡"
+      "tooltip": "%{BKY_C_ADDRESS_OF_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "&${VAR}",
@@ -75,7 +122,12 @@
     },
     "astPattern": {
       "nodeType": "pointer_expression",
-      "constraints": [{ "field": "operator", "text": "&" }]
+      "constraints": [
+        {
+          "field": "operator",
+          "text": "&"
+        }
+      ]
     }
   },
   {
@@ -85,20 +137,68 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_malloc",
-      "message0": "配置 %2 個 %3 的記憶體空間（%1 指標）",
+      "message0": "%{BKY_C_MALLOC_MSG0}",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"]] },
-        { "type": "input_value", "name": "SIZE", "check": "Expression" },
-        { "type": "field_dropdown", "name": "SIZEOF_TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"]] }
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [
+              "%{BKY_C_MALLOC_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_C_MALLOC_TYPE_FLOAT}",
+              "float"
+            ],
+            [
+              "%{BKY_C_MALLOC_TYPE_DOUBLE}",
+              "double"
+            ],
+            [
+              "%{BKY_C_MALLOC_TYPE_CHAR}",
+              "char"
+            ]
+          ]
+        },
+        {
+          "type": "input_value",
+          "name": "SIZE",
+          "check": "Expression"
+        },
+        {
+          "type": "field_dropdown",
+          "name": "SIZEOF_TYPE",
+          "options": [
+            [
+              "%{BKY_C_MALLOC_SIZEOF_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_C_MALLOC_SIZEOF_TYPE_FLOAT}",
+              "float"
+            ],
+            [
+              "%{BKY_C_MALLOC_SIZEOF_TYPE_DOUBLE}",
+              "double"
+            ],
+            [
+              "%{BKY_C_MALLOC_SIZEOF_TYPE_CHAR}",
+              "char"
+            ]
+          ]
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 280,
-      "tooltip": "向系統要一塊記憶體空間來使用，用完記得用 free 歸還"
+      "tooltip": "%{BKY_C_MALLOC_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "(${TYPE}*)malloc(${SIZE} * sizeof(${SIZEOF_TYPE}))",
-      "imports": ["stdlib.h"],
+      "imports": [
+        "stdlib.h"
+      ],
       "order": 20
     },
     "astPattern": {
@@ -113,23 +213,34 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_free",
-      "message0": "釋放記憶體 %1",
+      "message0": "%{BKY_C_FREE_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "PTR", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "PTR",
+          "check": "Expression"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 280,
-      "tooltip": "把之前用 malloc 要來的記憶體歸還給系統"
+      "tooltip": "%{BKY_C_FREE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "free(${PTR});",
-      "imports": ["stdlib.h"],
+      "imports": [
+        "stdlib.h"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "call_expression",
-      "constraints": [{ "field": "function", "text": "free" }]
+      "constraints": [
+        {
+          "field": "function",
+          "text": "free"
+        }
+      ]
     }
   },
   {
@@ -139,16 +250,24 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_struct_declare",
-      "message0": "定義結構 %1",
+      "message0": "%{BKY_C_STRUCT_DECLARE_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "NAME", "text": "MyStruct" }
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "MyStruct"
+        }
       ],
       "message1": "%1",
       "args1": [
-        { "type": "input_statement", "name": "MEMBERS", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "MEMBERS",
+          "check": "Statement"
+        }
       ],
       "colour": 20,
-      "tooltip": "定義一個結構，把多個相關的變數組合在一起，像是一張有多個欄位的表格"
+      "tooltip": "%{BKY_C_STRUCT_DECLARE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "struct ${NAME} {\n${MEMBERS}\n};",
@@ -167,15 +286,23 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_struct_member_access",
-      "message0": "結構 %1 的欄位 %2",
+      "message0": "%{BKY_C_STRUCT_MEMBER_ACCESS_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "OBJ", "text": "obj" },
-        { "type": "field_input", "name": "MEMBER", "text": "field" }
+        {
+          "type": "field_input",
+          "name": "OBJ",
+          "text": "obj"
+        },
+        {
+          "type": "field_input",
+          "name": "MEMBER",
+          "text": "field"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 20,
-      "tooltip": "取得或設定結構裡某個欄位的值"
+      "tooltip": "%{BKY_C_STRUCT_MEMBER_ACCESS_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "${OBJ}.${MEMBER}",
@@ -184,7 +311,12 @@
     },
     "astPattern": {
       "nodeType": "field_expression",
-      "constraints": [{ "field": "operator", "text": "." }]
+      "constraints": [
+        {
+          "field": "operator",
+          "text": "."
+        }
+      ]
     }
   },
   {
@@ -194,15 +326,23 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_struct_pointer_access",
-      "message0": "指標 %1 的欄位 %2",
+      "message0": "%{BKY_C_STRUCT_POINTER_ACCESS_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "PTR", "text": "ptr" },
-        { "type": "field_input", "name": "MEMBER", "text": "field" }
+        {
+          "type": "field_input",
+          "name": "PTR",
+          "text": "ptr"
+        },
+        {
+          "type": "field_input",
+          "name": "MEMBER",
+          "text": "field"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 20,
-      "tooltip": "透過指標來取得或設定結構裡某個欄位的值"
+      "tooltip": "%{BKY_C_STRUCT_POINTER_ACCESS_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "${PTR}->${MEMBER}",
@@ -211,7 +351,12 @@
     },
     "astPattern": {
       "nodeType": "field_expression",
-      "constraints": [{ "field": "operator", "text": "->" }]
+      "constraints": [
+        {
+          "field": "operator",
+          "text": "->"
+        }
+      ]
     }
   },
   {
@@ -221,23 +366,34 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_strlen",
-      "message0": "文字長度（ %1 ）",
+      "message0": "%{BKY_C_STRLEN_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "STR", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "STR",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 160,
-      "tooltip": "計算文字有幾個字元（不含結尾符號）"
+      "tooltip": "%{BKY_C_STRLEN_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "strlen(${STR})",
-      "imports": ["string.h"],
+      "imports": [
+        "string.h"
+      ],
       "order": 20
     },
     "astPattern": {
       "nodeType": "call_expression",
-      "constraints": [{ "field": "function", "text": "strlen" }]
+      "constraints": [
+        {
+          "field": "function",
+          "text": "strlen"
+        }
+      ]
     }
   },
   {
@@ -247,24 +403,39 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_strcmp",
-      "message0": "比較文字（ %1 , %2 ）",
+      "message0": "%{BKY_C_STRCMP_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "S1", "check": "Expression" },
-        { "type": "input_value", "name": "S2", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "S1",
+          "check": "Expression"
+        },
+        {
+          "type": "input_value",
+          "name": "S2",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 160,
-      "tooltip": "比較兩段文字是否相同。回傳 0 表示一樣，其他數字表示不同"
+      "tooltip": "%{BKY_C_STRCMP_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "strcmp(${S1}, ${S2})",
-      "imports": ["string.h"],
+      "imports": [
+        "string.h"
+      ],
       "order": 20
     },
     "astPattern": {
       "nodeType": "call_expression",
-      "constraints": [{ "field": "function", "text": "strcmp" }]
+      "constraints": [
+        {
+          "field": "function",
+          "text": "strcmp"
+        }
+      ]
     }
   },
   {
@@ -274,24 +445,39 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_strcpy",
-      "message0": "複製文字 %2 到 %1",
+      "message0": "%{BKY_C_STRCPY_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "DEST", "check": "Expression" },
-        { "type": "input_value", "name": "SRC", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "DEST",
+          "check": "Expression"
+        },
+        {
+          "type": "input_value",
+          "name": "SRC",
+          "check": "Expression"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 160,
-      "tooltip": "把一段文字複製到另一個位置"
+      "tooltip": "%{BKY_C_STRCPY_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "strcpy(${DEST}, ${SRC});",
-      "imports": ["string.h"],
+      "imports": [
+        "string.h"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "call_expression",
-      "constraints": [{ "field": "function", "text": "strcpy" }]
+      "constraints": [
+        {
+          "field": "function",
+          "text": "strcpy"
+        }
+      ]
     }
   },
   {
@@ -301,24 +487,64 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_vector_declare",
-      "message0": "建立 %1 列表變數 %2",
+      "message0": "%{BKY_CPP_VECTOR_DECLARE_MSG0}",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"],["string（文字）","std::string"],["long long（大整數）","long long"]] },
-        { "type": "field_input", "name": "NAME", "text": "vec" }
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [
+              "%{BKY_CPP_VECTOR_DECLARE_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_CPP_VECTOR_DECLARE_TYPE_FLOAT}",
+              "float"
+            ],
+            [
+              "%{BKY_CPP_VECTOR_DECLARE_TYPE_DOUBLE}",
+              "double"
+            ],
+            [
+              "%{BKY_CPP_VECTOR_DECLARE_TYPE_CHAR}",
+              "char"
+            ],
+            [
+              "%{BKY_CPP_VECTOR_DECLARE_TYPE_STRING}",
+              "std::string"
+            ],
+            [
+              "%{BKY_CPP_VECTOR_DECLARE_TYPE_LONG_LONG}",
+              "long long"
+            ]
+          ]
+        },
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "vec"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "建立一個列表（可變長度的陣列），可以隨時加入或移除元素"
+      "tooltip": "%{BKY_CPP_VECTOR_DECLARE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "std::vector<${TYPE}> ${NAME};",
-      "imports": ["vector"],
+      "imports": [
+        "vector"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "declaration",
-      "constraints": [{ "field": "type", "nodeType": "template_type" }]
+      "constraints": [
+        {
+          "field": "type",
+          "nodeType": "template_type"
+        }
+      ]
     }
   },
   {
@@ -328,24 +554,39 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_vector_push_back",
-      "message0": "在列表 %1 尾端加入 %2",
+      "message0": "%{BKY_CPP_VECTOR_PUSH_BACK_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "VECTOR", "text": "vec" },
-        { "type": "input_value", "name": "VALUE", "check": "Expression" }
+        {
+          "type": "field_input",
+          "name": "VECTOR",
+          "text": "vec"
+        },
+        {
+          "type": "input_value",
+          "name": "VALUE",
+          "check": "Expression"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "在列表的最後面加入一個新元素"
+      "tooltip": "%{BKY_CPP_VECTOR_PUSH_BACK_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "${VECTOR}.push_back(${VALUE});",
-      "imports": ["vector"],
+      "imports": [
+        "vector"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "call_expression",
-      "constraints": [{ "field": "function", "nodeType": "field_expression" }]
+      "constraints": [
+        {
+          "field": "function",
+          "nodeType": "field_expression"
+        }
+      ]
     }
   },
   {
@@ -355,23 +596,34 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_vector_size",
-      "message0": "列表 %1 的長度",
+      "message0": "%{BKY_CPP_VECTOR_SIZE_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "VECTOR", "text": "vec" }
+        {
+          "type": "field_input",
+          "name": "VECTOR",
+          "text": "vec"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 200,
-      "tooltip": "取得列表裡有幾個元素"
+      "tooltip": "%{BKY_CPP_VECTOR_SIZE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "${VECTOR}.size()",
-      "imports": ["vector"],
+      "imports": [
+        "vector"
+      ],
       "order": 20
     },
     "astPattern": {
       "nodeType": "call_expression",
-      "constraints": [{ "field": "function", "nodeType": "field_expression" }]
+      "constraints": [
+        {
+          "field": "function",
+          "nodeType": "field_expression"
+        }
+      ]
     }
   },
   {
@@ -381,25 +633,74 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_map_declare",
-      "message0": "建立對照表變數 %3（鍵 %1 值 %2）",
+      "message0": "%{BKY_CPP_MAP_DECLARE_MSG0}",
       "args0": [
-        { "type": "field_dropdown", "name": "KEY_TYPE", "options": [["int（整數）","int"],["string（文字）","std::string"],["char（字元）","char"]] },
-        { "type": "field_dropdown", "name": "VALUE_TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["string（文字）","std::string"]] },
-        { "type": "field_input", "name": "NAME", "text": "mp" }
+        {
+          "type": "field_dropdown",
+          "name": "KEY_TYPE",
+          "options": [
+            [
+              "%{BKY_CPP_MAP_DECLARE_KEY_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_CPP_MAP_DECLARE_KEY_TYPE_STRING}",
+              "std::string"
+            ],
+            [
+              "%{BKY_CPP_MAP_DECLARE_KEY_TYPE_CHAR}",
+              "char"
+            ]
+          ]
+        },
+        {
+          "type": "field_dropdown",
+          "name": "VALUE_TYPE",
+          "options": [
+            [
+              "%{BKY_CPP_MAP_DECLARE_VALUE_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_CPP_MAP_DECLARE_VALUE_TYPE_FLOAT}",
+              "float"
+            ],
+            [
+              "%{BKY_CPP_MAP_DECLARE_VALUE_TYPE_DOUBLE}",
+              "double"
+            ],
+            [
+              "%{BKY_CPP_MAP_DECLARE_VALUE_TYPE_STRING}",
+              "std::string"
+            ]
+          ]
+        },
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "mp"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "建立一個對照表，用一個「鍵」來查詢對應的「值」，像字典一樣"
+      "tooltip": "%{BKY_CPP_MAP_DECLARE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "std::map<${KEY_TYPE}, ${VALUE_TYPE}> ${NAME};",
-      "imports": ["map"],
+      "imports": [
+        "map"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "declaration",
-      "constraints": [{ "field": "type", "nodeType": "template_type" }]
+      "constraints": [
+        {
+          "field": "type",
+          "nodeType": "template_type"
+        }
+      ]
     }
   },
   {
@@ -409,23 +710,34 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_string_declare",
-      "message0": "建立文字變數 %1",
+      "message0": "%{BKY_CPP_STRING_DECLARE_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "NAME", "text": "str" }
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "str"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "建立一個文字變數，可以存放和處理一段文字"
+      "tooltip": "%{BKY_CPP_STRING_DECLARE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "std::string ${NAME};",
-      "imports": ["string"],
+      "imports": [
+        "string"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "declaration",
-      "constraints": [{ "field": "type", "text": "string" }]
+      "constraints": [
+        {
+          "field": "type",
+          "text": "string"
+        }
+      ]
     }
   },
   {
@@ -435,24 +747,39 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_sort",
-      "message0": "排序（ %1 到 %2 ）",
+      "message0": "%{BKY_CPP_SORT_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "BEGIN", "check": "Expression" },
-        { "type": "input_value", "name": "END", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "BEGIN",
+          "check": "Expression"
+        },
+        {
+          "type": "input_value",
+          "name": "END",
+          "check": "Expression"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "把指定範圍內的元素從小到大排好"
+      "tooltip": "%{BKY_CPP_SORT_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "std::sort(${BEGIN}, ${END});",
-      "imports": ["algorithm"],
+      "imports": [
+        "algorithm"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "call_expression",
-      "constraints": [{ "field": "function", "text": "sort" }]
+      "constraints": [
+        {
+          "field": "function",
+          "text": "sort"
+        }
+      ]
     }
   },
   {
@@ -462,20 +789,32 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_class_def",
-      "message0": "定義類別 %1",
+      "message0": "%{BKY_CPP_CLASS_DEF_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "NAME", "text": "MyClass" }
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "MyClass"
+        }
       ],
-      "message1": "公開： %1",
+      "message1": "%{BKY_CPP_CLASS_DEF_MSG1}",
       "args1": [
-        { "type": "input_statement", "name": "PUBLIC", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "PUBLIC",
+          "check": "Statement"
+        }
       ],
-      "message2": "私有： %1",
+      "message2": "%{BKY_CPP_CLASS_DEF_MSG2}",
       "args2": [
-        { "type": "input_statement", "name": "PRIVATE", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "PRIVATE",
+          "check": "Statement"
+        }
       ],
       "colour": 140,
-      "tooltip": "定義一個類別，把資料和操作包裝在一起。公開的部分外面可以用，私有的只有內部能用"
+      "tooltip": "%{BKY_CPP_CLASS_DEF_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "class ${NAME} {\npublic:\n${PUBLIC}\nprivate:\n${PRIVATE}\n};",
@@ -494,15 +833,23 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_new",
-      "message0": "建立新物件 %1（ %2 ）",
+      "message0": "%{BKY_CPP_NEW_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "TYPE", "text": "MyClass" },
-        { "type": "field_input", "name": "ARGS", "text": "" }
+        {
+          "type": "field_input",
+          "name": "TYPE",
+          "text": "MyClass"
+        },
+        {
+          "type": "field_input",
+          "name": "ARGS",
+          "text": ""
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 140,
-      "tooltip": "建立一個新的物件，並配置記憶體空間"
+      "tooltip": "%{BKY_CPP_NEW_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "new ${TYPE}(${ARGS})",
@@ -521,14 +868,18 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_delete",
-      "message0": "刪除物件 %1",
+      "message0": "%{BKY_CPP_DELETE_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "PTR", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "PTR",
+          "check": "Expression"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 140,
-      "tooltip": "刪除用 new 建立的物件，歸還記憶體空間"
+      "tooltip": "%{BKY_CPP_DELETE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "delete ${PTR};",
@@ -547,23 +898,47 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_template_function",
-      "message0": "樣板：讓 %1 代表任意型別",
+      "message0": "%{BKY_CPP_TEMPLATE_FUNCTION_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "T", "text": "T" }
+        {
+          "type": "field_input",
+          "name": "T",
+          "text": "T"
+        }
       ],
       "message1": "%1 %2 ( %3 %4 )",
       "args1": [
-        { "type": "field_input", "name": "RETURN_TYPE", "text": "T" },
-        { "type": "field_input", "name": "FUNC_NAME", "text": "myFunc" },
-        { "type": "field_input", "name": "PARAM_TYPE", "text": "T" },
-        { "type": "field_input", "name": "PARAM_NAME", "text": "a" }
+        {
+          "type": "field_input",
+          "name": "RETURN_TYPE",
+          "text": "T"
+        },
+        {
+          "type": "field_input",
+          "name": "FUNC_NAME",
+          "text": "myFunc"
+        },
+        {
+          "type": "field_input",
+          "name": "PARAM_TYPE",
+          "text": "T"
+        },
+        {
+          "type": "field_input",
+          "name": "PARAM_NAME",
+          "text": "a"
+        }
       ],
       "message2": "%1",
       "args2": [
-        { "type": "input_statement", "name": "BODY", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
       ],
       "colour": 140,
-      "tooltip": "建立一個樣板函式，可以處理不同型別的資料，不用重複寫很多版本"
+      "tooltip": "%{BKY_CPP_TEMPLATE_FUNCTION_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "template<typename ${T}>\n${RETURN_TYPE} ${FUNC_NAME}(${PARAM_TYPE} ${PARAM_NAME}) {\n${BODY}\n}",
@@ -582,24 +957,56 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_stack_declare",
-      "message0": "建立 %1 堆疊變數 %2",
+      "message0": "%{BKY_CPP_STACK_DECLARE_MSG0}",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["string（文字）","std::string"],["char（字元）","char"]] },
-        { "type": "field_input", "name": "NAME", "text": "stk" }
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [
+              "%{BKY_CPP_STACK_DECLARE_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_CPP_STACK_DECLARE_TYPE_FLOAT}",
+              "float"
+            ],
+            [
+              "%{BKY_CPP_STACK_DECLARE_TYPE_STRING}",
+              "std::string"
+            ],
+            [
+              "%{BKY_CPP_STACK_DECLARE_TYPE_CHAR}",
+              "char"
+            ]
+          ]
+        },
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "stk"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "建立一個堆疊，像疊盤子一樣，最後放的最先拿出來（後進先出）"
+      "tooltip": "%{BKY_CPP_STACK_DECLARE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "std::stack<${TYPE}> ${NAME};",
-      "imports": ["stack"],
+      "imports": [
+        "stack"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "declaration",
-      "constraints": [{ "field": "type", "nodeType": "template_type" }]
+      "constraints": [
+        {
+          "field": "type",
+          "nodeType": "template_type"
+        }
+      ]
     }
   },
   {
@@ -609,24 +1016,56 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_queue_declare",
-      "message0": "建立 %1 佇列變數 %2",
+      "message0": "%{BKY_CPP_QUEUE_DECLARE_MSG0}",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["string（文字）","std::string"],["char（字元）","char"]] },
-        { "type": "field_input", "name": "NAME", "text": "que" }
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [
+              "%{BKY_CPP_QUEUE_DECLARE_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_CPP_QUEUE_DECLARE_TYPE_FLOAT}",
+              "float"
+            ],
+            [
+              "%{BKY_CPP_QUEUE_DECLARE_TYPE_STRING}",
+              "std::string"
+            ],
+            [
+              "%{BKY_CPP_QUEUE_DECLARE_TYPE_CHAR}",
+              "char"
+            ]
+          ]
+        },
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "que"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "建立一個佇列，像排隊一樣，最先來的最先處理（先進先出）"
+      "tooltip": "%{BKY_CPP_QUEUE_DECLARE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "std::queue<${TYPE}> ${NAME};",
-      "imports": ["queue"],
+      "imports": [
+        "queue"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "declaration",
-      "constraints": [{ "field": "type", "nodeType": "template_type" }]
+      "constraints": [
+        {
+          "field": "type",
+          "nodeType": "template_type"
+        }
+      ]
     }
   },
   {
@@ -636,24 +1075,56 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_set_declare",
-      "message0": "建立 %1 集合變數 %2",
+      "message0": "%{BKY_CPP_SET_DECLARE_MSG0}",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["string（文字）","std::string"],["char（字元）","char"]] },
-        { "type": "field_input", "name": "NAME", "text": "s" }
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [
+              "%{BKY_CPP_SET_DECLARE_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_CPP_SET_DECLARE_TYPE_FLOAT}",
+              "float"
+            ],
+            [
+              "%{BKY_CPP_SET_DECLARE_TYPE_STRING}",
+              "std::string"
+            ],
+            [
+              "%{BKY_CPP_SET_DECLARE_TYPE_CHAR}",
+              "char"
+            ]
+          ]
+        },
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "s"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "建立一個集合，裡面的元素不會重複，而且會自動排序"
+      "tooltip": "%{BKY_CPP_SET_DECLARE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "std::set<${TYPE}> ${NAME};",
-      "imports": ["set"],
+      "imports": [
+        "set"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "declaration",
-      "constraints": [{ "field": "type", "nodeType": "template_type" }]
+      "constraints": [
+        {
+          "field": "type",
+          "nodeType": "template_type"
+        }
+      ]
     }
   },
   {
@@ -663,16 +1134,28 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_method_call",
-      "message0": "對 %1 執行 %2（ %3 ）",
+      "message0": "%{BKY_CPP_METHOD_CALL_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "OBJ", "text": "obj" },
-        { "type": "field_input", "name": "METHOD", "text": "push_back" },
-        { "type": "field_input", "name": "ARGS", "text": "" }
+        {
+          "type": "field_input",
+          "name": "OBJ",
+          "text": "obj"
+        },
+        {
+          "type": "field_input",
+          "name": "METHOD",
+          "text": "push_back"
+        },
+        {
+          "type": "field_input",
+          "name": "ARGS",
+          "text": ""
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 200,
-      "tooltip": "對物件執行一個操作（方法），可以傳入參數"
+      "tooltip": "%{BKY_CPP_METHOD_CALL_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "${OBJ}.${METHOD}(${ARGS});",
@@ -681,7 +1164,12 @@
     },
     "astPattern": {
       "nodeType": "call_expression",
-      "constraints": [{ "field": "function", "nodeType": "field_expression" }]
+      "constraints": [
+        {
+          "field": "function",
+          "nodeType": "field_expression"
+        }
+      ]
     }
   },
   {
@@ -691,16 +1179,28 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_method_call_expr",
-      "message0": "對 %1 執行 %2（ %3 ）的結果",
+      "message0": "%{BKY_CPP_METHOD_CALL_EXPR_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "OBJ", "text": "obj" },
-        { "type": "field_input", "name": "METHOD", "text": "size" },
-        { "type": "field_input", "name": "ARGS", "text": "" }
+        {
+          "type": "field_input",
+          "name": "OBJ",
+          "text": "obj"
+        },
+        {
+          "type": "field_input",
+          "name": "METHOD",
+          "text": "size"
+        },
+        {
+          "type": "field_input",
+          "name": "ARGS",
+          "text": ""
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 200,
-      "tooltip": "對物件執行一個操作（方法），並取得結果"
+      "tooltip": "%{BKY_CPP_METHOD_CALL_EXPR_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "${OBJ}.${METHOD}(${ARGS})",
@@ -709,7 +1209,12 @@
     },
     "astPattern": {
       "nodeType": "call_expression",
-      "constraints": [{ "field": "function", "nodeType": "field_expression" }]
+      "constraints": [
+        {
+          "field": "function",
+          "nodeType": "field_expression"
+        }
+      ]
     }
   }
 ]

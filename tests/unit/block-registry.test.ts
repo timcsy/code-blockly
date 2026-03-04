@@ -382,34 +382,32 @@ describe('BlockRegistry', () => {
       allBlocks.forEach(spec => fullRegistry.register(spec))
     })
 
-    it('u_compare dropdown should use natural language labels', () => {
+    it('u_compare dropdown should use i18n keys for labels', () => {
       const spec = fullRegistry.get('u_compare')!
       const dropdown = spec.blockDef.args0?.find((a: { name?: string }) => a.name === 'OP')
       expect(dropdown).toBeDefined()
       const labels = (dropdown as { options: string[][] }).options.map((o: string[]) => o[0])
-      expect(labels).toContain('大於')
-      expect(labels).toContain('小於')
-      expect(labels).toContain('大於等於')
-      expect(labels).toContain('小於等於')
-      expect(labels).toContain('等於')
-      expect(labels).toContain('不等於')
+      expect(labels).toContain('%{BKY_U_COMPARE_OP_GT}')
+      expect(labels).toContain('%{BKY_U_COMPARE_OP_LT}')
+      expect(labels).toContain('%{BKY_U_COMPARE_OP_GE}')
+      expect(labels).toContain('%{BKY_U_COMPARE_OP_LE}')
+      expect(labels).toContain('%{BKY_U_COMPARE_OP_EQ}')
+      expect(labels).toContain('%{BKY_U_COMPARE_OP_NE}')
     })
 
-    it('u_arithmetic dropdown should use × ÷ 餘數', () => {
+    it('u_arithmetic dropdown should use i18n keys for × ÷ 餘數', () => {
       const spec = fullRegistry.get('u_arithmetic')!
       const dropdown = spec.blockDef.args0?.find((a: { name?: string }) => a.name === 'OP')
       expect(dropdown).toBeDefined()
       const labels = (dropdown as { options: string[][] }).options.map((o: string[]) => o[0])
       expect(labels).toContain('×')
       expect(labels).toContain('÷')
-      expect(labels).toContain('餘數')
+      expect(labels).toContain('%{BKY_U_ARITHMETIC_OP_REMAINDER}')
     })
 
-    it('u_array_access message0 should use Chinese-friendly format with bracket notation', () => {
+    it('u_array_access message0 should use i18n key', () => {
       const spec = fullRegistry.get('u_array_access')!
-      expect(spec.blockDef.message0).toContain('陣列')
-      expect(spec.blockDef.message0).toContain('[ %2 ]')
-      expect(spec.blockDef.message0).toContain('格')
+      expect(spec.blockDef.message0).toBe('%{BKY_U_ARRAY_ACCESS_MSG0}')
     })
   })
 

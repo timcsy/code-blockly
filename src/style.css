@@ -50,6 +50,69 @@ html, body {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.toolbar-actions select {
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.toolbar-actions select option {
+  background: #2c3e50;
+  color: white;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  align-self: center;
+}
+
+/* Sync button hint: pulsing glow when the corresponding side has changes */
+.toolbar-actions button.sync-hint {
+  border-color: #f39c12;
+  box-shadow: 0 0 6px rgba(243, 156, 18, 0.6);
+  animation: sync-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes sync-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(243, 156, 18, 0.4); }
+  50% { box-shadow: 0 0 10px rgba(243, 156, 18, 0.8); }
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast-success {
+  background: rgba(39, 174, 96, 0.9);
+}
+
+.toast-error {
+  background: rgba(231, 76, 60, 0.9);
+}
+
 #editors {
   display: flex;
   flex: 1;

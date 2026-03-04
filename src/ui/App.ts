@@ -1,3 +1,4 @@
+import * as Blockly from 'blockly'
 import { BlocklyEditor } from './blockly-editor'
 import { CodeEditor } from './code-editor'
 import { SyncController } from './sync-controller'
@@ -6,7 +7,13 @@ import { BlockRegistry } from '../core/block-registry'
 import { CppGenerator } from '../languages/cpp/generator'
 import { CppParser } from '../languages/cpp/parser'
 import { CppLanguageAdapter } from '../languages/cpp/adapter'
+import { CppLanguageModule } from '../languages/cpp/module'
+import { LanguageRegistryImpl } from '../core/converter'
 import { CodeToBlocksConverter } from '../core/code-to-blocks'
+import { serializeModel } from '../core/semantic-model'
+import { StyleManagerImpl } from '../languages/style'
+import type { StylePresetId } from '../languages/style'
+import { LocaleLoader } from '../i18n/loader'
 import { DEFAULT_TEMPLATE_STATE, QUICK_ACCESS_ITEMS } from '../core/types'
 import type { BlockSpec, WorkspaceState, ToolboxLevel } from '../core/types'
 import universalBlocks from '../blocks/universal.json'
@@ -24,9 +31,13 @@ export class App {
   private parser: CppParser
   private adapter: CppLanguageAdapter
   private codeToBlocks: CodeToBlocksConverter | null = null
+  private localeLoader: LocaleLoader
+  private languageRegistry: LanguageRegistryImpl
+  private styleManager: StyleManagerImpl
   private languageId = 'cpp'
   private toolboxLevel: ToolboxLevel = 'beginner'
   private diagnosticsTimer: ReturnType<typeof setTimeout> | null = null
+  private lastChangedSide: 'blocks' | 'code' | null = null
 
   constructor() {
     this.storage = new Storage()
@@ -34,10 +45,25 @@ export class App {
     this.adapter = new CppLanguageAdapter()
     this.generator = new CppGenerator(this.registry, this.adapter)
     this.parser = new CppParser()
+    this.localeLoader = new LocaleLoader()
+    this.languageRegistry = new LanguageRegistryImpl()
+    this.styleManager = new StyleManagerImpl()
   }
 
   async init(): Promise<void> {
-    // Load universal + language-specific block definitions
+    // 1. Load locale before block registration so Blockly.Msg is populated
+    await this.loadLocale('zh-TW')
+
+    // 2. Register language module and inject types
+    const cppModule = new CppLanguageModule(this.registry)
+    this.languageRegistry.register(cppModule)
+    this.languageRegistry.setActive('cpp')
+
+    // 3. Apply language module tooltip overrides
+    const activeModule = this.languageRegistry.getActive()
+    this.localeLoader.applyTooltipOverrides(activeModule.getTooltipOverrides())
+
+    // 4. Load universal + language-specific block definitions
     this.loadDefaultBlocks()
 
     // Initialize parser
@@ -53,6 +79,7 @@ export class App {
     }
 
     this.blocklyEditor = new BlocklyEditor(blocklyContainer)
+    this.blocklyEditor.setLanguageTypes(activeModule.getTypes())
     this.blocklyEditor.init(this.registry, this.languageId)
 
     this.codeEditor = new CodeEditor(codeContainer)
@@ -72,12 +99,24 @@ export class App {
       clearCodeHighlight: () => this.codeEditor!.clearHighlight(),
       highlightBlock: (blockId) => this.blocklyEditor!.highlightBlock(blockId),
       clearBlockHighlight: () => this.blocklyEditor!.highlightBlock(null),
+      // Semantic model hooks (T016)
+      codeToSemanticModel: async (code) => {
+        return this.parser.parseToModel(code, this.adapter)
+      },
+      semanticModelToCode: (model) => {
+        return this.generator.generateFromModel(model, this.styleManager.getActive())
+      },
+      onSemanticModelUpdated: (model) => {
+        try { localStorage.setItem('code-blockly-semantic', serializeModel(model)) } catch { /* ignore */ }
+      },
     })
 
-    // Wire up auto-save (no auto-sync) and diagnostics
+    // Wire up auto-save (no auto-sync), diagnostics, and sync hints
     this.blocklyEditor.onChange(() => {
       this.autoSave()
       this.scheduleDiagnostics()
+      this.lastChangedSide = 'blocks'
+      this.updateSyncHints()
     })
 
     // Wire up bidirectional highlight
@@ -91,6 +130,8 @@ export class App {
 
     this.codeEditor.onChange(() => {
       this.autoSave()
+      this.lastChangedSide = 'code'
+      this.updateSyncHints()
     })
 
     this.codeEditor.onCursorChange((line) => {
@@ -109,6 +150,8 @@ export class App {
     this.setupQuickAccess()
     this.setupUploadUI()
     this.setupExportImportUI()
+    this.setupStyleSelector()
+    this.setupUndoRedo()
   }
 
   private loadDefaultBlocks(): void {
@@ -120,7 +163,7 @@ export class App {
     const state: WorkspaceState = {
       blocklyState: this.blocklyEditor?.getState() as Record<string, unknown> ?? {},
       code: this.codeEditor?.getCode() ?? '',
-      languageId: 'cpp',
+      languageId: this.languageId,
       customBlockSpecs: [],
       lastModified: new Date().toISOString(),
     }
@@ -160,8 +203,12 @@ export class App {
         this.blocklyEditor?.updateToolbox(this.registry, this.languageId)
       }
     } else {
-      // No saved state: load default template
+      // No saved state: load default template and generate code
       this.blocklyEditor?.setState(DEFAULT_TEMPLATE_STATE)
+      setTimeout(() => {
+        const workspace = this.blocklyEditor?.getState()
+        if (workspace) this.syncController!.syncBlocksToCode(workspace)
+      }, 0)
     }
   }
 
@@ -194,11 +241,14 @@ export class App {
   }
 
   private updateToggleButton(btn: HTMLElement): void {
+    const msg = Blockly.Msg as Record<string, string>
     if (this.toolboxLevel === 'beginner') {
-      btn.textContent = '初級模式'
+      btn.textContent = msg['MODE_BEGINNER'] || '初級模式'
+      btn.title = msg['MODE_BEGINNER_DESC'] || '顯示常用積木，適合入門學習'
       btn.dataset.level = 'beginner'
     } else {
-      btn.textContent = '進階模式'
+      btn.textContent = msg['MODE_ADVANCED'] || '進階模式'
+      btn.title = msg['MODE_ADVANCED_DESC'] || '顯示全部積木，包含指標、結構等進階功能'
       btn.dataset.level = 'advanced'
     }
   }
@@ -251,10 +301,21 @@ export class App {
     const codeToBlocksBtn = document.getElementById('code-to-blocks-btn')
 
     if (blocksToCodeBtn) {
-      blocksToCodeBtn.addEventListener('click', () => {
+      blocksToCodeBtn.addEventListener('click', async () => {
         const workspace = this.blocklyEditor?.getState()
         if (workspace) {
           this.syncController!.syncBlocksToCode(workspace)
+          // Build semantic model cache from generated code for style switching
+          const code = this.codeEditor?.getCode()
+          if (code) {
+            try {
+              const model = await this.parser.parseToModel(code, this.adapter)
+              this.syncController!.setCurrentModel(model)
+            } catch { /* ignore - model cache is optional */ }
+          }
+          this.lastChangedSide = null
+          this.updateSyncHints()
+          this.showToast('TOAST_SYNC_SUCCESS', '同步完成')
         }
       })
     }
@@ -263,7 +324,14 @@ export class App {
       codeToBlocksBtn.addEventListener('click', async () => {
         const code = this.codeEditor?.getCode()
         if (code !== undefined) {
-          await this.syncController!.syncCodeToBlocks(code)
+          try {
+            await this.syncController!.syncCodeToBlocks(code)
+            this.lastChangedSide = null
+            this.updateSyncHints()
+            this.showToast('TOAST_SYNC_SUCCESS', '同步完成')
+          } catch {
+            this.showToast('ERROR_SYNC_FAILED', '轉換失敗，程式碼可能有語法錯誤', 'error')
+          }
         }
       })
     }
@@ -272,11 +340,14 @@ export class App {
   private setupQuickAccess(): void {
     const bar = document.getElementById('quick-access-bar')
     if (!bar || !this.blocklyEditor) return
+    const msg = Blockly.Msg as Record<string, string>
     for (const item of QUICK_ACCESS_ITEMS) {
+      const label = msg[item.labelKey] || item.fallbackLabel
+      const tooltip = item.tooltipKey ? (msg[item.tooltipKey] || label) : label
       const btn = document.createElement('button')
       btn.className = 'quick-access-btn'
-      btn.title = item.label
-      btn.textContent = `${item.icon} ${item.label}`
+      btn.title = tooltip
+      btn.textContent = `${item.icon} ${label}`
       btn.addEventListener('click', () => {
         this.blocklyEditor!.createBlockAtCenter(item.blockType)
       })
@@ -321,7 +392,7 @@ export class App {
         const state: WorkspaceState = {
           blocklyState: this.blocklyEditor?.getState() as Record<string, unknown> ?? {},
           code: this.codeEditor?.getCode() ?? '',
-          languageId: 'cpp',
+          languageId: this.languageId,
           customBlockSpecs: [],
           lastModified: new Date().toISOString(),
         }
@@ -330,7 +401,7 @@ export class App {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `code-blockly-${Date.now()}.json`
+        a.download = `code-blockly-${new Date().toISOString().slice(0, 10)}.json`
         a.click()
         URL.revokeObjectURL(url)
       })
@@ -362,6 +433,102 @@ export class App {
       const diagnostics = this.blocklyEditor.runDiagnostics()
       this.blocklyEditor.applyDiagnostics(diagnostics)
     }, 300)
+  }
+
+  private setupStyleSelector(): void {
+    const selector = document.getElementById('style-selector') as HTMLSelectElement | null
+    if (!selector) return
+
+    // Populate options with i18n names and description tooltips
+    const msg = Blockly.Msg as Record<string, string>
+    for (const preset of this.styleManager.getPresets()) {
+      const opt = document.createElement('option')
+      opt.value = preset.id
+      opt.textContent = msg[preset.nameKey] || preset.id
+      const descKey = `${preset.nameKey}.desc`
+      if (msg[descKey]) opt.title = msg[descKey]
+      selector.appendChild(opt)
+    }
+    selector.value = this.styleManager.getActive().id
+    // Set selector tooltip to active style description
+    const activeDescKey = `${this.styleManager.getActive().nameKey}.desc`
+    selector.title = msg[activeDescKey] || '編碼風格'
+
+    selector.addEventListener('change', async () => {
+      this.styleManager.setActiveById(selector.value as StylePresetId)
+      const newDescKey = `${this.styleManager.getActive().nameKey}.desc`
+      selector.title = msg[newDescKey] || '編碼風格'
+      // Re-generate code using cached semantic model (avoids lossy re-parse)
+      if (this.syncController && this.codeEditor) {
+        const cachedModel = this.syncController.getCurrentModel()
+        if (cachedModel) {
+          const newCode = this.generator.generateFromModel(cachedModel, this.styleManager.getActive())
+          this.codeEditor.setCode(newCode)
+        } else {
+          // No cached model: parse current code to build one
+          const code = this.codeEditor.getCode()
+          if (code) {
+            try {
+              const model = await this.parser.parseToModel(code, this.adapter)
+              const newCode = this.generator.generateFromModel(model, this.styleManager.getActive())
+              this.codeEditor.setCode(newCode)
+            } catch {
+              // Fallback: re-generate from blocks
+              if (this.blocklyEditor) {
+                const workspace = this.blocklyEditor.getState()
+                if (workspace) {
+                  this.syncController.syncBlocksToCode(workspace)
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+  }
+
+  private setupUndoRedo(): void {
+    const undoBtn = document.getElementById('undo-btn')
+    const redoBtn = document.getElementById('redo-btn')
+    if (undoBtn) {
+      undoBtn.addEventListener('click', () => this.blocklyEditor?.undo())
+    }
+    if (redoBtn) {
+      redoBtn.addEventListener('click', () => this.blocklyEditor?.redo())
+    }
+  }
+
+  private updateSyncHints(): void {
+    const b2cBtn = document.getElementById('blocks-to-code-btn')
+    const c2bBtn = document.getElementById('code-to-blocks-btn')
+    if (!b2cBtn || !c2bBtn) return
+    const msg = Blockly.Msg as Record<string, string>
+    b2cBtn.classList.toggle('sync-hint', this.lastChangedSide === 'blocks')
+    c2bBtn.classList.toggle('sync-hint', this.lastChangedSide === 'code')
+    b2cBtn.title = this.lastChangedSide === 'blocks'
+      ? (msg['SYNC_HINT_BLOCKS_CHANGED'] || '積木有變更，按此同步到程式碼')
+      : (msg['SYNC_BLOCKS_TO_CODE'] || '把積木轉成程式碼')
+    c2bBtn.title = this.lastChangedSide === 'code'
+      ? (msg['SYNC_HINT_CODE_CHANGED'] || '程式碼有變更，按此同步到積木')
+      : (msg['SYNC_CODE_TO_BLOCKS'] || '把程式碼轉成積木')
+  }
+
+  private showToast(messageKey: string, fallback: string, type: 'success' | 'error' = 'success'): void {
+    const text = (Blockly.Msg as Record<string, string>)[messageKey] || fallback
+    const toast = document.createElement('div')
+    toast.className = `toast toast-${type}`
+    toast.textContent = text
+    document.body.appendChild(toast)
+    requestAnimationFrame(() => toast.classList.add('show'))
+    setTimeout(() => {
+      toast.classList.remove('show')
+      setTimeout(() => toast.remove(), 300)
+    }, 2000)
+  }
+
+  private async loadLocale(localeId: string): Promise<void> {
+    this.localeLoader.setBlocklyMsg(Blockly.Msg as Record<string, string>)
+    await this.localeLoader.load(localeId)
   }
 
   dispose(): void {

@@ -1,4 +1,5 @@
 import type { SourceMapping } from '../core/types'
+import type { SemanticModel } from '../core/semantic-model'
 
 export interface SyncControllerOptions {
   blocksToCode: (workspace: unknown) => string
@@ -10,12 +11,19 @@ export interface SyncControllerOptions {
   clearCodeHighlight?: () => void
   highlightBlock?: (blockId: string) => void
   clearBlockHighlight?: () => void
+  // Semantic model sync hooks (T015)
+  codeToSemanticModel?: (code: string) => Promise<SemanticModel>
+  semanticModelToCode?: (model: SemanticModel) => string
+  semanticModelToBlocks?: (model: SemanticModel) => unknown
+  blocksToSemanticModel?: (workspace: unknown) => SemanticModel | null
+  onSemanticModelUpdated?: (model: SemanticModel) => void
 }
 
 export class SyncController {
   private options: SyncControllerOptions
   private syncing = false
   private sourceMappings: SourceMapping[] = []
+  private currentModel: SemanticModel | null = null
 
   constructor(options: SyncControllerOptions) {
     this.options = options
@@ -79,6 +87,54 @@ export class SyncController {
       this.options.highlightBlock(mapping.blockId)
     } else {
       this.options.clearBlockHighlight?.()
+    }
+  }
+
+  /** Semantic model accessor (T015) */
+  getCurrentModel(): SemanticModel | null {
+    return this.currentModel
+  }
+
+  /** Set cached semantic model (for style switching) */
+  setCurrentModel(model: SemanticModel): void {
+    this.currentModel = model
+  }
+
+  /** Code → SemanticModel → Blocks sync (T015) */
+  async syncCodeToBlocksViaModel(code: string): Promise<void> {
+    if (this.syncing) return
+    if (!this.options.codeToSemanticModel || !this.options.semanticModelToBlocks) {
+      return this.syncCodeToBlocks(code)
+    }
+    this.syncing = true
+    try {
+      const model = await this.options.codeToSemanticModel(code)
+      this.currentModel = model
+      this.options.onSemanticModelUpdated?.(model)
+      const workspace = this.options.semanticModelToBlocks(model)
+      this.options.setBlocks(workspace)
+    } finally {
+      this.syncing = false
+    }
+  }
+
+  /** Blocks → SemanticModel → Code sync (T015) */
+  syncBlocksToCodeViaModel(workspace: unknown): void {
+    if (this.syncing) return
+    if (!this.options.blocksToSemanticModel || !this.options.semanticModelToCode) {
+      return this.syncBlocksToCode(workspace)
+    }
+    this.syncing = true
+    try {
+      const model = this.options.blocksToSemanticModel(workspace)
+      if (model) {
+        this.currentModel = model
+        this.options.onSemanticModelUpdated?.(model)
+        const code = this.options.semanticModelToCode(model)
+        this.options.setCode(code)
+      }
+    } finally {
+      this.syncing = false
     }
   }
 

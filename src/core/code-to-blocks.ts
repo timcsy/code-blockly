@@ -1,6 +1,8 @@
 import type { BlockRegistry } from './block-registry'
 import type { CppParser } from '../languages/cpp/parser'
 import type { BlockSpec, LanguageAdapter, SourceMapping } from './types'
+import type { SemanticModel } from './semantic-model'
+import type { NewLanguageAdapter } from '../languages/types'
 import type { Node } from 'web-tree-sitter'
 
 interface BlockJSON {
@@ -74,6 +76,36 @@ export class CodeToBlocksConverter {
   async convertWithMappings(code: string): Promise<ConvertResult> {
     const workspace = await this.convert(code)
     return { workspace, mappings: this.sourceMappings }
+  }
+
+  /** Convert via SemanticModel path (T014): code → SemanticModel → BlockJSON */
+  async convertViaSemanticModel(code: string): Promise<{ workspace: WorkspaceJSON; model: SemanticModel }> {
+    const cppParser = this.parser as { parseToModel?(code: string): Promise<SemanticModel> }
+    if (!cppParser.parseToModel) {
+      throw new Error('Parser does not support parseToModel')
+    }
+    const model = await cppParser.parseToModel(code)
+    const semAdapter = this.adapter as unknown as NewLanguageAdapter | null
+    if (!semAdapter?.toBlockJSON) {
+      throw new Error('Adapter does not support toBlockJSON')
+    }
+
+    // Convert program body to BlockJSON
+    const body = Array.isArray(model.program.children.body) ? model.program.children.body : []
+    const blocks: BlockJSON[] = []
+    let y = 30
+    for (const node of body) {
+      const blockJson = semAdapter.toBlockJSON(node) as BlockJSON
+      blockJson.x = 30
+      blockJson.y = y
+      y += this.estimateBlockHeight(blockJson)
+      blocks.push(blockJson)
+    }
+
+    return {
+      workspace: { blocks: { languageVersion: 0, blocks } },
+      model,
+    }
   }
 
   getSourceMappings(): SourceMapping[] {

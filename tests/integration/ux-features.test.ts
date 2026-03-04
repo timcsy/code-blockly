@@ -156,10 +156,11 @@ describe('US5: 快捷列常數', () => {
     expect(QUICK_ACCESS_ITEMS).toHaveLength(6)
   })
 
-  it('每個項目有 blockType, label, icon 欄位', () => {
+  it('每個項目有 blockType, labelKey, fallbackLabel, icon 欄位', () => {
     for (const item of QUICK_ACCESS_ITEMS) {
       expect(item.blockType).toBeTruthy()
-      expect(item.label).toBeTruthy()
+      expect(item.labelKey).toBeTruthy()
+      expect(item.fallbackLabel).toBeTruthy()
       expect(item.icon).toBeTruthy()
     }
   })

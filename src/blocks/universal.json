@@ -6,17 +6,58 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_var_declare",
-      "message0": "建立 %1 變數 %2 = %3",
+      "message0": "%{BKY_U_VAR_DECLARE_MSG0}",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"],["long long（大整數）","long long"],["string（文字）","string"],["bool（是/否）","bool"]] },
-        { "type": "field_input", "name": "NAME", "text": "x" },
-        { "type": "input_value", "name": "INIT", "check": "Expression" }
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [
+              "%{BKY_U_VAR_DECLARE_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_U_VAR_DECLARE_TYPE_FLOAT}",
+              "float"
+            ],
+            [
+              "%{BKY_U_VAR_DECLARE_TYPE_DOUBLE}",
+              "double"
+            ],
+            [
+              "%{BKY_U_VAR_DECLARE_TYPE_CHAR}",
+              "char"
+            ],
+            [
+              "%{BKY_U_VAR_DECLARE_TYPE_LONG_LONG}",
+              "long long"
+            ],
+            [
+              "%{BKY_U_VAR_DECLARE_TYPE_STRING}",
+              "string"
+            ],
+            [
+              "%{BKY_U_VAR_DECLARE_TYPE_BOOL}",
+              "bool"
+            ]
+          ]
+        },
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "x"
+        },
+        {
+          "type": "input_value",
+          "name": "INIT",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 330,
-      "tooltip": "建立一個新的變數，可以選擇型別和初始值。變數就像一個有名字的盒子，用來存放資料"
+      "tooltip": "%{BKY_U_VAR_DECLARE_TOOLTIP}"
     }
   },
   {
@@ -26,16 +67,24 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_var_assign",
-      "message0": "把變數 %1 設成 %2",
+      "message0": "%{BKY_U_VAR_ASSIGN_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "NAME", "text": "x" },
-        { "type": "input_value", "name": "VALUE", "check": "Expression" }
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "x"
+        },
+        {
+          "type": "input_value",
+          "name": "VALUE",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 330,
-      "tooltip": "把已經建立的變數改成新的值"
+      "tooltip": "%{BKY_U_VAR_ASSIGN_TOOLTIP}"
     }
   },
   {
@@ -47,11 +96,15 @@
       "type": "u_var_ref",
       "message0": "%1",
       "args0": [
-        { "type": "field_input", "name": "NAME", "text": "x" }
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "x"
+        }
       ],
       "output": "Expression",
       "colour": 330,
-      "tooltip": "使用這個變數目前存放的值"
+      "tooltip": "%{BKY_U_VAR_REF_TOOLTIP}"
     }
   },
   {
@@ -63,11 +116,15 @@
       "type": "u_number",
       "message0": "%1",
       "args0": [
-        { "type": "field_number", "name": "NUM", "value": 0 }
+        {
+          "type": "field_number",
+          "name": "NUM",
+          "value": 0
+        }
       ],
       "output": "Expression",
       "colour": 330,
-      "tooltip": "輸入一個數字，可以用在計算或比較中"
+      "tooltip": "%{BKY_U_NUMBER_TOOLTIP}"
     }
   },
   {
@@ -79,11 +136,15 @@
       "type": "u_string",
       "message0": "\" %1 \"",
       "args0": [
-        { "type": "field_input", "name": "TEXT", "text": "hello" }
+        {
+          "type": "field_input",
+          "name": "TEXT",
+          "text": "hello"
+        }
       ],
       "output": "Expression",
       "colour": 330,
-      "tooltip": "輸入一段文字內容，前後會自動加上引號"
+      "tooltip": "%{BKY_U_STRING_TOOLTIP}"
     }
   },
   {
@@ -95,14 +156,47 @@
       "type": "u_arithmetic",
       "message0": "%1 %2 %3",
       "args0": [
-        { "type": "input_value", "name": "A", "check": "Expression" },
-        { "type": "field_dropdown", "name": "OP", "options": [["+","+"],["-","-"],["×","*"],["÷","/"],["餘數","%"]] },
-        { "type": "input_value", "name": "B", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "A",
+          "check": "Expression"
+        },
+        {
+          "type": "field_dropdown",
+          "name": "OP",
+          "options": [
+            [
+              "+",
+              "+"
+            ],
+            [
+              "-",
+              "-"
+            ],
+            [
+              "×",
+              "*"
+            ],
+            [
+              "÷",
+              "/"
+            ],
+            [
+              "%{BKY_U_ARITHMETIC_OP_REMAINDER}",
+              "%"
+            ]
+          ]
+        },
+        {
+          "type": "input_value",
+          "name": "B",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 210,
-      "tooltip": "把兩個數字做加、減、乘、除或取餘數的計算"
+      "tooltip": "%{BKY_U_ARITHMETIC_TOOLTIP}"
     }
   },
   {
@@ -114,14 +208,51 @@
       "type": "u_compare",
       "message0": "%1 %2 %3",
       "args0": [
-        { "type": "input_value", "name": "A", "check": "Expression" },
-        { "type": "field_dropdown", "name": "OP", "options": [["大於",">"],["小於","<"],["大於等於",">="],["小於等於","<="],["等於","=="],["不等於","!="]] },
-        { "type": "input_value", "name": "B", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "A",
+          "check": "Expression"
+        },
+        {
+          "type": "field_dropdown",
+          "name": "OP",
+          "options": [
+            [
+              "%{BKY_U_COMPARE_OP_GT}",
+              ">"
+            ],
+            [
+              "%{BKY_U_COMPARE_OP_LT}",
+              "<"
+            ],
+            [
+              "%{BKY_U_COMPARE_OP_GE}",
+              ">="
+            ],
+            [
+              "%{BKY_U_COMPARE_OP_LE}",
+              "<="
+            ],
+            [
+              "%{BKY_U_COMPARE_OP_EQ}",
+              "=="
+            ],
+            [
+              "%{BKY_U_COMPARE_OP_NE}",
+              "!="
+            ]
+          ]
+        },
+        {
+          "type": "input_value",
+          "name": "B",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 210,
-      "tooltip": "比較兩個值的大小或是否相等，結果是「是」或「否」"
+      "tooltip": "%{BKY_U_COMPARE_TOOLTIP}"
     }
   },
   {
@@ -133,14 +264,35 @@
       "type": "u_logic",
       "message0": "%1 %2 %3",
       "args0": [
-        { "type": "input_value", "name": "A", "check": "Expression" },
-        { "type": "field_dropdown", "name": "OP", "options": [["而且","&&"],["或者","||"]] },
-        { "type": "input_value", "name": "B", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "A",
+          "check": "Expression"
+        },
+        {
+          "type": "field_dropdown",
+          "name": "OP",
+          "options": [
+            [
+              "%{BKY_U_LOGIC_OP_AND}",
+              "&&"
+            ],
+            [
+              "%{BKY_U_LOGIC_OP_OR}",
+              "||"
+            ]
+          ]
+        },
+        {
+          "type": "input_value",
+          "name": "B",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 210,
-      "tooltip": "組合兩個條件：「而且」表示兩個都要成立，「或者」表示只要一個成立就行"
+      "tooltip": "%{BKY_U_LOGIC_TOOLTIP}"
     }
   },
   {
@@ -150,14 +302,18 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_logic_not",
-      "message0": "不是 %1",
+      "message0": "%{BKY_U_LOGIC_NOT_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "A", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "A",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 210,
-      "tooltip": "把條件反過來：「是」變「否」，「否」變「是」"
+      "tooltip": "%{BKY_U_LOGIC_NOT_TOOLTIP}"
     }
   },
   {
@@ -167,18 +323,26 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_if",
-      "message0": "如果 %1 就",
+      "message0": "%{BKY_U_IF_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "COND", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "COND",
+          "check": "Expression"
+        }
       ],
       "message1": "%1",
       "args1": [
-        { "type": "input_statement", "name": "BODY", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 40,
-      "tooltip": "如果條件成立，就執行裡面的積木"
+      "tooltip": "%{BKY_U_IF_TOOLTIP}"
     }
   },
   {
@@ -188,23 +352,35 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_if_else",
-      "message0": "如果 %1 就",
+      "message0": "%{BKY_U_IF_ELSE_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "COND", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "COND",
+          "check": "Expression"
+        }
       ],
       "message1": "%1",
       "args1": [
-        { "type": "input_statement", "name": "THEN", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "THEN",
+          "check": "Statement"
+        }
       ],
-      "message2": "否則",
+      "message2": "%{BKY_U_IF_ELSE_MSG2}",
       "message3": "%1",
       "args3": [
-        { "type": "input_statement", "name": "ELSE", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "ELSE",
+          "check": "Statement"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 40,
-      "tooltip": "如果條件成立就執行「就」的部分，否則執行「否則」的部分"
+      "tooltip": "%{BKY_U_IF_ELSE_TOOLTIP}"
     }
   },
   {
@@ -214,21 +390,37 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_count_loop",
-      "message0": "重複：%1 從 %2 到 %3",
+      "message0": "%{BKY_U_COUNT_LOOP_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "VAR", "text": "i" },
-        { "type": "input_value", "name": "FROM", "check": "Expression" },
-        { "type": "input_value", "name": "TO", "check": "Expression" }
+        {
+          "type": "field_input",
+          "name": "VAR",
+          "text": "i"
+        },
+        {
+          "type": "input_value",
+          "name": "FROM",
+          "check": "Expression"
+        },
+        {
+          "type": "input_value",
+          "name": "TO",
+          "check": "Expression"
+        }
       ],
       "message1": "%1",
       "args1": [
-        { "type": "input_statement", "name": "BODY", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
       ],
       "inputsInline": true,
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 120,
-      "tooltip": "讓程式重複執行：變數會從起始值一直數到結束值，每次加 1"
+      "tooltip": "%{BKY_U_COUNT_LOOP_TOOLTIP}"
     }
   },
   {
@@ -238,18 +430,26 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_while_loop",
-      "message0": "當 %1 持續執行",
+      "message0": "%{BKY_U_WHILE_LOOP_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "COND", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "COND",
+          "check": "Expression"
+        }
       ],
       "message1": "%1",
       "args1": [
-        { "type": "input_statement", "name": "BODY", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 120,
-      "tooltip": "當條件成立時持續執行"
+      "tooltip": "%{BKY_U_WHILE_LOOP_TOOLTIP}"
     }
   },
   {
@@ -259,11 +459,11 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_break",
-      "message0": "跳出迴圈",
+      "message0": "%{BKY_U_BREAK_MSG0}",
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 120,
-      "tooltip": "立刻停止迴圈，不再重複"
+      "tooltip": "%{BKY_U_BREAK_TOOLTIP}"
     }
   },
   {
@@ -273,11 +473,11 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_continue",
-      "message0": "跳至下一次",
+      "message0": "%{BKY_U_CONTINUE_MSG0}",
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 120,
-      "tooltip": "跳過本次迴圈，直接執行下一次"
+      "tooltip": "%{BKY_U_CONTINUE_TOOLTIP}"
     }
   },
   {
@@ -287,20 +487,69 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_func_def",
-      "message0": "定義函式 %1（%2）回傳 %3",
+      "message0": "%{BKY_U_FUNC_DEF_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "NAME", "text": "myFunc" },
-        { "type": "field_input", "name": "PARAMS", "text": "" },
-        { "type": "field_dropdown", "name": "RETURN_TYPE", "options": [["void（無回傳）","void"],["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"],["long long（大整數）","long long"],["string（文字）","string"],["bool（是/否）","bool"]] }
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "myFunc"
+        },
+        {
+          "type": "field_input",
+          "name": "PARAMS",
+          "text": ""
+        },
+        {
+          "type": "field_dropdown",
+          "name": "RETURN_TYPE",
+          "options": [
+            [
+              "%{BKY_U_FUNC_DEF_RETURN_TYPE_VOID}",
+              "void"
+            ],
+            [
+              "%{BKY_U_FUNC_DEF_RETURN_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_U_FUNC_DEF_RETURN_TYPE_FLOAT}",
+              "float"
+            ],
+            [
+              "%{BKY_U_FUNC_DEF_RETURN_TYPE_DOUBLE}",
+              "double"
+            ],
+            [
+              "%{BKY_U_FUNC_DEF_RETURN_TYPE_CHAR}",
+              "char"
+            ],
+            [
+              "%{BKY_U_FUNC_DEF_RETURN_TYPE_LONG_LONG}",
+              "long long"
+            ],
+            [
+              "%{BKY_U_FUNC_DEF_RETURN_TYPE_STRING}",
+              "string"
+            ],
+            [
+              "%{BKY_U_FUNC_DEF_RETURN_TYPE_BOOL}",
+              "bool"
+            ]
+          ]
+        }
       ],
       "message1": "%1",
       "args1": [
-        { "type": "input_statement", "name": "BODY", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 60,
-      "tooltip": "定義一個函式（可重複使用的程式片段）。選擇 void（無回傳）表示不需要回傳結果"
+      "tooltip": "%{BKY_U_FUNC_DEF_TOOLTIP}"
     }
   },
   {
@@ -310,15 +559,23 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_func_call",
-      "message0": "呼叫函式 %1（%2）",
+      "message0": "%{BKY_U_FUNC_CALL_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "NAME", "text": "func" },
-        { "type": "field_input", "name": "ARGS", "text": "" }
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "func"
+        },
+        {
+          "type": "field_input",
+          "name": "ARGS",
+          "text": ""
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 60,
-      "tooltip": "執行指定的函式，可以傳入參數"
+      "tooltip": "%{BKY_U_FUNC_CALL_TOOLTIP}"
     }
   },
   {
@@ -328,14 +585,18 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_return",
-      "message0": "回傳 %1",
+      "message0": "%{BKY_U_RETURN_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "VALUE", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "VALUE",
+          "check": "Expression"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 60,
-      "tooltip": "結束函式的執行，並把結果送回去給呼叫的地方"
+      "tooltip": "%{BKY_U_RETURN_TOOLTIP}"
     }
   },
   {
@@ -345,15 +606,19 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_print",
-      "message0": "輸出 %1",
+      "message0": "%{BKY_U_PRINT_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "EXPR", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "EXPR",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 180,
-      "tooltip": "輸出一個或多個值到螢幕上"
+      "tooltip": "%{BKY_U_PRINT_TOOLTIP}"
     }
   },
   {
@@ -363,10 +628,10 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_endl",
-      "message0": "換行",
+      "message0": "%{BKY_U_ENDL_MSG0}",
       "output": "Expression",
       "colour": 180,
-      "tooltip": "讓輸出內容換到下一行"
+      "tooltip": "%{BKY_U_ENDL_TOOLTIP}"
     }
   },
   {
@@ -376,14 +641,18 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_input",
-      "message0": "讀取輸入 → 變數 %1",
+      "message0": "%{BKY_U_INPUT_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "NAME", "text": "x" }
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "x"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 180,
-      "tooltip": "從鍵盤讀取一個值到變數中"
+      "tooltip": "%{BKY_U_INPUT_TOOLTIP}"
     }
   },
   {
@@ -393,17 +662,50 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_array_declare",
-      "message0": "建立 %1 陣列 %2 大小 %3",
+      "message0": "%{BKY_U_ARRAY_DECLARE_MSG0}",
       "args0": [
-        { "type": "field_dropdown", "name": "TYPE", "options": [["int（整數）","int"],["float（小數）","float"],["double（精確小數）","double"],["char（字元）","char"],["long long（大整數）","long long"]] },
-        { "type": "field_input", "name": "NAME", "text": "arr" },
-        { "type": "input_value", "name": "SIZE", "check": "Expression" }
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [
+              "%{BKY_U_ARRAY_DECLARE_TYPE_INT}",
+              "int"
+            ],
+            [
+              "%{BKY_U_ARRAY_DECLARE_TYPE_FLOAT}",
+              "float"
+            ],
+            [
+              "%{BKY_U_ARRAY_DECLARE_TYPE_DOUBLE}",
+              "double"
+            ],
+            [
+              "%{BKY_U_ARRAY_DECLARE_TYPE_CHAR}",
+              "char"
+            ],
+            [
+              "%{BKY_U_ARRAY_DECLARE_TYPE_LONG_LONG}",
+              "long long"
+            ]
+          ]
+        },
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "arr"
+        },
+        {
+          "type": "input_value",
+          "name": "SIZE",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 260,
-      "tooltip": "建立一個固定大小的陣列（一排連續的格子），索引從 0 開始"
+      "tooltip": "%{BKY_U_ARRAY_DECLARE_TOOLTIP}"
     }
   },
   {
@@ -413,15 +715,23 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "u_array_access",
-      "message0": "陣列 %1 的第 [ %2 ] 格",
+      "message0": "%{BKY_U_ARRAY_ACCESS_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "ARRAY", "text": "arr" },
-        { "type": "input_value", "name": "INDEX", "check": "Expression" }
+        {
+          "type": "field_input",
+          "name": "ARRAY",
+          "text": "arr"
+        },
+        {
+          "type": "input_value",
+          "name": "INDEX",
+          "check": "Expression"
+        }
       ],
       "inputsInline": true,
       "output": "Expression",
       "colour": 260,
-      "tooltip": "取得或設定陣列中指定位置的值，索引從 0 開始"
+      "tooltip": "%{BKY_U_ARRAY_ACCESS_TOOLTIP}"
     }
   }
 ]

@@ -6,13 +6,17 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_char_literal",
-      "message0": "字元 ' %1 '",
+      "message0": "%{BKY_C_CHAR_LITERAL_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "CHAR", "text": "a" }
+        {
+          "type": "field_input",
+          "name": "CHAR",
+          "text": "a"
+        }
       ],
       "output": "Expression",
       "colour": 210,
-      "tooltip": "輸入一個字元（單一文字），用單引號包起來"
+      "tooltip": "%{BKY_C_CHAR_LITERAL_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "'${CHAR}'",
@@ -31,14 +35,31 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_increment",
-      "message0": "變數 %1 %2",
+      "message0": "%{BKY_C_INCREMENT_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "NAME", "text": "i" },
-        { "type": "field_dropdown", "name": "OP", "options": [["加 1（++）","++"],["減 1（--）","--"]] }
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "i"
+        },
+        {
+          "type": "field_dropdown",
+          "name": "OP",
+          "options": [
+            [
+              "%{BKY_C_INCREMENT_OP_INCREMENT}",
+              "++"
+            ],
+            [
+              "%{BKY_C_INCREMENT_OP_DECREMENT}",
+              "--"
+            ]
+          ]
+        }
       ],
       "output": "Expression",
       "colour": 210,
-      "tooltip": "讓變數的值加 1 或減 1"
+      "tooltip": "%{BKY_C_INCREMENT_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "${NAME}${OP}",
@@ -57,16 +78,49 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_compound_assign",
-      "message0": "把變數 %1 %2 %3",
+      "message0": "%{BKY_C_COMPOUND_ASSIGN_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "NAME", "text": "x" },
-        { "type": "field_dropdown", "name": "OP", "options": [["加上（+=）","+="],["減去（-=）","-="],["乘以（*=）","*="],["除以（/=）","/="],["取餘數（%=）","%="]] },
-        { "type": "input_value", "name": "VALUE", "check": "Expression" }
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "x"
+        },
+        {
+          "type": "field_dropdown",
+          "name": "OP",
+          "options": [
+            [
+              "%{BKY_C_COMPOUND_ASSIGN_OP_PLUS_EQ}",
+              "+="
+            ],
+            [
+              "%{BKY_C_COMPOUND_ASSIGN_OP_MINUS_EQ}",
+              "-="
+            ],
+            [
+              "%{BKY_C_COMPOUND_ASSIGN_OP_TIMES_EQ}",
+              "*="
+            ],
+            [
+              "%{BKY_C_COMPOUND_ASSIGN_OP_DIVIDE_EQ}",
+              "/="
+            ],
+            [
+              "%{BKY_C_COMPOUND_ASSIGN_OP_REMAINDER_EQ}",
+              "%="
+            ]
+          ]
+        },
+        {
+          "type": "input_value",
+          "name": "VALUE",
+          "check": "Expression"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 210,
-      "tooltip": "把變數的值加上、減去、乘以、除以或取餘數後存回去"
+      "tooltip": "%{BKY_C_COMPOUND_ASSIGN_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "${NAME} ${OP} ${VALUE};",
@@ -85,18 +139,26 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_switch",
-      "message0": "根據 %1 的值",
+      "message0": "%{BKY_C_SWITCH_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "EXPR", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "EXPR",
+          "check": "Expression"
+        }
       ],
       "message1": "%1",
       "args1": [
-        { "type": "input_statement", "name": "CASES", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "CASES",
+          "check": "Statement"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 40,
-      "tooltip": "根據一個值來決定要執行哪一段程式，類似多個「如果」的快捷寫法"
+      "tooltip": "%{BKY_C_SWITCH_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "switch (${EXPR}) {\n${CASES}\n}",
@@ -115,18 +177,26 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_case",
-      "message0": "當值為 %1 :",
+      "message0": "%{BKY_C_CASE_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "VALUE", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "VALUE",
+          "check": "Expression"
+        }
       ],
       "message1": "%1",
       "args1": [
-        { "type": "input_statement", "name": "BODY", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 40,
-      "tooltip": "當上面的值等於這個值時，就執行這段程式"
+      "tooltip": "%{BKY_C_CASE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "case ${VALUE}:\n${BODY}",
@@ -145,20 +215,36 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_for_loop",
-      "message0": "自訂重複：初始 %1 ；條件 %2 ；更新 %3",
+      "message0": "%{BKY_C_FOR_LOOP_MSG0}",
       "args0": [
-        { "type": "input_value", "name": "INIT", "check": "Expression" },
-        { "type": "input_value", "name": "COND", "check": "Expression" },
-        { "type": "input_value", "name": "UPDATE", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "INIT",
+          "check": "Expression"
+        },
+        {
+          "type": "input_value",
+          "name": "COND",
+          "check": "Expression"
+        },
+        {
+          "type": "input_value",
+          "name": "UPDATE",
+          "check": "Expression"
+        }
       ],
-      "message1": "執行 %1",
+      "message1": "%{BKY_C_FOR_LOOP_MSG1}",
       "args1": [
-        { "type": "input_statement", "name": "BODY", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 120,
-      "tooltip": "自訂的重複迴圈：先設定初始值，每次檢查條件，通過就執行，然後更新"
+      "tooltip": "%{BKY_C_FOR_LOOP_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "for (${INIT}; ${COND}; ${UPDATE}) {\n${BODY}\n}",
@@ -177,18 +263,26 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_do_while",
-      "message0": "先執行 %1",
+      "message0": "%{BKY_C_DO_WHILE_MSG0}",
       "args0": [
-        { "type": "input_statement", "name": "BODY", "check": "Statement" }
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
       ],
-      "message1": "當 %1 繼續重複",
+      "message1": "%{BKY_C_DO_WHILE_MSG1}",
       "args1": [
-        { "type": "input_value", "name": "COND", "check": "Expression" }
+        {
+          "type": "input_value",
+          "name": "COND",
+          "check": "Expression"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 120,
-      "tooltip": "先執行一次裡面的程式，然後檢查條件，成立就繼續重複"
+      "tooltip": "%{BKY_C_DO_WHILE_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "do {\n${BODY}\n} while (${COND});",
@@ -207,24 +301,39 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_printf",
-      "message0": "格式輸出 \" %1 \" %2",
+      "message0": "%{BKY_C_PRINTF_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "FORMAT", "text": "%d\\n" },
-        { "type": "field_input", "name": "ARGS", "text": ", x" }
+        {
+          "type": "field_input",
+          "name": "FORMAT",
+          "text": "%d\\n"
+        },
+        {
+          "type": "field_input",
+          "name": "ARGS",
+          "text": ", x"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 180,
-      "tooltip": "用格式字串輸出內容。常用格式：%d 整數、%f 小數、%s 文字、\\n 換行"
+      "tooltip": "%{BKY_C_PRINTF_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "printf(\"${FORMAT}\"${ARGS});",
-      "imports": ["stdio.h"],
+      "imports": [
+        "stdio.h"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "call_expression",
-      "constraints": [{ "field": "function", "text": "printf" }]
+      "constraints": [
+        {
+          "field": "function",
+          "text": "printf"
+        }
+      ]
     }
   },
   {
@@ -234,24 +343,39 @@
     "version": "1.0.0",
     "blockDef": {
       "type": "c_scanf",
-      "message0": "格式輸入 \" %1 \" %2",
+      "message0": "%{BKY_C_SCANF_MSG0}",
       "args0": [
-        { "type": "field_input", "name": "FORMAT", "text": "%d" },
-        { "type": "field_input", "name": "ARGS", "text": ", &x" }
+        {
+          "type": "field_input",
+          "name": "FORMAT",
+          "text": "%d"
+        },
+        {
+          "type": "field_input",
+          "name": "ARGS",
+          "text": ", &x"
+        }
       ],
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": 180,
-      "tooltip": "用格式字串讀取輸入。變數前要加 &（取址符號），如 &x"
+      "tooltip": "%{BKY_C_SCANF_TOOLTIP}"
     },
     "codeTemplate": {
       "pattern": "scanf(\"${FORMAT}\"${ARGS});",
-      "imports": ["stdio.h"],
+      "imports": [
+        "stdio.h"
+      ],
       "order": 0
     },
     "astPattern": {
       "nodeType": "call_expression",
-      "constraints": [{ "field": "function", "text": "scanf" }]
+      "constraints": [
+        {
+          "field": "function",
+          "text": "scanf"
+        }
+      ]
     }
   }
 ]

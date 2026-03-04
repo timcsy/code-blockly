@@ -1,7 +1,48 @@
 import * as Blockly from 'blockly'
 import type { BlockRegistry, ToolboxDefinition } from '../core/block-registry'
 import type { ToolboxLevel, WorkspaceDiagnostic } from '../core/types'
+import type { TypeEntry } from '../languages/types'
 import { runDiagnosticsOnState } from '../core/diagnostics'
+
+/** Module-level type list, updated by setLanguageTypes() */
+let currentTypeEntries: TypeEntry[] = []
+
+/** Get the current type dropdown options from the active language module */
+function getLanguageTypeOptions(): Array<[string, string]> {
+  if (currentTypeEntries.length === 0) {
+    // Fallback: basic C++ types (before LanguageModule is loaded)
+    return [
+      [Blockly.Msg['TYPE_INT'] || 'int', 'int'],
+      [Blockly.Msg['TYPE_FLOAT'] || 'float', 'float'],
+      [Blockly.Msg['TYPE_DOUBLE'] || 'double', 'double'],
+      [Blockly.Msg['TYPE_CHAR'] || 'char', 'char'],
+      [Blockly.Msg['TYPE_BOOL'] || 'bool', 'bool'],
+      [Blockly.Msg['TYPE_STRING'] || 'string', 'string'],
+      [Blockly.Msg['TYPE_VOID'] || 'void', 'void'],
+    ]
+  }
+  return currentTypeEntries.map(t => [
+    Blockly.Msg[t.labelKey] || t.value,
+    t.value,
+  ] as [string, string])
+}
+
+/** Get return type options (includes void first) */
+function getReturnTypeOptions(): Array<[string, string]> {
+  const all = getLanguageTypeOptions()
+  // Move void to the front if present
+  const voidIdx = all.findIndex(([, v]) => v === 'void')
+  if (voidIdx > 0) {
+    const [voidEntry] = all.splice(voidIdx, 1)
+    all.unshift(voidEntry)
+  }
+  return all
+}
+
+/** Get param type options (excludes void) */
+function getParamTypeOptions(): Array<[string, string]> {
+  return getLanguageTypeOptions().filter(([, v]) => v !== 'void')
+}
 
 export class BlocklyEditor {
   private workspace: Blockly.WorkspaceSvg | null = null
@@ -93,6 +134,11 @@ export class BlocklyEditor {
     this.blockCreateOffset = (this.blockCreateOffset + 30) % 150
   }
 
+  /** Update the available types from a language module */
+  setLanguageTypes(types: TypeEntry[]): void {
+    currentTypeEntries = types
+  }
+
   updateToolbox(registry: BlockRegistry, languageId?: string, level?: ToolboxLevel): void {
     if (!this.workspace) return
     this.registerBlocks(registry)
@@ -119,6 +165,16 @@ export class BlocklyEditor {
         block.setWarningText(diag.message)
       }
     }
+  }
+
+  undo(): void {
+    if (!this.workspace) return
+    this.workspace.undo(false)
+  }
+
+  redo(): void {
+    if (!this.workspace) return
+    this.workspace.undo(true)
   }
 
   dispose(): void {
@@ -164,11 +220,11 @@ export class BlocklyEditor {
         this.setColour(180)
         this.setPreviousStatement(true, 'Statement')
         this.setNextStatement(true, 'Statement')
-        this.setTooltip('輸出一個或多個值到螢幕上')
+        this.setTooltip(Blockly.Msg['U_PRINT_TOOLTIP'] || '輸出一個或多個值到螢幕上')
         this.setInputsInline(true)
 
         this.appendDummyInput('LABEL')
-          .appendField('輸出')
+          .appendField(Blockly.Msg['U_PRINT_LABEL'] || '輸出')
         this.appendValueInput('EXPR0')
           .setCheck('Expression')
         this.appendDummyInput('TAIL')
@@ -219,7 +275,7 @@ export class BlocklyEditor {
 
     // u_func_def: dynamic parameter rows with +/- buttons
     if (!Blockly.Blocks['u_func_def']) {
-      const TYPE_OPTIONS = [['int（整數）','int'],['float（小數）','float'],['double（精確小數）','double'],['char（字元）','char'],['bool（是/否）','bool'],['string（文字）','string'],['void（無回傳）','void']]
+      // Type options now come from LanguageModule via getParamTypeOptions()/getReturnTypeOptions()
       /* eslint-disable @typescript-eslint/no-explicit-any */
       Blockly.Blocks['u_func_def'] = {
         paramCount_: 0,
@@ -229,15 +285,15 @@ export class BlocklyEditor {
           this.setColour(60)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setTooltip('定義一個函式（可重複使用的程式片段）。選擇 void（無回傳）表示不需要回傳結果')
+          this.setTooltip(Blockly.Msg['U_FUNC_DEF_TOOLTIP'] || '定義一個函式（可重複使用的程式片段）。選擇 void（無回傳）表示不需要回傳結果')
 
           this.appendDummyInput('HEADER')
-            .appendField('定義函式')
+            .appendField(Blockly.Msg['U_FUNC_DEF_LABEL'] || '定義函式')
             .appendField(new Blockly.FieldTextInput('myFunc'), 'NAME')
-            .appendField('回傳')
-            .appendField(new Blockly.FieldDropdown([['void（無回傳）','void'],['int（整數）','int'],['float（小數）','float'],['double（精確小數）','double'],['char（字元）','char'],['long long（大整數）','long long'],['string（文字）','string'],['bool（是/否）','bool']]), 'RETURN_TYPE')
+            .appendField(Blockly.Msg['U_FUNC_DEF_RETURN_LABEL'] || '回傳')
+            .appendField(new Blockly.FieldDropdown(getReturnTypeOptions), 'RETURN_TYPE')
           this.appendDummyInput('PARAMS_LABEL')
-            .appendField('參數')
+            .appendField(Blockly.Msg['U_FUNC_DEF_PARAMS_LABEL'] || '參數')
             .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plus_()))
             .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minus_()), 'MINUS_BTN')
           this.appendStatementInput('BODY').setCheck('Statement')
@@ -246,7 +302,7 @@ export class BlocklyEditor {
         plus_: function (this: any) {
           const idx = this.paramCount_
           this.appendDummyInput('PARAM_ROW_' + idx)
-            .appendField(new Blockly.FieldDropdown(TYPE_OPTIONS), 'TYPE_' + idx)
+            .appendField(new Blockly.FieldDropdown(getParamTypeOptions), 'TYPE_' + idx)
             .appendField(new Blockly.FieldTextInput('p' + idx), 'PARAM_' + idx)
           this.moveInputBefore('PARAM_ROW_' + idx, 'BODY')
           this.paramCount_++
@@ -297,11 +353,11 @@ export class BlocklyEditor {
           this.argCount_ = 0
           this.setColour(60)
           this.setOutput(true, 'Expression')
-          this.setTooltip('執行指定的函式，可以傳入參數')
+          this.setTooltip(Blockly.Msg['U_FUNC_CALL_TOOLTIP'] || '執行指定的函式，可以傳入參數')
           this.setInputsInline(true)
 
           this.appendDummyInput('LABEL')
-            .appendField('呼叫函式')
+            .appendField(Blockly.Msg['U_FUNC_CALL_LABEL'] || '呼叫函式')
             .appendField(new Blockly.FieldTextInput('func'), 'NAME')
             .appendField('(')
           this.appendDummyInput('TAIL')
@@ -363,11 +419,11 @@ export class BlocklyEditor {
           this.setColour(180)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setTooltip('從鍵盤讀取一個或多個值到變數中')
+          this.setTooltip(Blockly.Msg['U_INPUT_TOOLTIP'] || '從鍵盤讀取一個或多個值到變數中')
           this.setInputsInline(true)
 
           this.appendDummyInput('LABEL')
-            .appendField('讀取輸入 → 變數')
+            .appendField(Blockly.Msg['U_INPUT_LABEL'] || '讀取輸入 → 變數')
           this.appendDummyInput('VAR_0')
             .appendField(new Blockly.FieldTextInput('x'), 'NAME_0')
           this.appendDummyInput('TAIL')
@@ -427,7 +483,7 @@ export class BlocklyEditor {
           this.customName_ = ''
           this.setColour(330)
           this.setOutput(true, 'Expression')
-          this.setTooltip('使用這個變數目前存放的值')
+          this.setTooltip(Blockly.Msg['U_VAR_REF_TOOLTIP'] || '使用這個變數目前存放的值')
 
           this.appendDummyInput('MAIN')
             .appendField(new Blockly.FieldDropdown(
@@ -442,7 +498,7 @@ export class BlocklyEditor {
 
         generateOptions_: function (this: any): Array<[string, string]> {
           const ws = this.workspace
-          if (!ws) return [['(自訂)', '__CUSTOM__']]
+          if (!ws) return [[Blockly.Msg['U_VAR_REF_CUSTOM'] || '(自訂)', '__CUSTOM__']]
 
           const options: Array<[string, string]> = []
           const seen = new Set<string>()
@@ -468,7 +524,7 @@ export class BlocklyEditor {
           }
 
           // Always add custom option at the end
-          options.push(['(自訂)', '__CUSTOM__'])
+          options.push([Blockly.Msg['U_VAR_REF_CUSTOM'] || '(自訂)', '__CUSTOM__'])
           return options
         },
 
@@ -512,15 +568,18 @@ export class BlocklyEditor {
           this.setColour(330)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setTooltip('建立一個新的變數，可以選擇型別和初始值。變數就像一個有名字的盒子，用來存放資料')
+          this.setTooltip(Blockly.Msg['U_VAR_DECLARE_TOOLTIP'] || '建立一個新的變數，可以選擇型別和初始值。變數就像一個有名字的盒子，用來存放資料')
 
           this.appendDummyInput('DECL')
-            .appendField(new Blockly.FieldDropdown(
-              [['int（整數）','int'],['float（小數）','float'],['double（精確小數）','double'],['char（字元）','char'],['bool（是/否）','bool'],['string（文字）','string'],['long long（大整數）','long long']],
-            ), 'TYPE')
+            .appendField(new Blockly.FieldDropdown(function() {
+              return getLanguageTypeOptions().filter(([, v]) => v !== 'void')
+            }), 'TYPE')
             .appendField(new Blockly.FieldTextInput('x'), 'NAME')
             .appendField(new Blockly.FieldDropdown(
-              [['有初始值','with_init'],['無初始值','no_init']],
+              function() { return [
+                [Blockly.Msg['U_VAR_DECLARE_WITH_INIT'] || '有初始值', 'with_init'],
+                [Blockly.Msg['U_VAR_DECLARE_NO_INIT'] || '無初始值', 'no_init'],
+              ] },
               function (this: Blockly.FieldDropdown, newValue: string) {
                 const block = this.getSourceBlock() as any
                 if (block) block.updateShape_(newValue)
@@ -592,26 +651,26 @@ export class BlocklyEditor {
     }
   }
 
-  private static readonly CATEGORY_NAMES: Record<string, string> = {
-    data: '資料',
-    operators: '運算',
-    control: '流程控制',
-    functions: '函式',
-    io: '輸入輸出',
-    arrays: '陣列',
-    variables: '變數',
-    values: '數值',
-    conditions: '條件',
-    loops: '迴圈',
-    pointers: '指標',
-    structures: '結構',
-    strings: '字串',
-    containers: '容器',
-    algorithms: '演算法',
-    oop: '物件導向',
-    templates: '模板',
-    special: '特殊',
-    preprocessor: '前處理',
+  private static readonly CATEGORY_I18N_KEYS: Record<string, string> = {
+    data: 'CAT_DATA',
+    operators: 'CAT_OPERATORS',
+    control: 'CAT_CONTROL',
+    functions: 'CAT_FUNCTIONS',
+    io: 'CAT_IO',
+    arrays: 'CAT_ARRAYS',
+    variables: 'CAT_VARIABLES',
+    values: 'CAT_VALUES',
+    conditions: 'CAT_CONDITIONS',
+    loops: 'CAT_LOOPS',
+    pointers: 'CAT_POINTERS',
+    structures: 'CAT_STRUCTURES',
+    strings: 'CAT_STRINGS',
+    containers: 'CAT_CONTAINERS',
+    algorithms: 'CAT_ALGORITHMS',
+    oop: 'CAT_OOP',
+    templates: 'CAT_TEMPLATES',
+    special: 'CAT_SPECIAL',
+    preprocessor: 'CAT_PREPROCESSOR',
   }
 
   private convertToolbox(def: ToolboxDefinition): object {
@@ -619,7 +678,7 @@ export class BlocklyEditor {
       kind: 'categoryToolbox',
       contents: def.contents.map(cat => ({
         kind: 'category',
-        name: BlocklyEditor.CATEGORY_NAMES[cat.name] ?? cat.name,
+        name: (BlocklyEditor.CATEGORY_I18N_KEYS[cat.name] ? Blockly.Msg[BlocklyEditor.CATEGORY_I18N_KEYS[cat.name]] : null) ?? cat.name,
         contents: cat.contents.map(block => ({
           kind: 'block',
           type: block.type,

@@ -1,40 +1,37 @@
-import type { BlockRegistry } from './block-registry'
-import type { GeneratorModule, ParserModule } from './types'
+import type { NewLanguageModule, LanguageRegistry as ILanguageRegistry } from '../languages/types'
 
-export class Converter {
-  private generators = new Map<string, GeneratorModule>()
-  private parsers = new Map<string, ParserModule>()
-  private registry: BlockRegistry
+/**
+ * LanguageRegistryImpl — 管理已註冊的語言模組，提供 active 語言切換。
+ */
+export class LanguageRegistryImpl implements ILanguageRegistry {
+  private modules = new Map<string, NewLanguageModule>()
+  private activeId = ''
 
-  constructor(registry: BlockRegistry) {
-    this.registry = registry
-  }
-
-  registerGenerator(generator: GeneratorModule): void {
-    this.generators.set(generator.getLanguageId(), generator)
-  }
-
-  registerParser(parser: ParserModule): void {
-    this.parsers.set(parser.getLanguageId(), parser)
-  }
-
-  blocksToCode(workspace: unknown, languageId: string): string {
-    const generator = this.generators.get(languageId)
-    if (!generator) {
-      throw new Error(`No generator registered for language: ${languageId}`)
+  register(module: NewLanguageModule): void {
+    this.modules.set(module.languageId, module)
+    if (!this.activeId) {
+      this.activeId = module.languageId
     }
-    return generator.generate(workspace)
   }
 
-  async codeToBlocks(code: string, languageId: string): Promise<unknown> {
-    const parser = this.parsers.get(languageId)
-    if (!parser) {
-      throw new Error(`No parser registered for language: ${languageId}`)
+  get(languageId: string): NewLanguageModule | undefined {
+    return this.modules.get(languageId)
+  }
+
+  getAvailableLanguages(): string[] {
+    return Array.from(this.modules.keys())
+  }
+
+  getActive(): NewLanguageModule {
+    const mod = this.modules.get(this.activeId)
+    if (!mod) throw new Error(`No active language module (activeId=${this.activeId})`)
+    return mod
+  }
+
+  setActive(languageId: string): void {
+    if (!this.modules.has(languageId)) {
+      throw new Error(`Language module '${languageId}' not registered`)
     }
-    return parser.parse(code)
-  }
-
-  getRegistry(): BlockRegistry {
-    return this.registry
+    this.activeId = languageId
   }
 }

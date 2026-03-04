@@ -82,7 +82,7 @@ export interface SourceMapping {
   endLine: number
 }
 
-/** 語言適配器介面 */
+/** @deprecated Use NewLanguageAdapter from '../languages/types' instead */
 export interface LanguageAdapter {
   /**
    * 給定 AST 節點，回傳對應的積木 ID。
@@ -107,7 +107,7 @@ export interface LanguageAdapter {
   generateCode(blockId: string, block: BlockJSON, indent: number): string
 }
 
-/** 語言模組介面 */
+/** @deprecated Use NewLanguageModule from '../languages/types' instead */
 export interface LanguageModule {
   readonly languageId: string
 
@@ -117,19 +117,19 @@ export interface LanguageModule {
   getAdapter(): LanguageAdapter
 }
 
-/** Parser Module 介面 */
+/** @deprecated Use Parser from '../languages/types' instead */
 export interface ParserModule {
   getLanguageId(): string
   parse(code: string): Promise<unknown>
 }
 
-/** Generator Module 介面 */
+/** @deprecated Use Generator from '../languages/types' instead */
 export interface GeneratorModule {
   getLanguageId(): string
   generate(workspace: unknown): string
 }
 
-/** Converter 介面 */
+/** @deprecated Use LanguageRegistryImpl from './converter' instead */
 export interface ConverterInterface {
   codeToBlocks(code: string, languageId: string): Promise<unknown>
   blocksToCode(workspace: unknown, languageId: string): string
@@ -150,8 +150,10 @@ export type ToolboxLevel = 'beginner' | 'advanced'
 /** 快捷列項目定義 */
 export interface QuickAccessItem {
   blockType: string
-  label: string
+  labelKey: string
+  fallbackLabel: string
   icon: string
+  tooltipKey?: string
 }
 
 /** 即時錯誤診斷結果 */
@@ -177,12 +179,12 @@ export const BEGINNER_BLOCKS: readonly string[] = [
 
 /** 快捷列預設項目 */
 export const QUICK_ACCESS_ITEMS: readonly QuickAccessItem[] = [
-  { blockType: 'u_var_declare', label: '變數', icon: '📦' },
-  { blockType: 'u_print', label: '輸出', icon: '📤' },
-  { blockType: 'u_input', label: '輸入', icon: '📥' },
-  { blockType: 'u_if', label: '如果', icon: '🔀' },
-  { blockType: 'u_count_loop', label: '迴圈', icon: '🔁' },
-  { blockType: 'u_func_def', label: '函式', icon: '⚙️' },
+  { blockType: 'u_var_declare', labelKey: 'QA_VAR', fallbackLabel: '變數', icon: '📦', tooltipKey: 'QA_TOOLTIP_VAR' },
+  { blockType: 'u_print', labelKey: 'QA_PRINT', fallbackLabel: '輸出', icon: '📤', tooltipKey: 'QA_TOOLTIP_PRINT' },
+  { blockType: 'u_input', labelKey: 'QA_INPUT', fallbackLabel: '輸入', icon: '📥', tooltipKey: 'QA_TOOLTIP_INPUT' },
+  { blockType: 'u_if', labelKey: 'QA_IF', fallbackLabel: '如果', icon: '🔀', tooltipKey: 'QA_TOOLTIP_IF' },
+  { blockType: 'u_count_loop', labelKey: 'QA_LOOP', fallbackLabel: '迴圈', icon: '🔁', tooltipKey: 'QA_TOOLTIP_LOOP' },
+  { blockType: 'u_func_def', labelKey: 'QA_FUNC', fallbackLabel: '函式', icon: '⚙️', tooltipKey: 'QA_TOOLTIP_FUNC' },
 ]
 
 /** 預設 C++ iostream 程式骨架模板 */
