@@ -150,9 +150,9 @@
 
 **目的**: 跨故事整合測試、邊界情況驗證、quickstart 場景驗收
 
-- [ ] T042 [P] 撰寫端對端整合測試在 tests/integration/interpreter-integration.test.ts — 涵蓋 quickstart.md 8 個場景
-- [ ] T043 驗證所有測試通過並確認 npm run build 成功
-- [ ] T044 在瀏覽器中手動驗證 quickstart.md 所有 8 個場景
+- [X] T042 [P] 撰寫端對端整合測試在 tests/integration/interpreter-integration.test.ts — 涵蓋 quickstart.md 8 個場景
+- [X] T043 驗證所有測試通過並確認 npm run build 成功
+- [X] T044 在瀏覽器中手動驗證 quickstart.md 所有 8 個場景
 
 ---
 
