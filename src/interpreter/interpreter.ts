@@ -314,6 +314,9 @@ export class SemanticInterpreter {
 
     if (!Array.isArray(body)) return
 
+    // 建立子 scope，迴圈變數在子 scope 中宣告（避免巢狀迴圈重複宣告）
+    const parentScope = this.scope
+    this.scope = parentScope.createChild()
     this.scope.declare(varName, { type: 'int', value: from })
 
     for (let i = from; i <= to; i++) {
@@ -323,9 +326,11 @@ export class SemanticInterpreter {
       } catch (signal) {
         if (signal instanceof BreakSignal) break
         if (signal instanceof ContinueSignal) continue
+        this.scope = parentScope
         throw signal
       }
     }
+    this.scope = parentScope
   }
 
   private execWhileLoop(node: SemanticNode): void {
@@ -333,7 +338,10 @@ export class SemanticInterpreter {
 
     if (!Array.isArray(body)) return
 
+    // 建立子 scope，每次迭代內的宣告不會外洩
+    const parentScope = this.scope
     while (true) {
+      this.scope = parentScope.createChild()
       const condition = this.evaluate(node.children.condition as SemanticNode)
       if (!this.toBool(condition)) break
 
@@ -342,9 +350,11 @@ export class SemanticInterpreter {
       } catch (signal) {
         if (signal instanceof BreakSignal) break
         if (signal instanceof ContinueSignal) continue
+        this.scope = parentScope
         throw signal
       }
     }
+    this.scope = parentScope
   }
 
   // --- 函式概念 (T019) ---
