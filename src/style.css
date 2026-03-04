@@ -202,6 +202,13 @@ html, body {
   background: rgba(255, 213, 79, 0.3);
 }
 
+/* Highlighted block during execution (Blockly adds .blocklyHighlighted class) */
+.blocklyHighlighted > .blocklyPath {
+  stroke: #f39c12 !important;
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 0 6px rgba(243, 156, 18, 0.8));
+}
+
 /* Breakpoint gutter */
 .cm-breakpoint-gutter {
   width: 16px;

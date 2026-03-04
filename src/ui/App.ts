@@ -588,6 +588,9 @@ export class App {
       return
     }
 
+    // Ensure sourceMappings exist for block highlighting
+    await this.ensureSourceMappings()
+
     // Use step-based execution for highlighting + breakpoints
     this.consolePanel.clear()
     this.consolePanel.setStatus('running')
@@ -634,6 +637,9 @@ export class App {
     if (needsInit) {
       this.stepController.stop()
       this.interpreter.reset()
+
+      // Ensure sourceMappings exist for block highlighting
+      await this.ensureSourceMappings()
 
       let model = this.syncController.getCurrentModel()
       if (!model) {
@@ -740,6 +746,18 @@ export class App {
     }
 
     this.consolePanel?.setStatus('running')
+  }
+
+  /** Compute sourceMappings if not already available (for block highlighting) */
+  private async ensureSourceMappings(): Promise<void> {
+    if (!this.syncController || !this.codeToBlocks) return
+    if (this.syncController.getSourceMappings().length > 0) return
+    const code = this.codeEditor?.getCode()
+    if (!code) return
+    try {
+      const result = await this.codeToBlocks.convertWithMappings(code)
+      this.syncController.setSourceMappings(result.mappings)
+    } catch { /* ignore — mappings are optional */ }
   }
 
   private onStepStopped(): void {

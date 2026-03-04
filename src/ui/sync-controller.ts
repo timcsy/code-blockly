@@ -37,6 +37,10 @@ export class SyncController {
     return this.sourceMappings
   }
 
+  setSourceMappings(mappings: SourceMapping[]): void {
+    this.sourceMappings = mappings
+  }
+
   syncBlocksToCode(workspace: unknown): void {
     if (this.syncing) return
     this.syncing = true
