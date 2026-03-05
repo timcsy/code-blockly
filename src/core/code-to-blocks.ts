@@ -176,21 +176,8 @@ export class CodeToBlocksConverter {
     // Extract statement inputs (BODY, THEN, ELSE) from the node
     this.extractAdapterStatementInputs(blockId, node, block)
 
-    // Add extraState for dynamic-input blocks (u_print with EXPR0, EXPR1, ...)
-    if (block.inputs) {
-      const exprCount = Object.keys(block.inputs).filter(k => /^EXPR\d+$/.test(k)).length
-      if (exprCount > 0) {
-        block.extraState = { itemCount: exprCount }
-      }
-    }
-
-    // Add varCount for u_input blocks with multiple variables (NAME_0, NAME_1, ...)
-    if (blockId === 'u_input' && block.fields) {
-      const varCount = Object.keys(block.fields).filter(k => /^NAME_\d+$/.test(k)).length
-      if (varCount > 0) {
-        block.extraState = { ...(block.extraState ?? {}), varCount }
-      }
-    }
+    // Add extraState for dynamic-input blocks
+    this.addDynamicExtraState(block)
 
     // Record source mapping (T014)
     this.sourceMappings.push({
@@ -215,10 +202,48 @@ export class CodeToBlocksConverter {
       newBlock.next = { block: this.reassignBlockIds(block.next.block) }
     }
 
-    // Record source mapping for child blocks too
-    // (adapter blocks don't have node refs, skip for now)
+    // Add extraState for dynamic blocks in the nested tree
+    this.addDynamicExtraState(newBlock)
 
     return newBlock
+  }
+
+  /**
+   * Add extraState for blocks that use dynamic inputs/fields (saveExtraState/loadExtraState).
+   * Without this, Blockly won't create the dynamic inputs during deserialization.
+   */
+  private addDynamicExtraState(block: BlockJSON): void {
+    // u_print: EXPR0, EXPR1, ... → itemCount
+    if (block.inputs) {
+      const exprCount = Object.keys(block.inputs).filter(k => /^EXPR\d+$/.test(k)).length
+      if (exprCount > 0) {
+        block.extraState = { ...(block.extraState ?? {}), itemCount: exprCount }
+      }
+    }
+
+    // u_func_call: ARG0, ARG1, ... → argCount
+    if (block.type === 'u_func_call' && block.inputs) {
+      const argCount = Object.keys(block.inputs).filter(k => /^ARG\d+$/.test(k)).length
+      if (argCount > 0) {
+        block.extraState = { ...(block.extraState ?? {}), argCount }
+      }
+    }
+
+    // u_input: NAME_0, NAME_1, ... → varCount
+    if (block.type === 'u_input' && block.fields) {
+      const varCount = Object.keys(block.fields).filter(k => /^NAME_\d+$/.test(k)).length
+      if (varCount > 0) {
+        block.extraState = { ...(block.extraState ?? {}), varCount }
+      }
+    }
+
+    // u_func_def: PARAM_0, PARAM_1, ... → paramCount
+    if (block.type === 'u_func_def' && block.fields) {
+      const paramCount = Object.keys(block.fields).filter(k => /^PARAM_\d+$/.test(k)).length
+      if (paramCount > 0) {
+        block.extraState = { ...(block.extraState ?? {}), paramCount }
+      }
+    }
   }
 
   private extractAdapterStatementInputs(blockId: string, node: Node, block: BlockJSON): void {
