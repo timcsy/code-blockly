@@ -116,8 +116,8 @@ describe('雙向同步整合測試', () => {
       const ws = {
         blocks: { languageVersion: 0, blocks: [{
           type: 'u_var_declare', id: 'b1',
-          fields: { TYPE: 'int', NAME: 'x' },
-          inputs: { INIT: { block: { type: 'u_number', id: 'b2', fields: { NUM: 0 } } } },
+          fields: { TYPE: 'int', NAME_0: 'x' },
+          inputs: { INIT_0: { block: { type: 'u_number', id: 'b2', fields: { NUM: 0 } } } },
         }] },
       }
       const code = generator.generate(ws)

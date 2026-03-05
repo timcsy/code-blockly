@@ -52,18 +52,18 @@ describe('US2: 工具箱分級顯示', () => {
     allBlocks.forEach(spec => registry.register(spec))
   })
 
-  it('初級模式積木數 ≤ 19 且分類 ≤ 6', () => {
+  it('初級模式積木數 ≤ 20 且分類 ≤ 6', () => {
     const toolbox = registry.toToolboxDef('cpp', 'beginner')
     const totalBlocks = toolbox.contents.reduce((sum, cat) => sum + cat.contents.length, 0)
-    expect(totalBlocks).toBeLessThanOrEqual(19)
+    expect(totalBlocks).toBeLessThanOrEqual(20)
     expect(toolbox.contents.length).toBeLessThanOrEqual(6)
   })
 
-  it('進階模式顯示全部 68 個積木（u_if 隱藏）', () => {
+  it('進階模式顯示全部 69 個積木（u_if 隱藏）', () => {
     const toolbox = registry.toToolboxDef('cpp', 'advanced')
     const totalBlocks = toolbox.contents.reduce((sum, cat) => sum + cat.contents.length, 0)
-    // 67 total - 1 hidden (u_if) + 2 presets (u_if_else) = 68
-    expect(totalBlocks).toBe(68)
+    // 68 total - 1 hidden (u_if) + 2 presets (u_if_else) = 69
+    expect(totalBlocks).toBe(69)
   })
 
   it('初級模式隱藏 c_printf/c_scanf 但顯示 u_print/u_input', () => {
@@ -75,8 +75,8 @@ describe('US2: 工具箱分級顯示', () => {
     expect(allTypes).not.toContain('c_scanf')
   })
 
-  it('BEGINNER_BLOCKS 包含正確的 17 個積木', () => {
-    expect(BEGINNER_BLOCKS).toHaveLength(17)
+  it('BEGINNER_BLOCKS 包含正確的 18 個積木', () => {
+    expect(BEGINNER_BLOCKS).toHaveLength(18)
     expect(BEGINNER_BLOCKS).toContain('u_var_declare')
     expect(BEGINNER_BLOCKS).toContain('u_if_else')
     expect(BEGINNER_BLOCKS).not.toContain('u_if')
@@ -247,7 +247,7 @@ describe('US6: 即時錯誤提示', () => {
       blocks: {
         languageVersion: 0,
         blocks: [
-          { type: 'u_var_declare', id: 'decl1', fields: { NAME: 'y', TYPE: 'int' } },
+          { type: 'u_var_declare', id: 'decl1', fields: { NAME_0: 'y', TYPE: 'int' } },
           { type: 'u_var_ref', id: 'ref1', fields: { NAME: 'y' } },
         ],
       },

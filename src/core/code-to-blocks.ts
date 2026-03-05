@@ -251,6 +251,22 @@ export class CodeToBlocksConverter {
       const elseIfCount = block.inputs ? Object.keys(block.inputs).filter(k => /^COND\d+$/.test(k)).length : 0
       block.extraState = { ...(block.extraState ?? {}), hasElse, elseIfCount }
     }
+
+    // u_var_declare: items array based on NAME_n / INIT_n presence
+    if (block.type === 'u_var_declare' && block.fields) {
+      const items: string[] = []
+      for (let n = 0; ; n++) {
+        if (!('NAME_' + n in block.fields)) break
+        if (block.inputs && ('INIT_' + n in block.inputs)) {
+          items.push('var_init')
+        } else {
+          items.push('var')
+        }
+      }
+      if (items.length > 0) {
+        block.extraState = { ...(block.extraState ?? {}), items }
+      }
+    }
   }
 
   private extractAdapterStatementInputs(blockId: string, node: Node, block: BlockJSON): void {
@@ -582,11 +598,16 @@ export class CodeToBlocksConverter {
     if (name === 'COND') {
       const cond = node.childForFieldName('condition')
       if (cond) {
-        // condition is wrapped in parenthesized_expression
-        if (cond.type === 'parenthesized_expression' && cond.namedChildren.length > 0) {
-          return this.convertToExpression(cond.namedChildren[0])
+        // Unwrap condition_clause (tree-sitter WASM may wrap condition in this node)
+        let inner = cond
+        if (inner.type === 'condition_clause' && inner.namedChildren.length > 0) {
+          inner = inner.namedChildren[0]
         }
-        return this.convertToExpression(cond)
+        // condition is wrapped in parenthesized_expression
+        if (inner.type === 'parenthesized_expression' && inner.namedChildren.length > 0) {
+          return this.convertToExpression(inner.namedChildren[0])
+        }
+        return this.convertToExpression(inner)
       }
     }
     return null
@@ -596,10 +617,15 @@ export class CodeToBlocksConverter {
     if (name === 'COND') {
       const cond = node.childForFieldName('condition')
       if (cond) {
-        if (cond.type === 'parenthesized_expression' && cond.namedChildren.length > 0) {
-          return this.convertToExpression(cond.namedChildren[0])
+        // Unwrap condition_clause (tree-sitter WASM may wrap condition in this node)
+        let inner = cond
+        if (inner.type === 'condition_clause' && inner.namedChildren.length > 0) {
+          inner = inner.namedChildren[0]
         }
-        return this.convertToExpression(cond)
+        if (inner.type === 'parenthesized_expression' && inner.namedChildren.length > 0) {
+          return this.convertToExpression(inner.namedChildren[0])
+        }
+        return this.convertToExpression(inner)
       }
     }
     return null
@@ -963,11 +989,117 @@ export class CodeToBlocksConverter {
     const results: BlockJSON[] = []
 
     for (const child of node.namedChildren) {
+      // Multi-variable declarations: int a,b,c; → single multi-var block
+      // UNLESS it contains array declarators (mixed array declarations still expand)
+      if (child.type === 'declaration') {
+        const declarators = child.namedChildren.filter(c =>
+          c.type === 'identifier' || c.type === 'init_declarator' || c.type === 'array_declarator'
+        )
+        const hasArrayDecl = declarators.some(d =>
+          d.type === 'array_declarator' ||
+          (d.type === 'init_declarator' && d.childForFieldName('declarator')?.type === 'array_declarator')
+        )
+        if (declarators.length > 1 && hasArrayDecl) {
+          // Mixed array: expand into separate blocks
+          const expanded = this.expandMultiDeclaration(child, declarators)
+          results.push(...expanded)
+          continue
+        }
+        // Non-array multi-declarator: let the adapter handle it as a single block
+        // (adapter's extractVarDeclare now handles indexed fields)
+      }
+
       const block = this.convertNode(child)
       if (block) results.push(block)
     }
 
     return results
+  }
+
+  /**
+   * Expand a multi-declarator declaration (e.g. int a,b,c;) into separate blocks.
+   */
+  private expandMultiDeclaration(declNode: Node, declarators: Node[]): BlockJSON[] {
+    const typeNode = declNode.childForFieldName('type')
+    const typeName = typeNode?.text ?? ''
+    const blocks: BlockJSON[] = []
+
+    for (const declarator of declarators) {
+      const isArray = declarator.type === 'array_declarator' ||
+        (declarator.type === 'init_declarator' &&
+          declarator.childForFieldName('declarator')?.type === 'array_declarator')
+
+      const blockType = isArray ? 'u_array_declare' : 'u_var_declare'
+      const id = nextBlockId()
+      const fields: Record<string, unknown> = { TYPE: typeName }
+      const inputs: Record<string, { block: BlockJSON }> = {}
+
+      if (declarator.type === 'init_declarator' && !isArray) {
+        const nameNode = declarator.childForFieldName('declarator')
+        fields.NAME_0 = nameNode?.text ?? ''
+        const value = declarator.childForFieldName('value')
+        if (value) {
+          const expr = this.convertToExpression(value)
+          if (typeof expr === 'object') {
+            inputs.INIT_0 = { block: this.reassignBlockIds(expr) }
+          } else {
+            inputs.INIT_0 = { block: { type: 'c_raw_expression', id: nextBlockId(), fields: { CODE: expr } } }
+          }
+        }
+      } else if (declarator.type === 'init_declarator' && isArray) {
+        const nameNode = declarator.childForFieldName('declarator')
+        const arrDecl = nameNode
+        if (arrDecl) {
+          const arrNameNode = arrDecl.childForFieldName('declarator')
+          fields.NAME = arrNameNode?.text ?? ''
+          const sizeNode = arrDecl.childForFieldName('size')
+          if (sizeNode) {
+            const sizeExpr = this.convertToExpression(sizeNode)
+            if (typeof sizeExpr === 'object') {
+              inputs.SIZE = { block: this.reassignBlockIds(sizeExpr) }
+            } else {
+              inputs.SIZE = { block: { type: 'u_number', id: nextBlockId(), fields: { NUM: sizeExpr } } }
+            }
+          }
+        }
+      } else if (declarator.type === 'array_declarator') {
+        // Simple array: int a[10]
+        const nameNode = declarator.childForFieldName('declarator')
+        fields.NAME = nameNode?.text ?? ''
+        const sizeNode = declarator.childForFieldName('size')
+        if (sizeNode) {
+          const sizeExpr = this.convertToExpression(sizeNode)
+          if (typeof sizeExpr === 'object') {
+            inputs.SIZE = { block: this.reassignBlockIds(sizeExpr) }
+          } else {
+            inputs.SIZE = { block: { type: 'u_number', id: nextBlockId(), fields: { NUM: sizeExpr } } }
+          }
+        }
+      } else {
+        // Simple identifier: int a → single var (for u_var_declare)
+        if (isArray) {
+          fields.NAME = declarator.text ?? ''
+        } else {
+          fields.NAME_0 = declarator.text ?? ''
+        }
+      }
+
+      const block: BlockJSON = { type: blockType, id }
+      if (Object.keys(fields).length > 0) block.fields = fields
+      if (Object.keys(inputs).length > 0) block.inputs = inputs
+
+      this.addDynamicExtraState(block)
+
+      this.sourceMappings.push({
+        blockId: id,
+        startLine: declNode.startPosition.row,
+        endLine: declNode.endPosition.row,
+      })
+
+      blocks.push(block)
+    }
+
+    return blocks
   }
 
   private convertToExpression(node: Node): BlockJSON | string {

@@ -124,14 +124,14 @@ describe('BlockSpec 型別驗證', () => {
     const block: BlockJSON = {
       type: 'u_var_declare',
       id: 'block_1',
-      fields: { TYPE: 'int', NAME: 'x' },
+      fields: { TYPE: 'int', NAME_0: 'x' },
       inputs: {
-        INIT: { block: { type: 'u_number', id: 'block_2', fields: { NUM: 0 } } },
+        INIT_0: { block: { type: 'u_number', id: 'block_2', fields: { NUM: 0 } } },
       },
     }
 
     expect(block.type).toBe('u_var_declare')
-    expect(block.inputs?.INIT.block.type).toBe('u_number')
+    expect(block.inputs?.INIT_0.block.type).toBe('u_number')
   })
 
   it('should accept WorkspaceJSON structure', () => {

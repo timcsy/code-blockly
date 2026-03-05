@@ -249,22 +249,33 @@ describe('T010: CppAdapter.extractFields', () => {
     })
   })
 
-  describe('u_var_declare 欄位萃取（含 INIT_MODE）', () => {
-    it('should extract INIT_MODE=with_init for initialized declaration', async () => {
+  describe('u_var_declare 欄位萃取（indexed fields）', () => {
+    it('should extract NAME_0 and INIT_0 for initialized declaration', async () => {
       const node = await parseAndGetNode('int x = 5;', 'declaration')
       const { fields, inputs } = adapter.extractFields(node, 'u_var_declare')
       expect(fields.TYPE).toBe('int')
-      expect(fields.NAME).toBe('x')
-      expect(fields.INIT_MODE).toBe('with_init')
-      expect(inputs.INIT).toBeDefined()
+      expect(fields.NAME_0).toBe('x')
+      expect(inputs.INIT_0).toBeDefined()
     })
 
-    it('should extract INIT_MODE=no_init for uninitialized declaration', async () => {
+    it('should extract NAME_0 without INIT for uninitialized declaration', async () => {
       const node = await parseAndGetNode('int x;', 'declaration')
-      const { fields } = adapter.extractFields(node, 'u_var_declare')
+      const { fields, inputs } = adapter.extractFields(node, 'u_var_declare')
       expect(fields.TYPE).toBe('int')
-      expect(fields.NAME).toBe('x')
-      expect(fields.INIT_MODE).toBe('no_init')
+      expect(fields.NAME_0).toBe('x')
+      expect(inputs.INIT_0).toBeUndefined()
+    })
+
+    it('should extract multi-variable declaration', async () => {
+      const node = await parseAndGetNode('int a, b = 5, c;', 'declaration')
+      const { fields, inputs } = adapter.extractFields(node, 'u_var_declare')
+      expect(fields.TYPE).toBe('int')
+      expect(fields.NAME_0).toBe('a')
+      expect(fields.NAME_1).toBe('b')
+      expect(fields.NAME_2).toBe('c')
+      expect(inputs.INIT_0).toBeUndefined()
+      expect(inputs.INIT_1).toBeDefined()
+      expect(inputs.INIT_2).toBeUndefined()
     })
   })
 
@@ -706,10 +717,10 @@ describe('T010: toBlockJSON — SemanticNode → BlockJSON', () => {
     const node = createNode('var_declare', { name: 'x', type: 'int' }, { initializer: init })
     const block = adapter.toBlockJSON(node) as any
     expect(block.type).toBe('u_var_declare')
-    expect(block.fields.NAME).toBe('x')
+    expect(block.fields.NAME_0).toBe('x')
     expect(block.fields.TYPE).toBe('int')
-    expect(block.inputs.INIT.block.type).toBe('u_number')
-    expect(block.inputs.INIT.block.fields.NUM).toBe('42')
+    expect(block.inputs.INIT_0.block.type).toBe('u_number')
+    expect(block.inputs.INIT_0.block.fields.NUM).toBe('42')
   })
 
   it('should convert if with else_body to u_if_else', () => {
@@ -765,8 +776,8 @@ describe('T011: fromBlockJSON — BlockJSON → SemanticNode', () => {
     const block = {
       type: 'u_var_declare',
       id: 'test1',
-      fields: { NAME: 'x', TYPE: 'int', INIT_MODE: 'with_init' },
-      inputs: { INIT: { block: { type: 'u_number', id: 'test2', fields: { NUM: '42' } } } },
+      fields: { NAME_0: 'x', TYPE: 'int' },
+      inputs: { INIT_0: { block: { type: 'u_number', id: 'test2', fields: { NUM: '42' } } } },
     }
     const sem = adapter.fromBlockJSON(block)
     expect(sem).not.toBeNull()

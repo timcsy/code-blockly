@@ -44,6 +44,7 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
     'u_compare': 'compare',
     'u_logic': 'logic',
     'u_logic_not': 'logic_not',
+    'u_negate': 'negate',
     'u_if': 'if',
     'u_if_else': 'if',
     'u_count_loop': 'count_loop',
@@ -71,6 +72,7 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
     'compare': 'u_compare',
     'logic': 'u_logic',
     'logic_not': 'u_logic_not',
+    'negate': 'u_negate',
     'if': 'u_if',
     'count_loop': 'u_count_loop',
     'while_loop': 'u_while_loop',
@@ -187,17 +189,10 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
       case 'u_arithmetic':
       case 'u_compare':
       case 'u_logic':
-        if (node.type === 'unary_expression') {
-          // Unary minus: synthesize 0 - operand
-          fields.OP = '-'
-          inputs.A = { block: { type: 'u_number', id: `unary_zero_${node.startPosition.row}_${node.startPosition.column}`, fields: { NUM: '0' } } }
-          const operand = node.childForFieldName('argument')
-          if (operand) {
-            inputs.B = { block: this.nodeToExprBlock(operand) }
-          }
-        } else {
-          this.extractBinaryOp(node, fields, inputs)
-        }
+        this.extractBinaryOp(node, fields, inputs)
+        break
+      case 'u_negate':
+        this.extractNegate(node, inputs)
         break
       case 'u_logic_not':
         this.extractUnaryOp(node, inputs)
@@ -254,11 +249,10 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
   /** Get the operator precedence order for a block (used by generator for parenthesization) */
   getBlockOrder(block: BlockJSON): number {
     if (block.type === 'u_arithmetic' || block.type === 'u_compare' || block.type === 'u_logic') {
-      if (block.type === 'u_arithmetic' && this.isUnaryMinusPattern(block)) return UNARY_PREFIX_ORDER
       const f = block.fields ?? {}
       return OP_ORDER[f.OP as string] ?? 12
     }
-    if (block.type === 'u_logic_not') return UNARY_PREFIX_ORDER
+    if (block.type === 'u_negate' || block.type === 'u_logic_not') return UNARY_PREFIX_ORDER
     return 20 // atoms
   }
 
@@ -269,10 +263,19 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
 
     switch (blockId) {
       case 'u_var_declare': {
-        const init = i.INIT ? this.genExpr(i.INIT.block) : ''
-        return init
-          ? `${prefix}${f.TYPE} ${f.NAME} = ${init};`
-          : `${prefix}${f.TYPE} ${f.NAME};`
+        const parts: string[] = []
+        for (let n = 0; ; n++) {
+          const name = f['NAME_' + n]
+          if (name === undefined || name === null) break
+          const initInput = i['INIT_' + n]
+          if (initInput) {
+            parts.push(`${name} = ${this.genExpr(initInput.block)}`)
+          } else {
+            parts.push(String(name))
+          }
+        }
+        if (parts.length === 0) return `${prefix}${f.TYPE};`
+        return `${prefix}${f.TYPE} ${parts.join(', ')};`
       }
       case 'u_var_assign':
         return `${prefix}${f.NAME} = ${this.genExpr(i.VALUE?.block)};`
@@ -282,15 +285,14 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
         return String(f.NUM ?? '0')
       case 'u_string':
         return `"${f.TEXT ?? ''}"`
+      case 'u_negate': {
+        const operand = this.genExprWithOrder(i.VALUE?.block)
+        const code = operand.order > 0 && operand.order < UNARY_PREFIX_ORDER ? `-(${operand.code})` : `-${operand.code}`
+        return code
+      }
       case 'u_arithmetic':
       case 'u_compare':
       case 'u_logic': {
-        // Detect unary minus pattern: 0 - x → -x
-        if (blockId === 'u_arithmetic' && this.isUnaryMinusPattern(block)) {
-          const right = this.genExprWithOrder(i.B?.block)
-          const rightCode = right.order > 0 && right.order < UNARY_PREFIX_ORDER ? `(${right.code})` : right.code
-          return `-${rightCode}`
-        }
         const myOrder = OP_ORDER[f.OP as string] ?? 12
         const left = this.genExprWithOrder(i.A?.block)
         const right = this.genExprWithOrder(i.B?.block)
@@ -432,19 +434,14 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
 
     // Binary operators: return their actual precedence
     if (block.type === 'u_arithmetic' || block.type === 'u_compare' || block.type === 'u_logic') {
-      // Unary minus pattern: 0 - x → order is UNARY_PREFIX_ORDER
-      if (block.type === 'u_arithmetic' && this.isUnaryMinusPattern(block)) {
-        const code = this.generateCode(block.type, block, 0).trim()
-        return { code, order: UNARY_PREFIX_ORDER }
-      }
       const f = block.fields ?? {}
       const order = OP_ORDER[f.OP as string] ?? 12
       const code = this.generateCode(block.type, block, 0).trim()
       return { code, order }
     }
 
-    // Unary not
-    if (block.type === 'u_logic_not') {
+    // Unary negate / not
+    if (block.type === 'u_negate' || block.type === 'u_logic_not') {
       const code = this.generateCode(block.type, block, 0).trim()
       return { code, order: UNARY_PREFIX_ORDER }
     }
@@ -485,17 +482,6 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
       current = current.next?.block
     }
     return parts.join('\n')
-  }
-
-  /** Detect unary minus pattern: u_arithmetic { OP: '-', A: u_number(0), B: ... } */
-  private isUnaryMinusPattern(block: BlockJSON): boolean {
-    const f = block.fields ?? {}
-    const i = block.inputs ?? {}
-    if (f.OP !== '-') return false
-    const a = i.A?.block
-    if (!a || a.type !== 'u_number') return false
-    const num = a.fields?.NUM
-    return num === 0 || num === '0'
   }
 
   // --- matchNodeToBlock helpers ---
@@ -562,7 +548,7 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
   private matchUnaryExpression(node: Node): string | null {
     const op = node.childForFieldName('operator')
     if (op?.text === '!') return 'u_logic_not'
-    if (op?.text === '-') return 'u_arithmetic'
+    if (op?.text === '-') return 'u_negate'
     return null
   }
 
@@ -623,8 +609,13 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
   private extractIf(node: Node, inputs: Record<string, { block: BlockJSON }>): void {
     const cond = node.childForFieldName('condition')
     if (cond) {
-      const condNode = cond.type === 'parenthesized_expression' && cond.namedChildren.length > 0
-        ? cond.namedChildren[0] : cond
+      let condNode = cond
+      if (condNode.type === 'condition_clause' && condNode.namedChildren.length > 0) {
+        condNode = condNode.namedChildren[0]
+      }
+      if (condNode.type === 'parenthesized_expression' && condNode.namedChildren.length > 0) {
+        condNode = condNode.namedChildren[0]
+      }
       inputs.COND = { block: this.nodeToExprBlock(condNode) }
     }
   }
@@ -639,8 +630,13 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
       if (body?.type === 'if_statement') {
         const cond = body.childForFieldName('condition')
         if (cond) {
-          const condNode = cond.type === 'parenthesized_expression' && cond.namedChildren.length > 0
-            ? cond.namedChildren[0] : cond
+          let condNode = cond
+          if (condNode.type === 'condition_clause' && condNode.namedChildren.length > 0) {
+            condNode = condNode.namedChildren[0]
+          }
+          if (condNode.type === 'parenthesized_expression' && condNode.namedChildren.length > 0) {
+            condNode = condNode.namedChildren[0]
+          }
           inputs[`COND${elseIfIdx}`] = { block: this.nodeToExprBlock(condNode) }
         }
         elseIfIdx++
@@ -654,8 +650,13 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
   private extractWhile(node: Node, inputs: Record<string, { block: BlockJSON }>): void {
     const cond = node.childForFieldName('condition')
     if (cond) {
-      const condNode = cond.type === 'parenthesized_expression' && cond.namedChildren.length > 0
-        ? cond.namedChildren[0] : cond
+      let condNode = cond
+      if (condNode.type === 'condition_clause' && condNode.namedChildren.length > 0) {
+        condNode = condNode.namedChildren[0]
+      }
+      if (condNode.type === 'parenthesized_expression' && condNode.namedChildren.length > 0) {
+        condNode = condNode.namedChildren[0]
+      }
       inputs.COND = { block: this.nodeToExprBlock(condNode) }
     }
   }
@@ -664,19 +665,38 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
     const typeNode = node.childForFieldName('type')
     fields.TYPE = typeNode?.text ?? ''
 
-    const declarator = node.childForFieldName('declarator')
-    if (declarator?.type === 'init_declarator') {
-      const nameNode = declarator.childForFieldName('declarator')
-      fields.NAME = nameNode?.text ?? ''
-      fields.INIT_MODE = 'with_init'
+    // Collect all declarators (multi-variable support)
+    const declarators = node.namedChildren.filter(c =>
+      c.type === 'identifier' || c.type === 'init_declarator'
+    )
 
-      const value = declarator.childForFieldName('value')
-      if (value) {
-        inputs.INIT = { block: this.nodeToExprBlock(value) }
+    for (let n = 0; n < declarators.length; n++) {
+      const declarator = declarators[n]
+      if (declarator.type === 'init_declarator') {
+        const nameNode = declarator.childForFieldName('declarator')
+        fields['NAME_' + n] = nameNode?.text ?? ''
+        const value = declarator.childForFieldName('value')
+        if (value) {
+          inputs['INIT_' + n] = { block: this.nodeToExprBlock(value) }
+        }
+      } else {
+        fields['NAME_' + n] = declarator.text ?? ''
       }
-    } else {
-      fields.NAME = declarator?.text ?? ''
-      fields.INIT_MODE = 'no_init'
+    }
+
+    // Fallback: single declarator via childForFieldName
+    if (declarators.length === 0) {
+      const declarator = node.childForFieldName('declarator')
+      if (declarator?.type === 'init_declarator') {
+        const nameNode = declarator.childForFieldName('declarator')
+        fields.NAME_0 = nameNode?.text ?? ''
+        const value = declarator.childForFieldName('value')
+        if (value) {
+          inputs.INIT_0 = { block: this.nodeToExprBlock(value) }
+        }
+      } else {
+        fields.NAME_0 = declarator?.text ?? ''
+      }
     }
   }
 
@@ -702,6 +722,13 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
     const right = node.childForFieldName('right')
     if (right) {
       inputs.B = { block: this.nodeToExprBlock(right) }
+    }
+  }
+
+  private extractNegate(node: Node, inputs: Record<string, { block: BlockJSON }>): void {
+    const operand = node.childForFieldName('argument') ?? node.childForFieldName('operand')
+    if (operand) {
+      inputs.VALUE = { block: this.nodeToExprBlock(operand) }
     }
   }
 
@@ -850,24 +877,27 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
    * This is used by extractFields when building input blocks.
    */
   private nodeToExprBlock(node: Node): BlockJSON {
+    // Unwrap condition_clause → process inner content
+    if (node.type === 'condition_clause' && node.namedChildren.length > 0) {
+      return this.nodeToExprBlock(node.namedChildren[0])
+    }
+
     // Unwrap parenthesized expressions → process inner content
     if (node.type === 'parenthesized_expression' && node.namedChildren.length > 0) {
       return this.nodeToExprBlock(node.namedChildren[0])
     }
 
-    // Unary minus (-x) → arithmetic block: 0 - x
+    // Unary minus (-x) → u_negate block
     if (node.type === 'unary_expression') {
       const op = node.childForFieldName('operator')
       if (op?.text === '-') {
         const operand = node.childForFieldName('argument')
         if (operand) {
           return {
-            type: 'u_arithmetic',
+            type: 'u_negate',
             id: `adapter_${node.startPosition.row}_${node.startPosition.column}`,
-            fields: { OP: '-' },
             inputs: {
-              A: { block: { type: 'u_number', id: `adapter_${node.startPosition.row}_${node.startPosition.column}_zero`, fields: { NUM: '0' } } },
-              B: { block: this.nodeToExprBlock(operand) },
+              VALUE: { block: this.nodeToExprBlock(operand) },
             },
           }
         }
@@ -985,6 +1015,9 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
       case 'logic_not':
         this.buildSemLogicNot(node, children)
         break
+      case 'negate':
+        this.buildSemNegate(node, children)
+        break
       case 'if':
         this.buildSemIf(node, blockId, children)
         break
@@ -1071,6 +1104,14 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
     }
   }
 
+  private buildSemNegate(node: Node, children: Record<string, SemanticNode | SemanticNode[]>): void {
+    const operand = node.childForFieldName('argument') ?? node.childForFieldName('operand')
+    if (operand) {
+      const sem = this.cstToSemantic(operand)
+      if (sem) children.operand = sem
+    }
+  }
+
   private buildSemLogicNot(node: Node, children: Record<string, SemanticNode | SemanticNode[]>): void {
     const operand = node.childForFieldName('argument') ?? node.childForFieldName('operand')
     if (operand) {
@@ -1082,8 +1123,13 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
   private buildSemIf(node: Node, blockId: string, children: Record<string, SemanticNode | SemanticNode[]>): void {
     const cond = node.childForFieldName('condition')
     if (cond) {
-      const condNode = cond.type === 'parenthesized_expression' && cond.namedChildren.length > 0
-        ? cond.namedChildren[0] : cond
+      let condNode = cond
+      if (condNode.type === 'condition_clause' && condNode.namedChildren.length > 0) {
+        condNode = condNode.namedChildren[0]
+      }
+      if (condNode.type === 'parenthesized_expression' && condNode.namedChildren.length > 0) {
+        condNode = condNode.namedChildren[0]
+      }
       const sem = this.cstToSemantic(condNode)
       if (sem) children.condition = sem
     }
@@ -1136,8 +1182,13 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
   private buildSemWhileLoop(node: Node, children: Record<string, SemanticNode | SemanticNode[]>): void {
     const cond = node.childForFieldName('condition')
     if (cond) {
-      const condNode = cond.type === 'parenthesized_expression' && cond.namedChildren.length > 0
-        ? cond.namedChildren[0] : cond
+      let condNode = cond
+      if (condNode.type === 'condition_clause' && condNode.namedChildren.length > 0) {
+        condNode = condNode.namedChildren[0]
+      }
+      if (condNode.type === 'parenthesized_expression' && condNode.namedChildren.length > 0) {
+        condNode = condNode.namedChildren[0]
+      }
       const sem = this.cstToSemantic(condNode)
       if (sem) children.condition = sem
     }
@@ -1266,10 +1317,9 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
     switch (concept) {
       case 'var_declare':
         fields.TYPE = node.properties.type ?? ''
-        fields.NAME = node.properties.name ?? ''
-        fields.INIT_MODE = node.children.initializer ? 'with_init' : 'no_init'
+        fields.NAME_0 = node.properties.name ?? ''
         if (node.children.initializer && !Array.isArray(node.children.initializer)) {
-          inputs.INIT = { block: this.semanticToBlock(node.children.initializer) }
+          inputs.INIT_0 = { block: this.semanticToBlock(node.children.initializer) }
         }
         break
 
@@ -1307,6 +1357,12 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
       case 'logic_not':
         if (node.children.operand && !Array.isArray(node.children.operand)) {
           inputs.A = { block: this.semanticToBlock(node.children.operand) }
+        }
+        break
+
+      case 'negate':
+        if (node.children.operand && !Array.isArray(node.children.operand)) {
+          inputs.VALUE = { block: this.semanticToBlock(node.children.operand) }
         }
         break
 
@@ -1490,10 +1546,10 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
 
     switch (concept) {
       case 'var_declare':
-        props.name = String(f.NAME ?? '')
+        props.name = String(f.NAME_0 ?? f.NAME ?? '')
         props.type = String(f.TYPE ?? '')
-        if (i.INIT?.block) {
-          const init = this.blockToSemantic(i.INIT.block)
+        if (i.INIT_0?.block) {
+          const init = this.blockToSemantic(i.INIT_0.block)
           if (init) children.initializer = init
         }
         break
@@ -1535,6 +1591,13 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
       case 'logic_not':
         if (i.A?.block) {
           const operand = this.blockToSemantic(i.A.block)
+          if (operand) children.operand = operand
+        }
+        break
+
+      case 'negate':
+        if (i.VALUE?.block) {
+          const operand = this.blockToSemantic(i.VALUE.block)
           if (operand) children.operand = operand
         }
         break
@@ -1700,8 +1763,29 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
     const result: SemanticNode[] = []
     let current: BlockJSON | undefined = block
     while (current) {
-      const sem = this.blockToSemantic(current)
-      if (sem) result.push(sem)
+      // Expand multi-variable u_var_declare into separate SemanticNodes
+      if (current.type === 'u_var_declare') {
+        const f = (current.fields ?? {}) as Record<string, unknown>
+        const inp = current.inputs ?? {}
+        const varType = String(f.TYPE ?? '')
+        for (let n = 0; ; n++) {
+          const name = f['NAME_' + n]
+          if (name === undefined || name === null) break
+          const props: Record<string, string | number | boolean> = {
+            name: String(name),
+            type: varType,
+          }
+          const ch: Record<string, SemanticNode | SemanticNode[]> = {}
+          if (inp['INIT_' + n]?.block) {
+            const init = this.blockToSemantic(inp['INIT_' + n].block)
+            if (init) ch.initializer = init
+          }
+          result.push(createNode('var_declare', props, ch, { blockId: current.id }))
+        }
+      } else {
+        const sem = this.blockToSemantic(current)
+        if (sem) result.push(sem)
+      }
       current = current.next?.block
     }
     return result

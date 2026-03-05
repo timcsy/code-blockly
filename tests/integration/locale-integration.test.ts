@@ -38,8 +38,9 @@ describe('T031: Locale Integration', () => {
       expect(msg['U_FUNC_CALL_LABEL']).toBe('呼叫函式')
       expect(msg['U_INPUT_LABEL']).toBe('讀取輸入 → 變數')
       expect(msg['U_VAR_REF_CUSTOM']).toBe('(自訂)')
-      expect(msg['U_VAR_DECLARE_WITH_INIT']).toBe('有初始值')
-      expect(msg['U_VAR_DECLARE_NO_INIT']).toBe('無初始值')
+      expect(msg['U_VAR_DECLARE_HEADER']).toBe('宣告')
+      expect(msg['U_VAR_DECLARE_VAR_LABEL']).toBe('變數')
+      expect(msg['U_VAR_DECLARE_VAR_INIT_LABEL']).toBe('變數 = 值')
     })
 
     it('should have all category name keys', () => {

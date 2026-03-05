@@ -259,8 +259,8 @@ describe('CppGenerator 整合測試', () => {
       const ws = {
         blocks: { languageVersion: 0, blocks: [{
           type: 'u_var_declare', id: 'b1',
-          fields: { TYPE: 'int', NAME: 'x' },
-          inputs: { INIT: { block: { type: 'u_number', id: 'b2', fields: { NUM: 0 } } } },
+          fields: { TYPE: 'int', NAME_0: 'x' },
+          inputs: { INIT_0: { block: { type: 'u_number', id: 'b2', fields: { NUM: 0 } } } },
         }] },
       }
       const code = generator.generate(ws)
@@ -428,11 +428,11 @@ describe('CppGenerator 整合測試', () => {
       expect(code).toContain('cin >> x;')
     })
 
-    it('u_var_declare INIT_MODE=no_init → int x;', () => {
+    it('u_var_declare no init → int x;', () => {
       const ws = {
         blocks: { languageVersion: 0, blocks: [{
           type: 'u_var_declare', id: 'b1',
-          fields: { TYPE: 'int', NAME: 'x', INIT_MODE: 'no_init' },
+          fields: { TYPE: 'int', NAME_0: 'x' },
         }] },
       }
       const code = generator.generate(ws)
@@ -440,16 +440,28 @@ describe('CppGenerator 整合測試', () => {
       expect(code).not.toContain('=')
     })
 
-    it('u_var_declare INIT_MODE=with_init → int x = 5;', () => {
+    it('u_var_declare with init → int x = 5;', () => {
       const ws = {
         blocks: { languageVersion: 0, blocks: [{
           type: 'u_var_declare', id: 'b1',
-          fields: { TYPE: 'int', NAME: 'x', INIT_MODE: 'with_init' },
-          inputs: { INIT: { block: { type: 'u_number', id: 'b2', fields: { NUM: 5 } } } },
+          fields: { TYPE: 'int', NAME_0: 'x' },
+          inputs: { INIT_0: { block: { type: 'u_number', id: 'b2', fields: { NUM: 5 } } } },
         }] },
       }
       const code = generator.generate(ws)
       expect(code).toContain('int x = 5;')
+    })
+
+    it('u_var_declare multi-variable → int a, b = 5, c;', () => {
+      const ws = {
+        blocks: { languageVersion: 0, blocks: [{
+          type: 'u_var_declare', id: 'b1',
+          fields: { TYPE: 'int', NAME_0: 'a', NAME_1: 'b', NAME_2: 'c' },
+          inputs: { INIT_1: { block: { type: 'u_number', id: 'b2', fields: { NUM: 5 } } } },
+        }] },
+      }
+      const code = generator.generate(ws)
+      expect(code).toContain('int a, b = 5, c;')
     })
   })
 })

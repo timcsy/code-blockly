@@ -718,6 +718,40 @@ export class BlocklyEditor {
       /* eslint-enable @typescript-eslint/no-explicit-any */
     }
 
+    // Mutator helper blocks for u_var_declare (gear mini-workspace)
+    if (!Blockly.Blocks['u_var_declare_container']) {
+      Blockly.Blocks['u_var_declare_container'] = {
+        init: function (this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+          this.setColour(330)
+          this.appendDummyInput().appendField(Blockly.Msg['U_VAR_DECLARE_HEADER'] || '宣告')
+          this.setNextStatement(true)
+          this.contextMenu = false
+        },
+      }
+    }
+    if (!Blockly.Blocks['u_var_declare_var_input']) {
+      Blockly.Blocks['u_var_declare_var_input'] = {
+        init: function (this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+          this.setColour(330)
+          this.appendDummyInput().appendField(Blockly.Msg['U_VAR_DECLARE_VAR_LABEL'] || '變數')
+          this.setPreviousStatement(true)
+          this.setNextStatement(true)
+          this.contextMenu = false
+        },
+      }
+    }
+    if (!Blockly.Blocks['u_var_declare_var_init_input']) {
+      Blockly.Blocks['u_var_declare_var_init_input'] = {
+        init: function (this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+          this.setColour(330)
+          this.appendDummyInput().appendField(Blockly.Msg['U_VAR_DECLARE_VAR_INIT_LABEL'] || '變數 = 值')
+          this.setPreviousStatement(true)
+          this.setNextStatement(true)
+          this.contextMenu = false
+        },
+      }
+    }
+
     // u_var_ref: dynamic dropdown listing declared variables
     if (!Blockly.Blocks['u_var_ref']) {
       /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -748,13 +782,16 @@ export class BlocklyEditor {
           const options: Array<[string, string]> = []
           const seen = new Set<string>()
 
-          // Collect from u_var_declare
+          // Collect from u_var_declare (multi-variable: NAME_0, NAME_1, ...)
           const declareBlocks = ws.getBlocksByType('u_var_declare', false)
           for (const b of declareBlocks) {
-            const name = b.getFieldValue('NAME')
-            if (name && !seen.has(name)) {
-              seen.add(name)
-              options.push([name, name])
+            for (let idx = 0; ; idx++) {
+              const name = b.getFieldValue('NAME_' + idx)
+              if (name === null || name === undefined) break
+              if (name && !seen.has(name)) {
+                seen.add(name)
+                options.push([name, name])
+              }
             }
           }
 
@@ -802,81 +839,193 @@ export class BlocklyEditor {
       /* eslint-enable @typescript-eslint/no-explicit-any */
     }
 
-    // u_var_declare: dropdown to switch between init/no-init modes
+    // u_var_declare: multi-variable with mutator gear + per-variable init control
     if (!Blockly.Blocks['u_var_declare']) {
       /* eslint-disable @typescript-eslint/no-explicit-any */
       Blockly.Blocks['u_var_declare'] = {
-        initMode_: 'with_init',
+        items_: ['var_init'] as string[],
 
         init: function (this: any) {
-          this.initMode_ = 'with_init'
+          this.items_ = ['var_init']
           this.setColour(330)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
           this.setTooltip(Blockly.Msg['U_VAR_DECLARE_TOOLTIP'] || '建立一個新的變數，可以選擇型別和初始值。變數就像一個有名字的盒子，用來存放資料')
 
-          this.appendDummyInput('DECL')
+          // HEADER row: TYPE dropdown
+          this.appendDummyInput('HEADER')
+            .appendField(Blockly.Msg['U_VAR_DECLARE_HEADER'] || '宣告')
             .appendField(new Blockly.FieldDropdown(function() {
               return getLanguageTypeOptions().filter(([, v]) => v !== 'void')
             }), 'TYPE')
-            .appendField(new Blockly.FieldTextInput('x'), 'NAME')
-            .appendField(new Blockly.FieldDropdown(
-              function() { return [
-                [Blockly.Msg['U_VAR_DECLARE_WITH_INIT'] || '有初始值', 'with_init'],
-                [Blockly.Msg['U_VAR_DECLARE_NO_INIT'] || '無初始值', 'no_init'],
-              ] },
-              function (this: Blockly.FieldDropdown, newValue: string) {
-                const block = this.getSourceBlock() as any
-                if (block) block.updateShape_(newValue)
-                return newValue
-              }
-            ), 'INIT_MODE')
-          // Default: show init input
-          this.appendValueInput('INIT')
+
+          // First var_init row (index 0)
+          this.appendValueInput('INIT_0')
             .setCheck('Expression')
+            .appendField(new Blockly.FieldTextInput('x'), 'NAME_0')
             .appendField('=')
+
+          // TAIL: +/- buttons
+          this.appendDummyInput('TAIL')
+            .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plus_()))
+            .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minus_()), 'MINUS_BTN')
+
           this.setInputsInline(true)
+
+          // Mutator gear icon
+          this.setMutator(new Blockly.icons.MutatorIcon(
+            ['u_var_declare_var_input', 'u_var_declare_var_init_input'], this))
         },
 
-        updateShape_: function (this: any, mode: string) {
-          this.initMode_ = mode
-          if (mode === 'no_init') {
-            if (this.getInput('INIT')) {
-              this.removeInput('INIT')
-            }
+        /** + adds a var_init row at the end */
+        plus_: function (this: any) {
+          const idx = this.items_.length
+          this.items_.push('var_init')
+          const defaultNames = ['x', 'y', 'z', 'a', 'b', 'c', 'd', 'e', 'f']
+          const defName = defaultNames[idx] || ('v' + idx)
+          this.appendValueInput('INIT_' + idx)
+            .setCheck('Expression')
+            .appendField(', ')
+            .appendField(new Blockly.FieldTextInput(defName), 'NAME_' + idx)
+            .appendField('=')
+          this.moveInputBefore('INIT_' + idx, 'TAIL')
+          setMinusState(this, false)
+        },
+
+        /** - removes the last row */
+        minus_: function (this: any) {
+          if (this.items_.length <= 1) return
+          const idx = this.items_.length - 1
+          const kind = this.items_[idx]
+          if (kind === 'var_init') {
+            this.removeInput('INIT_' + idx)
           } else {
-            if (!this.getInput('INIT')) {
-              this.appendValueInput('INIT')
-                .setCheck('Expression')
-                .appendField('=')
+            this.removeInput('VAR_' + idx)
+          }
+          this.items_.pop()
+          setMinusState(this, this.items_.length <= 1)
+        },
+
+        /** Rebuild all variable rows from items_ */
+        updateShape_: function (this: any) {
+          // Remove all existing var rows
+          for (let n = 0; ; n++) {
+            if (this.getInput('INIT_' + n)) {
+              this.removeInput('INIT_' + n)
+            } else if (this.getInput('VAR_' + n)) {
+              this.removeInput('VAR_' + n)
+            } else {
+              break
             }
+          }
+          // Re-add rows per items_
+          const defaultNames = ['x', 'y', 'z', 'a', 'b', 'c', 'd', 'e', 'f']
+          for (let n = 0; n < this.items_.length; n++) {
+            const defName = defaultNames[n] || ('v' + n)
+            const comma = n > 0 ? ', ' : ''
+            if (this.items_[n] === 'var_init') {
+              const inp = this.appendValueInput('INIT_' + n)
+                .setCheck('Expression')
+              if (comma) inp.appendField(comma)
+              inp.appendField(new Blockly.FieldTextInput(defName), 'NAME_' + n)
+                .appendField('=')
+            } else {
+              const inp = this.appendDummyInput('VAR_' + n)
+              if (comma) inp.appendField(comma)
+              inp.appendField(new Blockly.FieldTextInput(defName), 'NAME_' + n)
+            }
+            this.moveInputBefore(this.items_[n] === 'var_init' ? 'INIT_' + n : 'VAR_' + n, 'TAIL')
+          }
+          setMinusState(this, this.items_.length <= 1)
+        },
+
+        /** Mutator: decompose into mini-workspace blocks */
+        decompose: function (this: any, workspace: any) {
+          const containerBlock = workspace.newBlock('u_var_declare_container')
+          containerBlock.initSvg()
+          let connection = containerBlock.nextConnection
+          for (let n = 0; n < this.items_.length; n++) {
+            const helperType = this.items_[n] === 'var_init'
+              ? 'u_var_declare_var_init_input'
+              : 'u_var_declare_var_input'
+            const itemBlock = workspace.newBlock(helperType)
+            itemBlock.initSvg()
+            connection.connect(itemBlock.previousConnection)
+            connection = itemBlock.nextConnection
+          }
+          return containerBlock
+        },
+
+        /** Mutator: recompose from mini-workspace arrangement */
+        compose: function (this: any, containerBlock: any) {
+          let block = containerBlock.nextConnection.targetBlock()
+          const newItems: string[] = []
+          const savedNames: (string | null)[] = []
+          const savedConns: any[] = []
+          while (block) {
+            if (!block.isInsertionMarker()) {
+              if (block.type === 'u_var_declare_var_init_input') {
+                newItems.push('var_init')
+              } else if (block.type === 'u_var_declare_var_input') {
+                newItems.push('var')
+              }
+              savedNames.push(block.savedName_ ?? null)
+              savedConns.push(block.savedConn_ ?? null)
+            }
+            block = block.getNextBlock()
+          }
+          this.items_ = newItems.length > 0 ? newItems : ['var_init']
+          this.updateShape_()
+          // Reconnect
+          for (let n = 0; n < this.items_.length; n++) {
+            if (savedNames[n]) this.setFieldValue(savedNames[n], 'NAME_' + n)
+            if (this.items_[n] === 'var_init' && savedConns[n]) {
+              savedConns[n].reconnect(this, 'INIT_' + n)
+            }
+          }
+        },
+
+        /** Mutator: save connections before recompose */
+        saveConnections: function (this: any, containerBlock: any) {
+          let block = containerBlock.nextConnection.targetBlock()
+          let idx = 0
+          while (block) {
+            if (!block.isInsertionMarker()) {
+              block.savedName_ = this.getFieldValue('NAME_' + idx)
+              if (this.items_[idx] === 'var_init') {
+                const inp = this.getInput('INIT_' + idx)
+                block.savedConn_ = inp && inp.connection.targetConnection
+              } else {
+                block.savedConn_ = null
+              }
+              idx++
+            }
+            block = block.getNextBlock()
           }
         },
 
         saveExtraState: function (this: any) {
-          return { initMode: this.initMode_ }
+          return { items: [...this.items_] }
         },
 
         loadExtraState: function (this: any, state: any) {
-          const mode = state?.initMode ?? 'with_init'
-          if (mode !== this.initMode_) {
-            this.updateShape_(mode)
-            this.setFieldValue(mode, 'INIT_MODE')
-          }
+          this.items_ = state?.items ?? ['var_init']
+          this.updateShape_()
         },
 
         mutationToDom: function (this: any) {
           const mutation = Blockly.utils.xml.createElement('mutation')
-          mutation.setAttribute('init_mode', this.initMode_)
+          mutation.setAttribute('items', JSON.stringify(this.items_))
           return mutation
         },
 
         domToMutation: function (this: any, xml: Element) {
-          const mode = xml.getAttribute('init_mode') || 'with_init'
-          if (mode !== this.initMode_) {
-            this.updateShape_(mode)
-            this.setFieldValue(mode, 'INIT_MODE')
+          try {
+            this.items_ = JSON.parse(xml.getAttribute('items') || '["var_init"]')
+          } catch {
+            this.items_ = ['var_init']
           }
+          this.updateShape_()
         },
       }
       /* eslint-enable @typescript-eslint/no-explicit-any */

@@ -61,8 +61,12 @@ export function runDiagnosticsOnState(state: unknown): WorkspaceDiagnostic[] {
   const declaredVars = new Set<string>()
   for (const block of allBlocks) {
     if (block.type === 'u_var_declare') {
-      const name = block.fields?.NAME as string
-      if (name) declaredVars.add(name)
+      // Multi-variable: scan NAME_0, NAME_1, ...
+      for (let n = 0; ; n++) {
+        const name = block.fields?.['NAME_' + n] as string
+        if (name === undefined || name === null) break
+        if (name) declaredVars.add(name)
+      }
     }
     if (block.type === 'u_count_loop') {
       const name = block.fields?.VAR as string

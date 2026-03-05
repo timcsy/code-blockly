@@ -58,7 +58,7 @@ function findBlockByType(block: BlockJSON, type: string): BlockJSON | null {
 }
 
 describe('Complex expression conversion with adapter', () => {
-  it('unary minus: -b → u_arithmetic(0 - b)', async () => {
+  it('unary minus: -b → u_negate(b)', async () => {
     const code = 'int x = -b;'
     const blocks = await converter.convert(code)
     const topBlocks = getTopBlocks(blocks)
@@ -67,13 +67,11 @@ describe('Complex expression conversion with adapter', () => {
     const varDecl = topBlocks[0]
     expect(varDecl.type).toBe('u_var_declare')
 
-    // The INIT should be u_arithmetic with OP='-', A=u_number(0), B=u_var_ref(b)
-    const init = varDecl.inputs?.INIT?.block
-    expect(init?.type).toBe('u_arithmetic')
-    expect(init?.fields?.OP).toBe('-')
-    expect(init?.inputs?.A?.block?.type).toBe('u_number')
-    expect(init?.inputs?.B?.block?.type).toBe('u_var_ref')
-    expect(init?.inputs?.B?.block?.fields?.NAME).toBe('b')
+    // The INIT_0 should be u_negate with VALUE=u_var_ref(b)
+    const init = varDecl.inputs?.INIT_0?.block
+    expect(init?.type).toBe('u_negate')
+    expect(init?.inputs?.VALUE?.block?.type).toBe('u_var_ref')
+    expect(init?.inputs?.VALUE?.block?.fields?.NAME).toBe('b')
   })
 
   it('parenthesized: (a + b) → unwrap to u_arithmetic', async () => {
@@ -81,7 +79,7 @@ describe('Complex expression conversion with adapter', () => {
     const blocks = await converter.convert(code)
     const topBlocks = getTopBlocks(blocks)
 
-    const init = topBlocks[0]?.inputs?.INIT?.block
+    const init = topBlocks[0]?.inputs?.INIT_0?.block
     expect(init?.type).toBe('u_arithmetic')
     expect(init?.fields?.OP).toBe('+')
     // Should NOT have parenthesized wrapper
@@ -93,7 +91,7 @@ describe('Complex expression conversion with adapter', () => {
     const blocks = await converter.convert(code)
     const topBlocks = getTopBlocks(blocks)
 
-    const init = topBlocks[0]?.inputs?.INIT?.block
+    const init = topBlocks[0]?.inputs?.INIT_0?.block
     expect(init?.type).toBe('u_func_call')
     expect(init?.fields?.NAME).toBe('sqrt')
     expect(init?.inputs?.ARG0?.block?.type).toBe('u_var_ref')
@@ -223,7 +221,7 @@ describe('Complex expression conversion with adapter', () => {
         inputs: { ARG0: { block: varBlock('x') } },
         extraState: { argCount: 1 },
       }
-      const negB = arithBlock('-', numBlock(0), varBlock('b'))
+      const negB: BlockJSON = { type: 'u_negate', id: 'test', inputs: { VALUE: { block: varBlock('b') } } }
       const numerator = arithBlock('+', negB, sqrtBlock)
       const denominator = arithBlock('*', numBlock(2), varBlock('a'))
       const block = arithBlock('/', numerator, denominator)
@@ -231,24 +229,50 @@ describe('Complex expression conversion with adapter', () => {
       expect(code).toBe('(-b + sqrt(x)) / (2 * a)')
     })
 
-    it('unary minus: -b → generates -b (not 0 - b)', () => {
-      const block = arithBlock('-', numBlock(0), varBlock('b'))
-      const code = adapter.generateCode('u_arithmetic', block, 0)
+    it('unary minus: -b → generates -b (using u_negate)', () => {
+      const block: BlockJSON = { type: 'u_negate', id: 'test', inputs: { VALUE: { block: varBlock('b') } } }
+      const code = adapter.generateCode('u_negate', block, 0)
       expect(code).toBe('-b')
     })
 
     it('unary minus with complex operand: -(a + b) → adds parens', () => {
-      const block = arithBlock('-', numBlock(0), arithBlock('+', varBlock('a'), varBlock('b')))
-      const code = adapter.generateCode('u_arithmetic', block, 0)
+      const block: BlockJSON = { type: 'u_negate', id: 'test', inputs: { VALUE: { block: arithBlock('+', varBlock('a'), varBlock('b')) } } }
+      const code = adapter.generateCode('u_negate', block, 0)
       expect(code).toBe('-(a + b)')
     })
 
     it('unary minus in multiplication: -a * b → no parens (higher precedence)', () => {
-      const negA = arithBlock('-', numBlock(0), varBlock('a'))
+      const negA: BlockJSON = { type: 'u_negate', id: 'test', inputs: { VALUE: { block: varBlock('a') } } }
       const block = arithBlock('*', negA, varBlock('b'))
       const code = adapter.generateCode('u_arithmetic', block, 0)
       expect(code).toBe('-a * b')
     })
+  })
+
+  it('complex if condition: (b*b-4*a*c>0) decomposes to u_compare (not c_raw_expression)', async () => {
+    const code = [
+      '#include <iostream>',
+      'using namespace std;',
+      'int main() {',
+      '    double a, b, c;',
+      '    cin >> a >> b >> c;',
+      '    if (b*b-4*a*c>0) {',
+      '        cout << "two roots" << endl;',
+      '    }',
+      '    return 0;',
+      '}',
+    ].join('\n')
+    const blocks = await converter.convert(code)
+    const topBlocks = getTopBlocks(blocks)
+
+    // Find the u_if_else block
+    const ifBlock = findBlockByType(topBlocks[0], 'u_if_else')
+    expect(ifBlock).not.toBeNull()
+
+    // COND should be u_compare (not c_raw_expression)
+    const cond = ifBlock?.inputs?.COND?.block
+    expect(cond?.type).toBe('u_compare')
+    expect(cond?.fields?.OP).toBe('>')
   })
 
   it('u_input with multiple vars gets extraState.varCount', async () => {
@@ -465,6 +489,58 @@ describe('Complex expression conversion with adapter', () => {
       expect(code).toContain('} else if (x > 0)')
       expect(code).toContain('} else if (x < 0)')
       expect(code).toContain('} else {')
+    })
+  })
+
+  describe('multi-variable declaration expansion', () => {
+    /** Walk the next-chain to collect all blocks */
+    function collectChain(block: BlockJSON | undefined): BlockJSON[] {
+      const chain: BlockJSON[] = []
+      let cur = block
+      while (cur) {
+        chain.push(cur)
+        cur = cur.next?.block
+      }
+      return chain
+    }
+
+    it('int a,b,c; → single u_var_declare block with 3 variables', async () => {
+      const code = 'int a,b,c;'
+      const blocks = await converter.convert(code)
+      const topBlocks = getTopBlocks(blocks)
+
+      expect(topBlocks).toHaveLength(1)
+      const block = topBlocks[0]
+      expect(block?.type).toBe('u_var_declare')
+      expect(block?.fields?.TYPE).toBe('int')
+      expect(block?.fields?.NAME_0).toBe('a')
+      expect(block?.fields?.NAME_1).toBe('b')
+      expect(block?.fields?.NAME_2).toBe('c')
+      expect(block?.extraState?.items).toEqual(['var', 'var', 'var'])
+    })
+
+    it('int a=1, b=2; → single u_var_declare block with 2 init variables', async () => {
+      const code = 'int a=1, b=2;'
+      const blocks = await converter.convert(code)
+      const topBlocks = getTopBlocks(blocks)
+
+      expect(topBlocks).toHaveLength(1)
+      const block = topBlocks[0]
+      expect(block?.fields?.NAME_0).toBe('a')
+      expect(block?.inputs?.INIT_0?.block?.type).toBe('u_number')
+      expect(block?.fields?.NAME_1).toBe('b')
+      expect(block?.inputs?.INIT_1?.block?.type).toBe('u_number')
+      expect(block?.extraState?.items).toEqual(['var_init', 'var_init'])
+    })
+
+    it('single declaration int x; still works normally', async () => {
+      const code = 'int x;'
+      const blocks = await converter.convert(code)
+      const topBlocks = getTopBlocks(blocks)
+
+      expect(topBlocks).toHaveLength(1)
+      expect(topBlocks[0]?.type).toBe('u_var_declare')
+      expect(topBlocks[0]?.fields?.NAME_0).toBe('x')
     })
   })
 })
