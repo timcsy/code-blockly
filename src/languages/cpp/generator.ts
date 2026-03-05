@@ -367,11 +367,16 @@ export class CppGenerator {
 
     // Universal blocks: delegate to adapter
     if (!spec.codeTemplate && this.adapter) {
-      const code = this.adapter.generateCode(block.type, block as import('../../core/types').BlockJSON, 0).trim()
+      const adapterBlock = block as import('../../core/types').BlockJSON
+      const code = this.adapter.generateCode(block.type, adapterBlock, 0).trim()
       for (const imp of this.adapter.getAndClearImports()) {
         this.collectedImports.add(imp)
       }
-      return { code, order: 20 } // atoms — no parens needed
+      const order = this.adapter.getBlockOrder(adapterBlock)
+      if (order <= parentOrder && order > 0 && order < 20) {
+        return { code: `(${code})`, order }
+      }
+      return { code, order }
     }
 
     if (!spec.codeTemplate) {

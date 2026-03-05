@@ -146,6 +146,92 @@ describe('Complex expression conversion with adapter', () => {
     checkNoRawExpr(topBlocks[0])
   })
 
+  describe('operator precedence parenthesization', () => {
+    // Helper to build a nested arithmetic block
+    function arithBlock(op: string, a: BlockJSON, b: BlockJSON): BlockJSON {
+      return { type: 'u_arithmetic', id: 'test', fields: { OP: op }, inputs: { A: { block: a }, B: { block: b } } }
+    }
+    function varBlock(name: string): BlockJSON {
+      return { type: 'u_var_ref', id: 'test', fields: { NAME: name } }
+    }
+    function numBlock(n: number): BlockJSON {
+      return { type: 'u_number', id: 'test', fields: { NUM: n } }
+    }
+
+    it('(a + b) * c → adds parens for lower precedence left child', () => {
+      // * { A: + { A: a, B: b }, B: c }
+      const block = arithBlock('*', arithBlock('+', varBlock('a'), varBlock('b')), varBlock('c'))
+      const code = adapter.generateCode('u_arithmetic', block, 0)
+      expect(code).toBe('(a + b) * c')
+    })
+
+    it('a * b + c → no parens needed', () => {
+      const block = arithBlock('+', arithBlock('*', varBlock('a'), varBlock('b')), varBlock('c'))
+      const code = adapter.generateCode('u_arithmetic', block, 0)
+      expect(code).toBe('a * b + c')
+    })
+
+    it('a - (b + c) → adds parens for right child with same precedence group', () => {
+      const block = arithBlock('-', varBlock('a'), arithBlock('+', varBlock('b'), varBlock('c')))
+      const code = adapter.generateCode('u_arithmetic', block, 0)
+      expect(code).toBe('a - (b + c)')
+    })
+
+    it('a * b / c → no parens for left child with same precedence', () => {
+      // / { A: * { A: a, B: b }, B: c }
+      const block = arithBlock('/', arithBlock('*', varBlock('a'), varBlock('b')), varBlock('c'))
+      const code = adapter.generateCode('u_arithmetic', block, 0)
+      expect(code).toBe('a * b / c')
+    })
+
+    it('a / (b * c) → adds parens for right child with same precedence', () => {
+      const block = arithBlock('/', varBlock('a'), arithBlock('*', varBlock('b'), varBlock('c')))
+      const code = adapter.generateCode('u_arithmetic', block, 0)
+      expect(code).toBe('a / (b * c)')
+    })
+
+    it('(a + b) > (c - d) → adds parens for arithmetic inside comparison', () => {
+      const block: BlockJSON = {
+        type: 'u_compare', id: 'test', fields: { OP: '>' },
+        inputs: {
+          A: { block: arithBlock('+', varBlock('a'), varBlock('b')) },
+          B: { block: arithBlock('-', varBlock('c'), varBlock('d')) },
+        },
+      }
+      // compare has order 10, arithmetic + has order 12 which is > 10
+      // so no parens needed (higher order = higher precedence)
+      const code = adapter.generateCode('u_compare', block, 0)
+      expect(code).toBe('a + b > c - d')
+    })
+
+    it('(a > b) && (c < d) → no parens for higher prec inside logic', () => {
+      const block: BlockJSON = {
+        type: 'u_logic', id: 'test', fields: { OP: '&&' },
+        inputs: {
+          A: { block: { type: 'u_compare', id: 't', fields: { OP: '>' }, inputs: { A: { block: varBlock('a') }, B: { block: varBlock('b') } } } },
+          B: { block: { type: 'u_compare', id: 't', fields: { OP: '<' }, inputs: { A: { block: varBlock('c') }, B: { block: varBlock('d') } } } },
+        },
+      }
+      const code = adapter.generateCode('u_logic', block, 0)
+      expect(code).toBe('a > b && c < d')
+    })
+
+    it('quadratic: (-b + sqrt(...)) / (2 * a) generates correct parens', () => {
+      // (-b + sqrt(x)) / (2 * a) → (0 - b + sqrt(x)) / (2 * a)
+      const sqrtBlock: BlockJSON = {
+        type: 'u_func_call', id: 't', fields: { NAME: 'sqrt' },
+        inputs: { ARG0: { block: varBlock('x') } },
+        extraState: { argCount: 1 },
+      }
+      const negB = arithBlock('-', numBlock(0), varBlock('b'))
+      const numerator = arithBlock('+', negB, sqrtBlock)
+      const denominator = arithBlock('*', numBlock(2), varBlock('a'))
+      const block = arithBlock('/', numerator, denominator)
+      const code = adapter.generateCode('u_arithmetic', block, 0)
+      expect(code).toBe('(0 - b + sqrt(x)) / (2 * a)')
+    })
+  })
+
   it('u_input with multiple vars gets extraState.varCount', async () => {
     const code = [
       'int main() {',

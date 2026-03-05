@@ -18,6 +18,17 @@ const ARITHMETIC_OPS = new Set(['+', '-', '*', '/', '%'])
 const COMPARE_OPS = new Set(['>', '<', '>=', '<=', '==', '!='])
 const LOGIC_OPS = new Set(['&&', '||'])
 
+/** C++ operator precedence (higher = binds tighter, 20 = atom) */
+const OP_ORDER: Record<string, number> = {
+  '||': 4,
+  '&&': 5,
+  '==': 9, '!=': 9,
+  '<': 10, '<=': 10, '>': 10, '>=': 10,
+  '+': 12, '-': 12,
+  '*': 13, '/': 13, '%': 13,
+}
+const UNARY_PREFIX_ORDER = 14
+
 /**
  * CppLanguageAdapter：負責 C++ AST 節點 ↔ 概念積木的雙向映射。
  */
@@ -230,6 +241,16 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
     return imports
   }
 
+  /** Get the operator precedence order for a block (used by generator for parenthesization) */
+  getBlockOrder(block: BlockJSON): number {
+    if (block.type === 'u_arithmetic' || block.type === 'u_compare' || block.type === 'u_logic') {
+      const f = block.fields ?? {}
+      return OP_ORDER[f.OP as string] ?? 12
+    }
+    if (block.type === 'u_logic_not') return UNARY_PREFIX_ORDER
+    return 20 // atoms
+  }
+
   generateCode(blockId: string, block: BlockJSON, indent: number): string {
     const prefix = '    '.repeat(indent)
     const f = (block.fields ?? {}) as Record<string, unknown>
@@ -252,10 +273,21 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
         return `"${f.TEXT ?? ''}"`
       case 'u_arithmetic':
       case 'u_compare':
-      case 'u_logic':
-        return `${this.genExpr(i.A?.block)} ${f.OP} ${this.genExpr(i.B?.block)}`
-      case 'u_logic_not':
-        return `!${this.genExpr(i.A?.block)}`
+      case 'u_logic': {
+        const myOrder = OP_ORDER[f.OP as string] ?? 12
+        const left = this.genExprWithOrder(i.A?.block)
+        const right = this.genExprWithOrder(i.B?.block)
+        // Left-associative: left child needs parens if strictly lower precedence
+        // Right child needs parens if same or lower precedence
+        const leftCode = left.order > 0 && left.order < 20 && left.order < myOrder ? `(${left.code})` : left.code
+        const rightCode = right.order > 0 && right.order < 20 && right.order <= myOrder ? `(${right.code})` : right.code
+        return `${leftCode} ${f.OP} ${rightCode}`
+      }
+      case 'u_logic_not': {
+        const operand = this.genExprWithOrder(i.A?.block)
+        const code = operand.order > 0 && operand.order < UNARY_PREFIX_ORDER ? `!(${operand.code})` : `!${operand.code}`
+        return code
+      }
       case 'u_if':
         return `${prefix}if (${this.genExpr(i.COND?.block)}) {\n${this.genStmts(i.BODY?.block, indent + 1)}\n${prefix}}`
       case 'u_if_else':
@@ -336,22 +368,47 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
   }
 
   private genExpr(block: BlockJSON | undefined): string {
-    if (!block) return ''
-    // For universal blocks, recursively generate code
-    if (block.type.startsWith('u_')) {
-      return this.generateCode(block.type, block, 0).trim()
+    return this.genExprWithOrder(block).code
+  }
+
+  /**
+   * Generate expression code with its operator precedence order.
+   * Used for parenthesization of nested binary expressions.
+   */
+  private genExprWithOrder(block: BlockJSON | undefined): { code: string; order: number } {
+    if (!block) return { code: '', order: 20 }
+
+    // Binary operators: return their actual precedence
+    if (block.type === 'u_arithmetic' || block.type === 'u_compare' || block.type === 'u_logic') {
+      const f = block.fields ?? {}
+      const order = OP_ORDER[f.OP as string] ?? 12
+      const code = this.generateCode(block.type, block, 0).trim()
+      return { code, order }
     }
+
+    // Unary not
+    if (block.type === 'u_logic_not') {
+      const code = this.generateCode(block.type, block, 0).trim()
+      return { code, order: UNARY_PREFIX_ORDER }
+    }
+
+    // For universal blocks, generate code as atom (order 20)
+    if (block.type.startsWith('u_')) {
+      return { code: this.generateCode(block.type, block, 0).trim(), order: 20 }
+    }
+
     // Delegate non-u_* blocks to generator via fallback
     if (this.fallbackCodeGen) {
-      return this.fallbackCodeGen.expression(block)
+      return { code: this.fallbackCodeGen.expression(block), order: 20 }
     }
+
     // Inline fallback for when no generator is wired (e.g., tests)
     const fields = block.fields ?? {}
-    if (block.type === 'c_raw_expression') return String(fields.CODE ?? '')
-    if (block.type === 'c_number') return String(fields.NUM ?? '0')
-    if (block.type === 'c_variable_ref') return String(fields.NAME ?? '')
-    if (block.type === 'c_string_literal') return `"${fields.TEXT ?? ''}"`
-    return String(fields.CODE ?? fields.NAME ?? fields.NUM ?? block.type)
+    if (block.type === 'c_raw_expression') return { code: String(fields.CODE ?? ''), order: 20 }
+    if (block.type === 'c_number') return { code: String(fields.NUM ?? '0'), order: 20 }
+    if (block.type === 'c_variable_ref') return { code: String(fields.NAME ?? ''), order: 20 }
+    if (block.type === 'c_string_literal') return { code: `"${fields.TEXT ?? ''}"`, order: 20 }
+    return { code: String(fields.CODE ?? fields.NAME ?? fields.NUM ?? block.type), order: 20 }
   }
 
   private genStmts(block: BlockJSON | undefined, indent: number): string {
