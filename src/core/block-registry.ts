@@ -1,9 +1,10 @@
-import { BEGINNER_BLOCKS } from './types'
+import { BEGINNER_BLOCKS, TOOLBOX_HIDDEN, TOOLBOX_PRESETS } from './types'
 import type { BlockSpec, ValidationError, ToolboxLevel } from './types'
 
 interface ToolboxBlockEntry {
   kind: 'block'
   type: string
+  extraState?: Record<string, unknown>
 }
 
 interface ToolboxCategory {
@@ -154,6 +155,7 @@ export class BlockRegistry {
     const filteredCategories = new Map<string, string[]>()
 
     for (const [id, spec] of this.blocks) {
+      if (TOOLBOX_HIDDEN.has(id)) continue
       if (languageId && spec.language !== 'universal' && spec.language !== languageId) {
         continue
       }
@@ -166,10 +168,21 @@ export class BlockRegistry {
     }
 
     for (const [categoryName, blockIds] of filteredCategories) {
+      const blockEntries: ToolboxBlockEntry[] = []
+      for (const id of blockIds) {
+        blockEntries.push({ kind: 'block', type: id })
+        // Insert preset variants after the original block
+        const presets = TOOLBOX_PRESETS[id]
+        if (presets) {
+          for (const preset of presets) {
+            blockEntries.push({ kind: 'block', type: preset.type, extraState: preset.extraState })
+          }
+        }
+      }
       contents.push({
         kind: 'category',
         name: categoryName,
-        contents: blockIds.map(id => ({ kind: 'block' as const, type: id })),
+        contents: blockEntries,
       })
     }
 

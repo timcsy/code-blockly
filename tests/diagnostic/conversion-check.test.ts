@@ -426,7 +426,7 @@ int main() {
     // Should have both universal and language-specific blocks
     expect(types).toContain('u_func_def')      // universal
     expect(types).toContain('u_var_declare')    // universal
-    expect(types).toContain('u_if')             // universal
+    expect(types).toContain('u_if_else')            // universal (unified if block)
     expect(types).toContain('c_printf')         // language-specific
     expect(types).toContain('c_include')        // language-specific
     expect(types).toContain('u_return')         // universal

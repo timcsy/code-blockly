@@ -356,9 +356,9 @@ describe('BlockRegistry', () => {
     it('should filter by languageId when provided', () => {
       registry.register(createValidSpec({ id: 'c_for_loop', language: 'cpp', blockDef: { type: 'c_for_loop' }, category: 'loops' }))
       registry.register(createValidSpec({
-        id: 'u_if',
+        id: 'u_if_else',
         language: 'universal',
-        blockDef: { type: 'u_if' },
+        blockDef: { type: 'u_if_else' },
         category: 'control',
         codeTemplate: undefined,
         astPattern: undefined,
@@ -369,7 +369,7 @@ describe('BlockRegistry', () => {
 
       const pyToolbox = registry.toToolboxDef('python')
       expect(pyToolbox.contents).toHaveLength(1) // only control (universal)
-      expect(pyToolbox.contents[0].contents[0].type).toBe('u_if')
+      expect(pyToolbox.contents[0].contents[0].type).toBe('u_if_else')
     })
   })
 
@@ -426,19 +426,22 @@ describe('BlockRegistry', () => {
       for (const blockType of allBlockTypes) {
         expect(BEGINNER_BLOCKS).toContain(blockType)
       }
-      expect(allBlockTypes.length).toBe(BEGINNER_BLOCKS.length)
+      // 17 BEGINNER_BLOCKS + 2 presets (u_if_else) = 19
+      expect(allBlockTypes.length).toBe(19)
     })
 
-    it('advanced 模式回傳全部積木', () => {
+    it('advanced 模式回傳全部積木（含隱藏）', () => {
       const toolbox = fullRegistry.toToolboxDef('cpp', 'advanced')
       const allBlockTypes = toolbox.contents.flatMap(cat => cat.contents.map(b => b.type))
-      expect(allBlockTypes.length).toBe(67)
+      // 67 total - 1 hidden (u_if) + 2 presets (u_if_else) = 68
+      expect(allBlockTypes.length).toBe(68)
     })
 
     it('不傳 level 時回傳全部積木（向後相容）', () => {
       const toolbox = fullRegistry.toToolboxDef('cpp')
       const allBlockTypes = toolbox.contents.flatMap(cat => cat.contents.map(b => b.type))
-      expect(allBlockTypes.length).toBe(67)
+      // 67 total - 1 hidden (u_if) + 2 presets (u_if_else) = 68
+      expect(allBlockTypes.length).toBe(68)
     })
 
     it('beginner 模式分類數 ≤ 6', () => {

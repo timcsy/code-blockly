@@ -204,7 +204,6 @@ export class BlocklyEditor {
       '<circle cx="10" cy="10" r="9" fill="#E0E0E0"/>' +
       '<path d="M6 10h8" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round"/></svg>'
     )
-
     /** Update the minus button image based on current count vs minimum */
     const setMinusState = (block: any, isAtMin: boolean) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       const f = block.getField('MINUS_BTN')
@@ -473,6 +472,252 @@ export class BlocklyEditor {
       /* eslint-enable @typescript-eslint/no-explicit-any */
     }
 
+    // Mutator helper blocks for u_if_else (used in gear/mutator mini-workspace)
+    if (!Blockly.Blocks['u_if_else_if_container']) {
+      Blockly.Blocks['u_if_else_if_container'] = {
+        init: function (this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+          this.setColour(40)
+          this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_IF_LABEL'] || '如果')
+          this.setNextStatement(true)
+          this.contextMenu = false
+        },
+      }
+    }
+    if (!Blockly.Blocks['u_if_else_elseif_input']) {
+      Blockly.Blocks['u_if_else_elseif_input'] = {
+        init: function (this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+          this.setColour(40)
+          this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_ELSEIF_MSG'] || '否則，如果')
+          this.setPreviousStatement(true)
+          this.setNextStatement(true)
+          this.contextMenu = false
+        },
+      }
+    }
+    if (!Blockly.Blocks['u_if_else_else_input']) {
+      Blockly.Blocks['u_if_else_else_input'] = {
+        init: function (this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+          this.setColour(40)
+          this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_MSG2'] || '否則')
+          this.setPreviousStatement(true)
+          this.contextMenu = false
+        },
+      }
+    }
+
+    // u_if_else: +/- for else-if, gear (mutator) for arrangement
+    if (!Blockly.Blocks['u_if_else']) {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      Blockly.Blocks['u_if_else'] = {
+        elseIfCount_: 0,
+        hasElse_: false,
+
+        init: function (this: any) {
+          this.elseIfCount_ = 0
+          this.hasElse_ = false
+          this.setColour(40)
+          this.setPreviousStatement(true, 'Statement')
+          this.setNextStatement(true, 'Statement')
+          this.setTooltip(Blockly.Msg['U_IF_ELSE_TOOLTIP'] || '如果條件成立就執行「就」的部分，否則執行「否則」的部分')
+
+          this.appendValueInput('COND')
+            .appendField(Blockly.Msg['U_IF_ELSE_IF_LABEL'] || '如果')
+            .setCheck('Expression')
+          this.appendStatementInput('THEN').setCheck('Statement')
+          // TAIL: +/- for else-if
+          this.appendDummyInput('TAIL')
+            .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plus_()))
+            .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minus_()), 'MINUS_BTN')
+          // Mutator gear icon for arrangement (else-if + else)
+          this.setMutator(new Blockly.icons.MutatorIcon(
+            ['u_if_else_elseif_input', 'u_if_else_else_input'], this))
+        },
+
+        /** Rebuild TAIL row (with +/- buttons only) */
+        rebuildTail_: function (this: any) {
+          // Determine where TAIL should go: before ELSE if present
+          const beforeInput = this.hasElse_ ? 'ELSE' : null
+          this.removeInput('TAIL')
+          const tail = this.appendDummyInput('TAIL')
+          if (this.hasElse_) {
+            tail.appendField(Blockly.Msg['U_IF_ELSE_MSG2'] || '否則')
+          }
+          tail.appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plus_()))
+          tail.appendField(new Blockly.FieldImage(
+            (this.elseIfCount_ <= 0 ? MINUS_DISABLED_IMG : MINUS_IMG), 20, 20, '-', () => this.minus_()), 'MINUS_BTN')
+          if (beforeInput) {
+            this.moveInputBefore('TAIL', beforeInput)
+          }
+        },
+
+        /** + always adds else-if */
+        plus_: function (this: any) {
+          this.elseIfCount_++
+          const idx = this.elseIfCount_
+          this.appendValueInput('COND' + idx)
+            .appendField(Blockly.Msg['U_IF_ELSE_ELSEIF_MSG'] || '否則，如果')
+            .setCheck('Expression')
+          this.appendStatementInput('THEN' + idx).setCheck('Statement')
+          this.moveInputBefore('COND' + idx, 'TAIL')
+          this.moveInputBefore('THEN' + idx, 'TAIL')
+          setMinusState(this, false)
+        },
+
+        /** - always removes last else-if */
+        minus_: function (this: any) {
+          if (this.elseIfCount_ > 0) {
+            const idx = this.elseIfCount_
+            this.removeInput('THEN' + idx)
+            this.removeInput('COND' + idx)
+            this.elseIfCount_--
+            setMinusState(this, this.elseIfCount_ <= 0)
+          }
+        },
+
+        /**
+         * Rebuild all inputs to match elseIfCount_ and hasElse_.
+         * Used by mutator compose and loadExtraState.
+         */
+        updateShape_: function (this: any) {
+          // Remove existing else-if inputs
+          for (let i = 1; this.getInput('COND' + i); i++) {
+            this.removeInput('COND' + i)
+            this.removeInput('THEN' + i)
+          }
+          // Remove ELSE if present
+          if (this.getInput('ELSE')) {
+            this.removeInput('ELSE')
+          }
+          // Re-add else-if inputs
+          for (let i = 1; i <= this.elseIfCount_; i++) {
+            this.appendValueInput('COND' + i)
+              .appendField(Blockly.Msg['U_IF_ELSE_ELSEIF_MSG'] || '否則，如果')
+              .setCheck('Expression')
+            this.appendStatementInput('THEN' + i).setCheck('Statement')
+            this.moveInputBefore('COND' + i, 'TAIL')
+            this.moveInputBefore('THEN' + i, 'TAIL')
+          }
+          // Re-add ELSE if needed
+          if (this.hasElse_) {
+            this.appendStatementInput('ELSE').setCheck('Statement')
+          }
+          // Rebuild TAIL (updates label and button states)
+          this.rebuildTail_()
+        },
+
+        /** Mutator: decompose into mini-workspace blocks */
+        decompose: function (this: any, workspace: any) {
+          const containerBlock = workspace.newBlock('u_if_else_if_container')
+          containerBlock.initSvg()
+          let connection = containerBlock.nextConnection
+          for (let i = 1; i <= this.elseIfCount_; i++) {
+            const elseIfBlock = workspace.newBlock('u_if_else_elseif_input')
+            elseIfBlock.initSvg()
+            connection.connect(elseIfBlock.previousConnection)
+            connection = elseIfBlock.nextConnection
+          }
+          if (this.hasElse_) {
+            const elseBlock = workspace.newBlock('u_if_else_else_input')
+            elseBlock.initSvg()
+            connection.connect(elseBlock.previousConnection)
+          }
+          return containerBlock
+        },
+
+        /** Mutator: recompose from mini-workspace arrangement */
+        compose: function (this: any, containerBlock: any) {
+          // Walk the chain to count else-if and else
+          let block = containerBlock.nextConnection.targetBlock()
+          let newElseIfCount = 0
+          let newHasElse = false
+          const condConnections: any[] = [null]
+          const thenConnections: any[] = [null]
+          let elseConnection: any = null
+          while (block) {
+            if (!block.isInsertionMarker()) {
+              switch (block.type) {
+                case 'u_if_else_elseif_input':
+                  newElseIfCount++
+                  condConnections.push(block.condConnection_)
+                  thenConnections.push(block.thenConnection_)
+                  break
+                case 'u_if_else_else_input':
+                  newHasElse = true
+                  elseConnection = block.elseConnection_
+                  break
+              }
+            }
+            block = block.getNextBlock()
+          }
+          this.elseIfCount_ = newElseIfCount
+          this.hasElse_ = newHasElse
+          this.updateShape_()
+          // Reconnect child blocks
+          this.reconnectChildBlocks_(condConnections, thenConnections, elseConnection)
+        },
+
+        /** Mutator: save connections before recompose */
+        saveConnections: function (this: any, containerBlock: any) {
+          let block = containerBlock.nextConnection.targetBlock()
+          let i = 1
+          while (block) {
+            if (!block.isInsertionMarker()) {
+              switch (block.type) {
+                case 'u_if_else_elseif_input': {
+                  const condInput = this.getInput('COND' + i)
+                  const thenInput = this.getInput('THEN' + i)
+                  block.condConnection_ = condInput && condInput.connection.targetConnection
+                  block.thenConnection_ = thenInput && thenInput.connection.targetConnection
+                  i++
+                  break
+                }
+                case 'u_if_else_else_input': {
+                  const elseInput = this.getInput('ELSE')
+                  block.elseConnection_ = elseInput && elseInput.connection.targetConnection
+                  break
+                }
+              }
+            }
+            block = block.getNextBlock()
+          }
+        },
+
+        /** Reconnect child blocks after updateShape_ */
+        reconnectChildBlocks_: function (this: any, condConns: any[], thenConns: any[], elseConn: any) {
+          for (let i = 1; i <= this.elseIfCount_; i++) {
+            condConns[i]?.reconnect(this, 'COND' + i)
+            thenConns[i]?.reconnect(this, 'THEN' + i)
+          }
+          elseConn?.reconnect(this, 'ELSE')
+        },
+
+        saveExtraState: function (this: any) {
+          return { hasElse: this.hasElse_, elseIfCount: this.elseIfCount_ }
+        },
+
+        loadExtraState: function (this: any, state: any) {
+          // Backward compat: if hasElse not defined but old data exists, default true
+          this.hasElse_ = state?.hasElse ?? (state?.elseIfCount > 0 ? true : false)
+          this.elseIfCount_ = state?.elseIfCount ?? 0
+          this.updateShape_()
+        },
+
+        mutationToDom: function (this: any) {
+          const mutation = Blockly.utils.xml.createElement('mutation')
+          mutation.setAttribute('haselse', String(this.hasElse_))
+          mutation.setAttribute('elseifcount', String(this.elseIfCount_))
+          return mutation
+        },
+
+        domToMutation: function (this: any, xml: Element) {
+          this.hasElse_ = xml.getAttribute('haselse') === 'true'
+          this.elseIfCount_ = parseInt(xml.getAttribute('elseifcount') || '0', 10)
+          this.updateShape_()
+        },
+      }
+      /* eslint-enable @typescript-eslint/no-explicit-any */
+    }
+
     // u_var_ref: dynamic dropdown listing declared variables
     if (!Blockly.Blocks['u_var_ref']) {
       /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -679,10 +924,11 @@ export class BlocklyEditor {
       contents: def.contents.map(cat => ({
         kind: 'category',
         name: (BlocklyEditor.CATEGORY_I18N_KEYS[cat.name] ? Blockly.Msg[BlocklyEditor.CATEGORY_I18N_KEYS[cat.name]] : null) ?? cat.name,
-        contents: cat.contents.map(block => ({
-          kind: 'block',
-          type: block.type,
-        })),
+        contents: cat.contents.map(block => {
+          const entry: Record<string, unknown> = { kind: 'block', type: block.type }
+          if (block.extraState) entry.extraState = block.extraState
+          return entry
+        }),
       })),
     }
   }

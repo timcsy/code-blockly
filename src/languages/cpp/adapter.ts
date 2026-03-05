@@ -108,7 +108,7 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
         return this.isCountingFor(node) ? 'u_count_loop' : null  // null → fallback to C++ specific
 
       case 'if_statement':
-        return node.childForFieldName('alternative') ? 'u_if_else' : 'u_if'
+        return 'u_if_else'
 
       case 'while_statement':
         return 'u_while_loop'
@@ -307,8 +307,43 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
       }
       case 'u_if':
         return `${prefix}if (${this.genExpr(i.COND?.block)}) {\n${this.genStmts(i.BODY?.block, indent + 1)}\n${prefix}}`
-      case 'u_if_else':
-        return `${prefix}if (${this.genExpr(i.COND?.block)}) {\n${this.genStmts(i.THEN?.block, indent + 1)}\n${prefix}} else {\n${this.genStmts(i.ELSE?.block, indent + 1)}\n${prefix}}`
+      case 'u_if_else': {
+        const condCode = this.genExpr(i.COND?.block)
+        const thenCode = this.genStmts(i.THEN?.block, indent + 1)
+
+        // Dynamic else-if branches: COND1/THEN1, COND2/THEN2, ...
+        let elseIfParts = ''
+        let eiIdx = 1
+        while (i[`COND${eiIdx}`]?.block) {
+          const eiCond = this.genExpr(i[`COND${eiIdx}`].block)
+          const eiBody = this.genStmts(i[`THEN${eiIdx}`]?.block, indent + 1)
+          elseIfParts += `\n${prefix}} else if (${eiCond}) {\n${eiBody}`
+          eiIdx++
+        }
+
+        const elseBlock = i.ELSE?.block
+
+        if (elseIfParts) {
+          if (elseBlock) {
+            const elseCode = this.genStmts(elseBlock, indent + 1)
+            return `${prefix}if (${condCode}) {\n${thenCode}${elseIfParts}\n${prefix}} else {\n${elseCode}\n${prefix}}`
+          }
+          return `${prefix}if (${condCode}) {\n${thenCode}${elseIfParts}\n${prefix}}`
+        }
+
+        // No else-if branches: check ELSE content
+        if (!elseBlock) {
+          // No else at all → simple if
+          return `${prefix}if (${condCode}) {\n${thenCode}\n${prefix}}`
+        }
+
+        // Legacy: else-if chain via nested u_if/u_if_else in ELSE slot
+        if ((elseBlock.type === 'u_if' || elseBlock.type === 'u_if_else') && !elseBlock.next) {
+          const elseIfCode = this.generateCode(elseBlock.type, elseBlock, indent)
+          return `${prefix}if (${condCode}) {\n${thenCode}\n${prefix}} else ${elseIfCode.trimStart()}`
+        }
+        return `${prefix}if (${condCode}) {\n${thenCode}\n${prefix}} else {\n${this.genStmts(elseBlock, indent + 1)}\n${prefix}}`
+      }
       case 'u_count_loop':
         return `${prefix}for (int ${f.VAR} = ${this.genExpr(i.FROM?.block)}; ${f.VAR} <= ${this.genExpr(i.TO?.block)}; ${f.VAR}++) {\n${this.genStmts(i.BODY?.block, indent + 1)}\n${prefix}}`
       case 'u_while_loop':
@@ -596,7 +631,24 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
 
   private extractIfElse(node: Node, inputs: Record<string, { block: BlockJSON }>): void {
     this.extractIf(node, inputs)
-    // THEN and ELSE are statement inputs, extracted by converter
+    // Flatten else-if chain: extract COND1, COND2, ... from nested if_statements
+    let elseIfIdx = 1
+    let alt = node.childForFieldName('alternative')
+    while (alt) {
+      const body = alt.type === 'else_clause' ? alt.namedChildren[0] : alt
+      if (body?.type === 'if_statement') {
+        const cond = body.childForFieldName('condition')
+        if (cond) {
+          const condNode = cond.type === 'parenthesized_expression' && cond.namedChildren.length > 0
+            ? cond.namedChildren[0] : cond
+          inputs[`COND${elseIfIdx}`] = { block: this.nodeToExprBlock(condNode) }
+        }
+        elseIfIdx++
+        alt = body.childForFieldName('alternative')
+      } else {
+        break // final else
+      }
+    }
   }
 
   private extractWhile(node: Node, inputs: Record<string, { block: BlockJSON }>): void {
@@ -1206,7 +1258,7 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
 
   private semanticToBlock(node: SemanticNode): BlockJSON {
     const concept = node.concept
-    const blockId = this.conceptToBlockId(concept, node)
+    const blockId = this.conceptToBlockId(concept)
     const fields: Record<string, unknown> = {}
     const inputs: Record<string, { block: BlockJSON }> = {}
     const id = node.metadata?.blockId ?? `sem_${Math.random().toString(36).slice(2, 8)}`
@@ -1262,21 +1314,38 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
         if (node.children.condition && !Array.isArray(node.children.condition)) {
           inputs.COND = { block: this.semanticToBlock(node.children.condition) }
         }
+        // Always use THEN (unified u_if_else block)
+        const thenBody = Array.isArray(node.children.then_body) ? node.children.then_body : []
+        if (thenBody.length > 0) {
+          inputs.THEN = { block: this.semanticArrayToChain(thenBody) }
+        }
         const hasElse = node.children.else_body &&
           (Array.isArray(node.children.else_body) ? node.children.else_body.length > 0 : true)
         if (hasElse) {
-          const thenBody = Array.isArray(node.children.then_body) ? node.children.then_body : []
-          if (thenBody.length > 0) {
-            inputs.THEN = { block: this.semanticArrayToChain(thenBody) }
+          // Flatten nested else-if chains into COND1/THEN1, COND2/THEN2, ...
+          let elseIfIdx = 1
+          let currentElse: SemanticNode[] = Array.isArray(node.children.else_body) ? node.children.else_body : []
+          while (currentElse.length === 1 && currentElse[0].concept === 'if') {
+            const elseIfNode = currentElse[0]
+            if (elseIfNode.children.condition && !Array.isArray(elseIfNode.children.condition)) {
+              inputs[`COND${elseIfIdx}`] = { block: this.semanticToBlock(elseIfNode.children.condition) }
+            }
+            const elseIfBody = Array.isArray(elseIfNode.children.then_body) ? elseIfNode.children.then_body : []
+            if (elseIfBody.length > 0) {
+              inputs[`THEN${elseIfIdx}`] = { block: this.semanticArrayToChain(elseIfBody) }
+            }
+            elseIfIdx++
+            const hasNestedElse = elseIfNode.children.else_body &&
+              (Array.isArray(elseIfNode.children.else_body) ? elseIfNode.children.else_body.length > 0 : true)
+            if (hasNestedElse) {
+              currentElse = Array.isArray(elseIfNode.children.else_body) ? elseIfNode.children.else_body : []
+            } else {
+              currentElse = []
+              break
+            }
           }
-          const elseBody = Array.isArray(node.children.else_body) ? node.children.else_body : []
-          if (elseBody.length > 0) {
-            inputs.ELSE = { block: this.semanticArrayToChain(elseBody) }
-          }
-        } else {
-          const body = Array.isArray(node.children.then_body) ? node.children.then_body : []
-          if (body.length > 0) {
-            inputs.BODY = { block: this.semanticArrayToChain(body) }
+          if (currentElse.length > 0) {
+            inputs.ELSE = { block: this.semanticArrayToChain(currentElse) }
           }
         }
         break
@@ -1383,15 +1452,19 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
     const block: BlockJSON = { type: blockId, id }
     if (Object.keys(fields).length > 0) block.fields = fields
     if (Object.keys(inputs).length > 0) block.inputs = inputs
+
+    // Add extraState for dynamic blocks
+    if (blockId === 'u_if_else') {
+      const elseIfCount = Object.keys(inputs).filter(k => /^COND\d+$/.test(k)).length
+      const hasElse = 'ELSE' in inputs
+      block.extraState = { ...(block.extraState ?? {}), hasElse, elseIfCount }
+    }
+
     return block
   }
 
-  private conceptToBlockId(concept: ConceptId, node: SemanticNode): string {
-    if (concept === 'if') {
-      const hasElse = node.children.else_body &&
-        (Array.isArray(node.children.else_body) ? node.children.else_body.length > 0 : true)
-      return hasElse ? 'u_if_else' : 'u_if'
-    }
+  private conceptToBlockId(concept: ConceptId): string {
+    if (concept === 'if') return 'u_if_else'
     return CppLanguageAdapter.CONCEPT_TO_BLOCK[concept] ?? concept
   }
 
@@ -1471,12 +1544,39 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
           const cond = this.blockToSemantic(i.COND.block)
           if (cond) children.condition = cond
         }
-        if (blockId === 'u_if_else') {
-          children.then_body = i.THEN?.block ? this.chainToArray(i.THEN.block) : []
-          children.else_body = i.ELSE?.block ? this.chainToArray(i.ELSE.block) : []
+        // Unified u_if_else: always use THEN (also handle legacy u_if with BODY)
+        if (blockId === 'u_if' && i.BODY?.block) {
+          children.then_body = this.chainToArray(i.BODY.block)
         } else {
-          children.then_body = i.BODY?.block ? this.chainToArray(i.BODY.block) : []
+          children.then_body = i.THEN?.block ? this.chainToArray(i.THEN.block) : []
         }
+
+        // Check for dynamic else-if branches (COND1/THEN1, COND2/THEN2, ...)
+        let lastElseIfIdx = 0
+        while (i[`COND${lastElseIfIdx + 1}`]?.block) {
+          lastElseIfIdx++
+        }
+
+        if (lastElseIfIdx > 0) {
+          // Rebuild nested semantic if nodes from flattened format (innermost first)
+          let currentElseBody: SemanticNode[] = i.ELSE?.block ? this.chainToArray(i.ELSE.block) : []
+          for (let idx = lastElseIfIdx; idx >= 1; idx--) {
+            const elseIfCond = i[`COND${idx}`]?.block ? this.blockToSemantic(i[`COND${idx}`].block) : null
+            const elseIfBody = i[`THEN${idx}`]?.block ? this.chainToArray(i[`THEN${idx}`].block) : []
+            const elseIfChildren: Record<string, SemanticNode | SemanticNode[]> = {
+              then_body: elseIfBody,
+            }
+            if (elseIfCond) elseIfChildren.condition = elseIfCond
+            if (currentElseBody.length > 0) elseIfChildren.else_body = currentElseBody
+            const elseIfNode = createNode('if', {}, elseIfChildren)
+            currentElseBody = [elseIfNode]
+          }
+          children.else_body = currentElseBody
+        } else if (i.ELSE?.block) {
+          // Has else but no else-if branches
+          children.else_body = this.chainToArray(i.ELSE.block)
+        }
+        // No ELSE input → no else_body (pure if)
         break
       }
 

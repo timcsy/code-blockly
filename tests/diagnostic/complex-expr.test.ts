@@ -265,4 +265,206 @@ describe('Complex expression conversion with adapter', () => {
     expect(inputBlock).not.toBeNull()
     expect(inputBlock?.extraState?.varCount).toBe(3)
   })
+
+  describe('if / else if / else chains', () => {
+    it('simple if-else generates correctly', () => {
+      const block: BlockJSON = {
+        type: 'u_if_else', id: 'test',
+        inputs: {
+          COND: { block: { type: 'u_compare', id: 't', fields: { OP: '>' }, inputs: { A: { block: { type: 'u_var_ref', id: 't', fields: { NAME: 'x' } } }, B: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+          THEN: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: 1 } } } } } },
+          ELSE: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+        },
+      }
+      const code = adapter.generateCode('u_if_else', block, 0)
+      expect(code).toContain('if (x > 0)')
+      expect(code).toContain('} else {')
+      expect(code).toContain('y = 0;')
+    })
+
+    it('dynamic else-if generates "else if" using COND1/THEN1 format', () => {
+      const block: BlockJSON = {
+        type: 'u_if_else', id: 'test',
+        extraState: { elseIfCount: 1 },
+        inputs: {
+          COND: { block: { type: 'u_compare', id: 't', fields: { OP: '>' }, inputs: { A: { block: { type: 'u_var_ref', id: 't', fields: { NAME: 'x' } } }, B: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+          THEN: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: 1 } } } } } },
+          COND1: { block: { type: 'u_compare', id: 't', fields: { OP: '<' }, inputs: { A: { block: { type: 'u_var_ref', id: 't', fields: { NAME: 'x' } } }, B: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+          THEN1: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: -1 } } } } } },
+          ELSE: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+        },
+      }
+      const code = adapter.generateCode('u_if_else', block, 0)
+      expect(code).toContain('} else if (x < 0)')
+      expect(code).not.toMatch(/else \{\s*\n\s*if \(/)
+      expect(code).toContain('} else {')
+      expect(code).toContain('y = 0;')
+    })
+
+    it('legacy else-if chain (nested u_if_else in ELSE) still works', () => {
+      const block: BlockJSON = {
+        type: 'u_if_else', id: 'test',
+        inputs: {
+          COND: { block: { type: 'u_compare', id: 't', fields: { OP: '>' }, inputs: { A: { block: { type: 'u_var_ref', id: 't', fields: { NAME: 'x' } } }, B: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+          THEN: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: 1 } } } } } },
+          ELSE: { block: {
+            type: 'u_if_else', id: 'test2',
+            inputs: {
+              COND: { block: { type: 'u_compare', id: 't', fields: { OP: '<' }, inputs: { A: { block: { type: 'u_var_ref', id: 't', fields: { NAME: 'x' } } }, B: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+              THEN: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: -1 } } } } } },
+              ELSE: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+            },
+          } },
+        },
+      }
+      const code = adapter.generateCode('u_if_else', block, 0)
+      expect(code).toContain('} else if (x < 0)')
+      expect(code).not.toMatch(/else \{\s*\n\s*if \(/)
+    })
+
+    it('else-if with trailing u_if (no else) flattens correctly (legacy)', () => {
+      const block: BlockJSON = {
+        type: 'u_if_else', id: 'test',
+        inputs: {
+          COND: { block: { type: 'u_compare', id: 't', fields: { OP: '>' }, inputs: { A: { block: { type: 'u_var_ref', id: 't', fields: { NAME: 'x' } } }, B: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+          THEN: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: 1 } } } } } },
+          ELSE: { block: {
+            type: 'u_if', id: 'test2',
+            inputs: {
+              COND: { block: { type: 'u_compare', id: 't', fields: { OP: '<' }, inputs: { A: { block: { type: 'u_var_ref', id: 't', fields: { NAME: 'x' } } }, B: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+              BODY: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: -1 } } } } } },
+            },
+          } },
+        },
+      }
+      const code = adapter.generateCode('u_if_else', block, 0)
+      expect(code).toContain('} else if (x < 0)')
+    })
+
+    it('parses if / else if / else from C++ code into flattened format', async () => {
+      const code = [
+        'int main() {',
+        '    int x = 5;',
+        '    int y;',
+        '    if (x > 0) {',
+        '        y = 1;',
+        '    } else if (x < 0) {',
+        '        y = -1;',
+        '    } else {',
+        '        y = 0;',
+        '    }',
+        '    return 0;',
+        '}',
+      ].join('\n')
+      const blocks = await converter.convert(code)
+      const topBlocks = getTopBlocks(blocks)
+      expect(topBlocks.length).toBeGreaterThan(0)
+
+      // Find the u_if_else block
+      const ifElse = findBlockByType(topBlocks[0], 'u_if_else')
+      expect(ifElse).not.toBeNull()
+      expect(ifElse?.inputs?.COND).toBeDefined()
+      expect(ifElse?.inputs?.THEN).toBeDefined()
+
+      // Should have flattened COND1/THEN1 instead of nested u_if_else in ELSE
+      expect(ifElse?.inputs?.COND1).toBeDefined()
+      expect(ifElse?.inputs?.THEN1).toBeDefined()
+      expect(ifElse?.inputs?.ELSE).toBeDefined()
+      // extraState should have hasElse and elseIfCount
+      expect(ifElse?.extraState?.hasElse).toBe(true)
+      expect(ifElse?.extraState?.elseIfCount).toBe(1)
+    })
+
+    it('parses pure if (no else) into u_if_else with hasElse=false', async () => {
+      const code = [
+        'if (x > 0) {',
+        '    y = 1;',
+        '}',
+      ].join('\n')
+      const blocks = await converter.convert(code)
+      const topBlocks = getTopBlocks(blocks)
+
+      const ifBlock = topBlocks[0]
+      expect(ifBlock?.type).toBe('u_if_else')
+      expect(ifBlock?.inputs?.COND).toBeDefined()
+      expect(ifBlock?.inputs?.THEN).toBeDefined()
+      expect(ifBlock?.inputs?.ELSE).toBeUndefined()
+      expect(ifBlock?.extraState?.hasElse).toBe(false)
+      expect(ifBlock?.extraState?.elseIfCount).toBe(0)
+    })
+
+    it('parses triple if/else-if/else-if/else chain', async () => {
+      const code = [
+        'if (x > 10) {',
+        '    y = 3;',
+        '} else if (x > 0) {',
+        '    y = 2;',
+        '} else if (x < 0) {',
+        '    y = 1;',
+        '} else {',
+        '    y = 0;',
+        '}',
+      ].join('\n')
+      const blocks = await converter.convert(code)
+      const topBlocks = getTopBlocks(blocks)
+
+      const ifElse = topBlocks[0]
+      expect(ifElse?.type).toBe('u_if_else')
+      expect(ifElse?.inputs?.COND).toBeDefined()
+      expect(ifElse?.inputs?.THEN).toBeDefined()
+      expect(ifElse?.inputs?.COND1).toBeDefined()
+      expect(ifElse?.inputs?.THEN1).toBeDefined()
+      expect(ifElse?.inputs?.COND2).toBeDefined()
+      expect(ifElse?.inputs?.THEN2).toBeDefined()
+      expect(ifElse?.inputs?.ELSE).toBeDefined()
+      expect(ifElse?.extraState?.elseIfCount).toBe(2)
+    })
+
+    it('roundtrip: parse else-if chain → generate code with "else if"', async () => {
+      const code = [
+        'int main() {',
+        '    int x = 5;',
+        '    int y;',
+        '    if (x > 0) {',
+        '        y = 1;',
+        '    } else if (x < 0) {',
+        '        y = -1;',
+        '    } else {',
+        '        y = 0;',
+        '    }',
+        '    return 0;',
+        '}',
+      ].join('\n')
+      const blocks = await converter.convert(code)
+      const topBlocks = getTopBlocks(blocks)
+
+      // Find the if_else block and generate code from it
+      const ifElse = findBlockByType(topBlocks[0], 'u_if_else')
+      expect(ifElse).not.toBeNull()
+      const generated = adapter.generateCode('u_if_else', ifElse!, 1)
+      expect(generated).toContain('} else if (')
+      expect(generated).not.toMatch(/else \{\s*\n\s*if \(/)
+    })
+
+    it('dynamic else-if with multiple branches generates correct code', () => {
+      const block: BlockJSON = {
+        type: 'u_if_else', id: 'test',
+        extraState: { elseIfCount: 2 },
+        inputs: {
+          COND: { block: { type: 'u_compare', id: 't', fields: { OP: '>' }, inputs: { A: { block: { type: 'u_var_ref', id: 't', fields: { NAME: 'x' } } }, B: { block: { type: 'u_number', id: 't', fields: { NUM: 10 } } } } } },
+          THEN: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: 3 } } } } } },
+          COND1: { block: { type: 'u_compare', id: 't', fields: { OP: '>' }, inputs: { A: { block: { type: 'u_var_ref', id: 't', fields: { NAME: 'x' } } }, B: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+          THEN1: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: 2 } } } } } },
+          COND2: { block: { type: 'u_compare', id: 't', fields: { OP: '<' }, inputs: { A: { block: { type: 'u_var_ref', id: 't', fields: { NAME: 'x' } } }, B: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+          THEN2: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: 1 } } } } } },
+          ELSE: { block: { type: 'u_var_assign', id: 't', fields: { NAME: 'y' }, inputs: { VALUE: { block: { type: 'u_number', id: 't', fields: { NUM: 0 } } } } } },
+        },
+      }
+      const code = adapter.generateCode('u_if_else', block, 0)
+      expect(code).toContain('if (x > 10)')
+      expect(code).toContain('} else if (x > 0)')
+      expect(code).toContain('} else if (x < 0)')
+      expect(code).toContain('} else {')
+    })
+  })
 })

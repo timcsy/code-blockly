@@ -62,9 +62,9 @@ describe('T009: CppAdapter.matchNodeToBlock', () => {
   })
 
   describe('if 條件判斷', () => {
-    it('should match if without else → u_if', async () => {
+    it('should match if without else → u_if_else', async () => {
       const node = await parseAndGetNode('void f() { if (x > 0) { } }', 'if_statement')
-      expect(adapter.matchNodeToBlock(node)).toBe('u_if')
+      expect(adapter.matchNodeToBlock(node)).toBe('u_if_else')
     })
 
     it('should match if with else → u_if_else', async () => {
@@ -407,8 +407,8 @@ int main() {
     expect(blockTypes).toContain('u_func_def')
     // for loop as counting loop
     expect(blockTypes).toContain('u_count_loop')
-    // if statement
-    expect(blockTypes).toContain('u_if')
+    // if statement (no else → u_if_else)
+    expect(blockTypes).toContain('u_if_else')
     // break
     expect(blockTypes).toContain('u_break')
     // return

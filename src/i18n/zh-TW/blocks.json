@@ -31,6 +31,8 @@
   "U_IF_TOOLTIP": "如果條件成立，就執行裡面的積木",
   "U_IF_ELSE_MSG0": "如果 %1 就",
   "U_IF_ELSE_MSG2": "否則",
+  "U_IF_ELSE_IF_LABEL": "如果",
+  "U_IF_ELSE_ELSEIF_MSG": "否則，如果",
   "U_IF_ELSE_TOOLTIP": "如果條件成立就執行「就」的部分，否則執行「否則」的部分",
   "U_COUNT_LOOP_MSG0": "重複：%1 從 %2 到 %3",
   "U_COUNT_LOOP_TOOLTIP": "讓程式重複執行：變數會從起始值一直數到結束值，每次加 1",

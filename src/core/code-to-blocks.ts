@@ -244,10 +244,24 @@ export class CodeToBlocksConverter {
         block.extraState = { ...(block.extraState ?? {}), paramCount }
       }
     }
+
+    // u_if_else: hasElse + elseIfCount
+    if (block.type === 'u_if_else') {
+      const hasElse = block.inputs ? 'ELSE' in block.inputs : false
+      const elseIfCount = block.inputs ? Object.keys(block.inputs).filter(k => /^COND\d+$/.test(k)).length : 0
+      block.extraState = { ...(block.extraState ?? {}), hasElse, elseIfCount }
+    }
   }
 
   private extractAdapterStatementInputs(blockId: string, node: Node, block: BlockJSON): void {
     if (!block.inputs) block.inputs = {}
+
+    // Special case for u_if_else: flatten else-if chain
+    if (blockId === 'u_if_else') {
+      this.extractFlatIfElseStatements(node, block)
+      if (Object.keys(block.inputs!).length === 0) delete block.inputs
+      return
+    }
 
     // Determine which statement inputs this block type has
     const stmtInputs = this.getStatementInputNames(blockId)
@@ -255,7 +269,14 @@ export class CodeToBlocksConverter {
     for (const inputName of stmtInputs) {
       const bodyNode = this.getStatementBodyNode(inputName, node)
       if (bodyNode) {
-        const stmts = this.convertChildren(bodyNode)
+        let stmts: BlockJSON[]
+        if (bodyNode.type === 'compound_statement') {
+          stmts = this.convertChildren(bodyNode)
+        } else {
+          // Single statement (e.g., else-if: bodyNode is an if_statement)
+          const converted = this.convertNode(bodyNode)
+          stmts = converted ? [converted] : []
+        }
         const chained = this.chainStatements(stmts)
         if (chained.length > 0) {
           block.inputs![inputName] = { block: chained[0] }
@@ -269,12 +290,57 @@ export class CodeToBlocksConverter {
     }
   }
 
+  /** Flatten if/else-if/else AST chain into THEN, THEN1, THEN2, ..., ELSE */
+  private extractFlatIfElseStatements(node: Node, block: BlockJSON): void {
+    if (!block.inputs) block.inputs = {}
+
+    // THEN: main consequence
+    const consequence = node.childForFieldName('consequence')
+    if (consequence) {
+      const stmts = consequence.type === 'compound_statement'
+        ? this.convertChildren(consequence)
+        : (() => { const c = this.convertNode(consequence); return c ? [c] : [] })()
+      const chained = this.chainStatements(stmts)
+      if (chained.length > 0) block.inputs!.THEN = { block: chained[0] }
+    }
+
+    // Walk else-if chain
+    let elseIfIdx = 1
+    let alt = node.childForFieldName('alternative')
+    while (alt) {
+      const body = alt.type === 'else_clause' ? alt.namedChildren[0] : alt
+      if (body?.type === 'if_statement') {
+        // else-if branch: extract THEN{n}
+        const eifConsequence = body.childForFieldName('consequence')
+        if (eifConsequence) {
+          const stmts = eifConsequence.type === 'compound_statement'
+            ? this.convertChildren(eifConsequence)
+            : (() => { const c = this.convertNode(eifConsequence); return c ? [c] : [] })()
+          const chained = this.chainStatements(stmts)
+          if (chained.length > 0) block.inputs![`THEN${elseIfIdx}`] = { block: chained[0] }
+        }
+        elseIfIdx++
+        alt = body.childForFieldName('alternative')
+      } else {
+        // Final else
+        if (body) {
+          const stmts = body.type === 'compound_statement'
+            ? this.convertChildren(body)
+            : (() => { const c = this.convertNode(body); return c ? [c] : [] })()
+          const chained = this.chainStatements(stmts)
+          if (chained.length > 0) block.inputs!.ELSE = { block: chained[0] }
+        }
+        break
+      }
+    }
+  }
+
   private getStatementInputNames(blockId: string): string[] {
     switch (blockId) {
       case 'u_if':
         return ['BODY']
       case 'u_if_else':
-        return ['THEN', 'ELSE']
+        return [] // handled by extractFlatIfElseStatements
       case 'u_count_loop':
       case 'u_while_loop':
       case 'u_func_def':

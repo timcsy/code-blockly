@@ -170,19 +170,36 @@ export const BEGINNER_BLOCKS: readonly string[] = [
   // 運算
   'u_arithmetic', 'u_compare', 'u_logic',
   // 流程控制
-  'u_if', 'u_if_else', 'u_count_loop', 'u_while_loop',
+  'u_if_else', 'u_count_loop', 'u_while_loop',
   // 函式
   'u_func_def', 'u_func_call', 'u_return',
   // 輸入輸出
   'u_print', 'u_input', 'u_endl',
 ]
 
+/** 工具箱中隱藏的積木（已被其他積木取代，保留向後相容） */
+export const TOOLBOX_HIDDEN: ReadonlySet<string> = new Set(['u_if'])
+
+/** 工具箱預設項目（同一積木的多種初始狀態） */
+export interface ToolboxPresetEntry {
+  type: string
+  extraState: Record<string, unknown>
+}
+
+/** 工具箱預設：在指定積木後插入額外的預設變體 */
+export const TOOLBOX_PRESETS: Readonly<Record<string, readonly ToolboxPresetEntry[]>> = {
+  'u_if_else': [
+    { type: 'u_if_else', extraState: { hasElse: true, elseIfCount: 0 } },
+    { type: 'u_if_else', extraState: { hasElse: true, elseIfCount: 1 } },
+  ],
+}
+
 /** 快捷列預設項目 */
 export const QUICK_ACCESS_ITEMS: readonly QuickAccessItem[] = [
   { blockType: 'u_var_declare', labelKey: 'QA_VAR', fallbackLabel: '變數', icon: '📦', tooltipKey: 'QA_TOOLTIP_VAR' },
   { blockType: 'u_print', labelKey: 'QA_PRINT', fallbackLabel: '輸出', icon: '📤', tooltipKey: 'QA_TOOLTIP_PRINT' },
   { blockType: 'u_input', labelKey: 'QA_INPUT', fallbackLabel: '輸入', icon: '📥', tooltipKey: 'QA_TOOLTIP_INPUT' },
-  { blockType: 'u_if', labelKey: 'QA_IF', fallbackLabel: '如果', icon: '🔀', tooltipKey: 'QA_TOOLTIP_IF' },
+  { blockType: 'u_if_else', labelKey: 'QA_IF', fallbackLabel: '如果', icon: '🔀', tooltipKey: 'QA_TOOLTIP_IF' },
   { blockType: 'u_count_loop', labelKey: 'QA_LOOP', fallbackLabel: '迴圈', icon: '🔁', tooltipKey: 'QA_TOOLTIP_LOOP' },
   { blockType: 'u_func_def', labelKey: 'QA_FUNC', fallbackLabel: '函式', icon: '⚙️', tooltipKey: 'QA_TOOLTIP_FUNC' },
 ]

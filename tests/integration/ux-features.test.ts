@@ -52,17 +52,18 @@ describe('US2: 工具箱分級顯示', () => {
     allBlocks.forEach(spec => registry.register(spec))
   })
 
-  it('初級模式積木數 ≤ 18 且分類 ≤ 6', () => {
+  it('初級模式積木數 ≤ 19 且分類 ≤ 6', () => {
     const toolbox = registry.toToolboxDef('cpp', 'beginner')
     const totalBlocks = toolbox.contents.reduce((sum, cat) => sum + cat.contents.length, 0)
-    expect(totalBlocks).toBeLessThanOrEqual(18)
+    expect(totalBlocks).toBeLessThanOrEqual(19)
     expect(toolbox.contents.length).toBeLessThanOrEqual(6)
   })
 
-  it('進階模式顯示全部 67 個積木', () => {
+  it('進階模式顯示全部 68 個積木（u_if 隱藏）', () => {
     const toolbox = registry.toToolboxDef('cpp', 'advanced')
     const totalBlocks = toolbox.contents.reduce((sum, cat) => sum + cat.contents.length, 0)
-    expect(totalBlocks).toBe(67)
+    // 67 total - 1 hidden (u_if) + 2 presets (u_if_else) = 68
+    expect(totalBlocks).toBe(68)
   })
 
   it('初級模式隱藏 c_printf/c_scanf 但顯示 u_print/u_input', () => {
@@ -74,10 +75,11 @@ describe('US2: 工具箱分級顯示', () => {
     expect(allTypes).not.toContain('c_scanf')
   })
 
-  it('BEGINNER_BLOCKS 包含正確的 18 個積木', () => {
-    expect(BEGINNER_BLOCKS).toHaveLength(18)
+  it('BEGINNER_BLOCKS 包含正確的 17 個積木', () => {
+    expect(BEGINNER_BLOCKS).toHaveLength(17)
     expect(BEGINNER_BLOCKS).toContain('u_var_declare')
-    expect(BEGINNER_BLOCKS).toContain('u_if')
+    expect(BEGINNER_BLOCKS).toContain('u_if_else')
+    expect(BEGINNER_BLOCKS).not.toContain('u_if')
     expect(BEGINNER_BLOCKS).toContain('u_print')
     expect(BEGINNER_BLOCKS).toContain('u_func_def')
     expect(BEGINNER_BLOCKS).toContain('u_endl')
@@ -165,12 +167,12 @@ describe('US5: 快捷列常數', () => {
     }
   })
 
-  it('快捷列包含 u_var_declare, u_print, u_input, u_if, u_count_loop, u_func_def', () => {
+  it('快捷列包含 u_var_declare, u_print, u_input, u_if_else, u_count_loop, u_func_def', () => {
     const types = QUICK_ACCESS_ITEMS.map(i => i.blockType)
     expect(types).toContain('u_var_declare')
     expect(types).toContain('u_print')
     expect(types).toContain('u_input')
-    expect(types).toContain('u_if')
+    expect(types).toContain('u_if_else')
     expect(types).toContain('u_count_loop')
     expect(types).toContain('u_func_def')
   })
