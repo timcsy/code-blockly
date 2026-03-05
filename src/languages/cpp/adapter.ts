@@ -707,6 +707,30 @@ export class CppLanguageAdapter implements LanguageAdapter, NewLanguageAdapter {
    * This is used by extractFields when building input blocks.
    */
   private nodeToExprBlock(node: Node): BlockJSON {
+    // Unwrap parenthesized expressions → process inner content
+    if (node.type === 'parenthesized_expression' && node.namedChildren.length > 0) {
+      return this.nodeToExprBlock(node.namedChildren[0])
+    }
+
+    // Unary minus (-x) → arithmetic block: 0 - x
+    if (node.type === 'unary_expression') {
+      const op = node.childForFieldName('operator')
+      if (op?.text === '-') {
+        const operand = node.childForFieldName('argument')
+        if (operand) {
+          return {
+            type: 'u_arithmetic',
+            id: `adapter_${node.startPosition.row}_${node.startPosition.column}`,
+            fields: { OP: '-' },
+            inputs: {
+              A: { block: { type: 'u_number', id: `adapter_${node.startPosition.row}_${node.startPosition.column}_zero`, fields: { NUM: '0' } } },
+              B: { block: this.nodeToExprBlock(operand) },
+            },
+          }
+        }
+      }
+    }
+
     const blockId = this.matchNodeToBlock(node)
     if (blockId) {
       const { fields, inputs } = this.extractFields(node, blockId)
