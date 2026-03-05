@@ -426,22 +426,22 @@ describe('BlockRegistry', () => {
       for (const blockType of allBlockTypes) {
         expect(BEGINNER_BLOCKS).toContain(blockType)
       }
-      // 17 BEGINNER_BLOCKS + 2 presets (u_if_else) = 19
-      expect(allBlockTypes.length).toBe(19)
+      // 18 BEGINNER_BLOCKS + 2 presets (u_if_else) = 20
+      expect(allBlockTypes.length).toBe(20)
     })
 
     it('advanced 模式回傳全部積木（含隱藏）', () => {
       const toolbox = fullRegistry.toToolboxDef('cpp', 'advanced')
       const allBlockTypes = toolbox.contents.flatMap(cat => cat.contents.map(b => b.type))
-      // 67 total - 1 hidden (u_if) + 2 presets (u_if_else) = 68
-      expect(allBlockTypes.length).toBe(68)
+      // 68 total - 1 hidden (u_if) + 2 presets (u_if_else) = 69
+      expect(allBlockTypes.length).toBe(69)
     })
 
     it('不傳 level 時回傳全部積木（向後相容）', () => {
       const toolbox = fullRegistry.toToolboxDef('cpp')
       const allBlockTypes = toolbox.contents.flatMap(cat => cat.contents.map(b => b.type))
-      // 67 total - 1 hidden (u_if) + 2 presets (u_if_else) = 68
-      expect(allBlockTypes.length).toBe(68)
+      // 68 total - 1 hidden (u_if) + 2 presets (u_if_else) = 69
+      expect(allBlockTypes.length).toBe(69)
     })
 
     it('beginner 模式分類數 ≤ 6', () => {

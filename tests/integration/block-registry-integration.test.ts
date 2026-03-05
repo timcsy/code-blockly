@@ -156,9 +156,9 @@ describe('BlockRegistry 整合測試', () => {
 
       // After US1: removed c_number, c_variable_ref, c_string_literal, c_binary_op,
       // cpp_cout, cpp_cin, cpp_endl, c_var_declare_init_expr (8 blocks)
-      // Remaining: 22 universal + 9 basic + 26 advanced + 10 special = 67
-      // u_if is hidden → 67 - 1 + 2 presets (u_if_else) = 68 visible
-      expect(totalBlocks).toBe(68)
+      // Remaining: 23 universal + 9 basic + 26 advanced + 10 special = 68
+      // u_if is hidden → 68 - 1 + 2 presets (u_if_else) = 69 visible
+      expect(totalBlocks).toBe(69)
     })
   })
 })

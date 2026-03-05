@@ -168,7 +168,7 @@ export const BEGINNER_BLOCKS: readonly string[] = [
   // 資料
   'u_var_declare', 'u_var_assign', 'u_var_ref', 'u_number', 'u_string',
   // 運算
-  'u_arithmetic', 'u_compare', 'u_logic',
+  'u_arithmetic', 'u_compare', 'u_logic', 'u_negate',
   // 流程控制
   'u_if_else', 'u_count_loop', 'u_while_loop',
   // 函式

@@ -134,6 +134,22 @@
             [
               "%{BKY_C_INCLUDE_HEADER_CLIMITS}",
               "climits"
+            ],
+            [
+              "%{BKY_C_INCLUDE_HEADER_CSTDIO}",
+              "cstdio"
+            ],
+            [
+              "%{BKY_C_INCLUDE_HEADER_CSTDLIB}",
+              "cstdlib"
+            ],
+            [
+              "%{BKY_C_INCLUDE_HEADER_CCTYPE}",
+              "cctype"
+            ],
+            [
+              "%{BKY_C_INCLUDE_HEADER_CFLOAT}",
+              "cfloat"
             ]
           ]
         }

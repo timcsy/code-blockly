@@ -10,6 +10,7 @@ export type UniversalConcept =
   | 'compare'
   | 'logic'
   | 'logic_not'
+  | 'negate'
   | 'if'
   | 'count_loop'
   | 'while_loop'
