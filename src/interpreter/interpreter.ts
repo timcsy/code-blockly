@@ -457,7 +457,17 @@ export class SemanticInterpreter {
   }
 
   private async execInput(node: SemanticNode): Promise<RuntimeValue> {
-    const targetType = String(node.properties.type || 'string')
+    const targetVar = node.properties.variable ? String(node.properties.variable) : null
+    let targetType = String(node.properties.type || 'string')
+
+    // If variable is specified, infer type from existing variable
+    if (targetVar) {
+      try {
+        const existing = this.scope.get(targetVar)
+        targetType = existing.type
+      } catch { /* variable might not exist yet */ }
+    }
+
     let raw = this.io.read()
     if (raw === null && this.inputProvider) {
       raw = await this.inputProvider()
@@ -465,7 +475,14 @@ export class SemanticInterpreter {
     if (raw === null) {
       throw new RuntimeError(RUNTIME_ERRORS.TYPE_MISMATCH, { '%1': 'input exhausted' })
     }
-    return parseInputValue(raw, targetType) ?? defaultValue(targetType)
+    const val = parseInputValue(raw, targetType) ?? defaultValue(targetType)
+
+    // cin >> var: assign value to the target variable
+    if (targetVar) {
+      this.scope.set(targetVar, val)
+    }
+
+    return val
   }
 
   private execArrayDeclare(node: SemanticNode): void {
