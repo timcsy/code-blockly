@@ -16,6 +16,7 @@ const UNIVERSAL_CONCEPTS: Record<UniversalConcept, ConceptDef> = {
   compare: { propertyNames: ['operator'], childNames: ['left', 'right'] },
   logic: { propertyNames: ['operator'], childNames: ['left', 'right'] },
   logic_not: { propertyNames: [], childNames: ['operand'] },
+  negate: { propertyNames: [], childNames: ['value'] },
   if: { propertyNames: [], childNames: ['condition', 'then_body', 'else_body'] },
   count_loop: { propertyNames: ['var_name'], childNames: ['from', 'to', 'body'] },
   while_loop: { propertyNames: [], childNames: ['condition', 'body'] },
