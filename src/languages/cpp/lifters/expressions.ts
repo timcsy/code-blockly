@@ -1,4 +1,6 @@
 import type { Lifter } from '../../../core/lift/lifter'
+import type { SemanticNode } from '../../../core/types'
+import type { AstNode, LiftContext } from '../../../core/lift/types'
 import { createNode } from '../../../core/semantic-tree'
 
 const ARITHMETIC_OPS = new Set(['+', '-', '*', '/', '%'])
@@ -37,6 +39,25 @@ export function registerExpressionLifters(lifter: Lifter): void {
       if (!child.isNamed && child.text !== '(' && child.text !== ')') {
         op = child.text
         break
+      }
+    }
+
+    // Handle cout << x << y  and  cin >> x >> y
+    if (op === '<<') {
+      const coutValues = extractCoutChain(node, ctx)
+      if (coutValues) {
+        return createNode('print', {}, { values: coutValues })
+      }
+    }
+    if (op === '>>') {
+      const cinVars = extractCinChain(node)
+      if (cinVars) {
+        if (cinVars.length === 1) {
+          return createNode('input', { variable: cinVars[0] })
+        }
+        // Multiple vars: wrap in _compound for parent to flatten
+        const inputs = cinVars.map(v => createNode('input', { variable: v }))
+        return createNode('_compound', {}, { body: inputs })
       }
     }
 
@@ -94,4 +115,56 @@ export function registerExpressionLifters(lifter: Lifter): void {
       index: index ? [index] : [],
     })
   })
+}
+
+/**
+ * Extract cout << x << y << endl chain.
+ * Tree-sitter parses "cout << x << y" as nested binary_expression:
+ *   (binary_expression left: (binary_expression left: "cout" right: "x") right: "y")
+ * Returns null if the leftmost identifier is not cout.
+ */
+function extractCoutChain(node: AstNode, ctx: LiftContext): SemanticNode[] | null {
+  const values: SemanticNode[] = []
+  let current: AstNode | null = node
+
+  // Walk left-recursively to collect all << operands
+  while (current && current.type === 'binary_expression') {
+    const op = current.children.find(c => !c.isNamed && c.text === '<<')
+    if (!op) break
+
+    const rightNode = current.childForFieldName('right')
+    if (rightNode) {
+      // Check for endl
+      if (rightNode.text === 'endl') {
+        values.unshift(createNode('endl', {}))
+      } else {
+        const lifted = ctx.lift(rightNode)
+        if (lifted) values.unshift(lifted)
+      }
+    }
+    current = current.childForFieldName('left')
+  }
+
+  // Check if the base is "cout"
+  if (!current || current.text !== 'cout') return null
+  return values
+}
+
+/**
+ * Extract cin >> x >> y chain. Returns array of variable names or null.
+ */
+function extractCinChain(node: AstNode): string[] | null {
+  const vars: string[] = []
+  let current: AstNode | null = node
+
+  while (current && current.type === 'binary_expression') {
+    const op = current.children.find(c => !c.isNamed && c.text === '>>')
+    if (!op) break
+    const rightNode = current.childForFieldName('right')
+    if (rightNode) vars.unshift(rightNode.text)
+    current = current.childForFieldName('left')
+  }
+
+  if (!current || current.text !== 'cin') return null
+  return vars.length > 0 ? vars : null
 }
