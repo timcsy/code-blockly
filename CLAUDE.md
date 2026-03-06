@@ -10,6 +10,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-02
 - TypeScript 5.x + Blockly 12.x, Monaco Editor (最新穩定版), web-tree-sitter 0.26.x, Vite 7.x (008-semantic-tree-restructure)
 - localStorage（自動儲存）+ JSON 檔案匯出匯入 (008-semantic-tree-restructure)
 - TypeScript 5.x + Blockly 12.4.1, Monaco Editor, web-tree-sitter 0.26.6, Vite (009-restore-legacy-features)
+- TypeScript 5.x + Blockly 12.4.1, web-tree-sitter 0.26.6, Vite (011-unified-pattern-engine)
+- N/A（Registry 為記憶體中的 Map） (011-unified-pattern-engine)
 
 - TypeScript 5.x + Blockly 12.x, web-tree-sitter 0.26.x, CodeMirror 6.x (001-code-blockly-converter)
 
@@ -29,6 +31,7 @@ npm test && npm run lint
 TypeScript 5.x: Follow standard conventions
 
 ## Recent Changes
+- 011-unified-pattern-engine: Added TypeScript 5.x + Blockly 12.4.1, web-tree-sitter 0.26.6, Vite
 - 009-restore-legacy-features: Added TypeScript 5.x + Blockly 12.4.1, Monaco Editor, web-tree-sitter 0.26.6, Vite
 - 008-semantic-tree-restructure: Added TypeScript 5.x + Blockly 12.x, Monaco Editor (最新穩定版), web-tree-sitter 0.26.x, Vite 7.x
 
