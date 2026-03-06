@@ -1,19 +1,25 @@
 import * as Blockly from 'blockly'
-import type { SemanticNode } from '../../core/types'
+import type { SemanticNode, BlockSpec } from '../../core/types'
 import { createNode } from '../../core/semantic-tree'
+import type { BlockSpecRegistry } from '../../core/block-spec-registry'
 
 export interface BlocklyPanelOptions {
   container: HTMLElement
   toolboxXml?: string
+  blockSpecRegistry?: BlockSpecRegistry
 }
 
 export class BlocklyPanel {
   private workspace: Blockly.WorkspaceSvg | null = null
   private container: HTMLElement
   private onChangeCallback: (() => void) | null = null
+  private onBlockSelectCallback: ((blockId: string | null) => void) | null = null
+  private highlightedBlockId: string | null = null
+  private blockSpecRegistry: BlockSpecRegistry | null = null
 
   constructor(options: BlocklyPanelOptions) {
     this.container = options.container
+    this.blockSpecRegistry = options.blockSpecRegistry ?? null
   }
 
   init(toolboxDef: object): void {
@@ -27,7 +33,14 @@ export class BlocklyPanel {
     })
 
     this.workspace.addChangeListener((event: Blockly.Events.Abstract) => {
-      if (event.isUiEvent) return
+      if (event.isUiEvent) {
+        // Track block selection (click events)
+        if (event.type === Blockly.Events.SELECTED) {
+          const selectEvent = event as Blockly.Events.Selected
+          this.onBlockSelectCallback?.(selectEvent.newElementId ?? null)
+        }
+        return
+      }
       this.onChangeCallback?.()
     })
   }
@@ -56,8 +69,13 @@ export class BlocklyPanel {
     const nodes: SemanticNode[] = []
     let current: Blockly.Block | null = block
     while (current) {
-      const node = this.extractBlock(current)
-      if (node) nodes.push(node)
+      // u_var_declare can produce multiple nodes (multi-variable)
+      if (current.type === 'u_var_declare') {
+        nodes.push(...this.extractVarDeclareAll(current))
+      } else {
+        const node = this.extractBlock(current)
+        if (node) nodes.push(node)
+      }
       current = current.getNextBlock()
     }
     return nodes
@@ -74,7 +92,7 @@ export class BlocklyPanel {
       case 'u_arithmetic': return this.extractBinaryExpr(block, 'arithmetic', 'OP', 'A', 'B')
       case 'u_compare': return this.extractBinaryExpr(block, 'compare', 'OP', 'A', 'B')
       case 'u_logic': return this.extractBinaryExpr(block, 'logic', 'OP', 'A', 'B')
-      case 'u_logic_not': return this.extractUnaryExpr(block, 'logic_not', 'VALUE', 'operand')
+      case 'u_logic_not': return this.extractUnaryExpr(block, 'logic_not', 'A', 'operand')
       case 'u_negate': return this.extractUnaryExpr(block, 'negate', 'VALUE', 'value')
       case 'u_if':
       case 'u_if_else': return this.extractIf(block)
@@ -84,6 +102,7 @@ export class BlocklyPanel {
       case 'u_continue': return createNode('continue', {})
       case 'u_func_def': return this.extractFuncDef(block)
       case 'u_func_call': return this.extractFuncCall(block)
+      case 'u_func_call_expr': return this.extractFuncCallExpr(block)
       case 'u_return': return this.extractReturn(block)
       case 'u_print': return this.extractPrint(block)
       case 'u_input': return this.extractInput(block)
@@ -91,8 +110,20 @@ export class BlocklyPanel {
       case 'u_array_declare': return this.extractArrayDeclare(block)
       case 'u_array_access': return this.extractArrayAccess(block)
       case 'c_raw_code': return this.extractRawCode(block)
+      case 'c_raw_expression': return this.extractRawExpression(block)
       case 'c_comment_line': return this.extractComment(block)
+      case 'c_include': return createNode('cpp_include', { header: block.getFieldValue('HEADER') ?? 'iostream', local: false })
+      case 'c_include_local': return createNode('cpp_include_local', { header: block.getFieldValue('HEADER') ?? 'myheader.h' })
+      case 'c_using_namespace': return createNode('cpp_using_namespace', { namespace: block.getFieldValue('NS') ?? 'std' })
+      case 'c_define': return createNode('cpp_define', { name: block.getFieldValue('NAME') ?? 'MACRO', value: block.getFieldValue('VALUE') ?? '' })
       default: {
+          // P3: Open extension — use codeTemplate from JSON spec as fallback
+          const generated = this.generateFromTemplate(block)
+          if (generated !== null) {
+            const node = createNode('raw_code', { code: generated })
+            node.metadata = { rawCode: generated }
+            return node
+          }
           const node = createNode('raw_code', {})
           node.metadata = { rawCode: `/* unknown: ${type} */` }
           return node
@@ -100,39 +131,120 @@ export class BlocklyPanel {
     }
   }
 
-  private extractVarDeclare(block: Blockly.Block): SemanticNode {
-    // Support multi-variable declarations (NAME_0, NAME_1, ...)
+  /**
+   * Generate code directly from a block's JSON codeTemplate spec.
+   * Substitutes ${FIELD} placeholders with field values and
+   * connected block expressions with recursively generated code.
+   */
+  private generateFromTemplate(block: Blockly.Block): string | null {
+    if (!this.blockSpecRegistry) return null
+    const specs = this.blockSpecRegistry.getAll()
+    const spec = specs.find((s: BlockSpec) => s.blockDef?.type === block.type)
+    if (!spec?.codeTemplate?.pattern) return null
+
+    let code = spec.codeTemplate.pattern
+
+    // Substitute placeholders with field values or connected block expressions
+    code = code.replace(/\$\{(\w+)\}/g, (_match: string, fieldName: string) => {
+      // Try field value first (FieldDropdown, FieldTextInput, etc.)
+      const fieldVal = block.getFieldValue(fieldName)
+      if (fieldVal !== null && fieldVal !== undefined) return String(fieldVal)
+
+      // Try connected value input (input_value)
+      const inputBlock = block.getInputTargetBlock(fieldName)
+      if (inputBlock) {
+        // Recursively extract and generate a simple expression
+        const innerNode = this.extractBlock(inputBlock)
+        if (innerNode) {
+          return this.simpleExpressionToCode(innerNode)
+        }
+      }
+
+      // Try statement input (input_statement) — generate body
+      const stmtBody = this.extractStatementInput(block, fieldName)
+      if (stmtBody.length > 0) {
+        return stmtBody.map(n => {
+          const raw = n.metadata?.rawCode
+          if (raw) return '    ' + raw
+          return `    /* ${n.concept} */`
+        }).join('\n')
+      }
+
+      return fieldName
+    })
+
+    return code
+  }
+
+  /** Convert a simple semantic node to inline code string */
+  private simpleExpressionToCode(node: SemanticNode): string {
+    switch (node.concept) {
+      case 'number_literal': return String(node.properties.value ?? '0')
+      case 'string_literal': return `"${node.properties.value ?? ''}"`
+      case 'var_ref': return String(node.properties.name ?? '')
+      case 'arithmetic':
+      case 'compare':
+      case 'logic': {
+        const left = (node.children.left ?? [])[0]
+        const right = (node.children.right ?? [])[0]
+        const op = node.properties.operator ?? '+'
+        const l = left ? this.simpleExpressionToCode(left) : '0'
+        const r = right ? this.simpleExpressionToCode(right) : '0'
+        return `${l} ${op} ${r}`
+      }
+      case 'logic_not': {
+        const inner = (node.children.operand ?? [])[0]
+        return `!${inner ? this.simpleExpressionToCode(inner) : '0'}`
+      }
+      case 'negate': {
+        const inner = (node.children.value ?? [])[0]
+        return `-${inner ? this.simpleExpressionToCode(inner) : '0'}`
+      }
+      case 'raw_code': return node.metadata?.rawCode ?? ''
+      case 'func_call': {
+        const name = node.properties.name ?? 'f'
+        const args = (node.children.args ?? []).map(a => this.simpleExpressionToCode(a))
+        return `${name}(${args.join(', ')})`
+      }
+      default: return node.metadata?.rawCode ?? `/* ${node.concept} */`
+    }
+  }
+
+  /** Extract all declarators from a multi-variable block */
+  private extractVarDeclareAll(block: Blockly.Block): SemanticNode[] {
     const type = block.getFieldValue('TYPE') ?? 'int'
-    // Try indexed fields first (new format)
-    let i = 0
     const declarators: SemanticNode[] = []
+
+    // Try indexed fields (NAME_0, NAME_1, ...)
+    let i = 0
     while (true) {
       const name = block.getFieldValue(`NAME_${i}`)
       if (name === null || name === undefined) break
       const initBlock = block.getInputTargetBlock(`INIT_${i}`)
       const initNode = initBlock ? this.extractBlock(initBlock) : null
-      declarators.push(createNode('var_declare', { name, type }, {
+      const node = createNode('var_declare', { name, type }, {
         initializer: initNode ? [initNode] : [],
-      }))
+      })
+      node.metadata = { blockId: block.id }
+      declarators.push(node)
       i++
     }
 
-    if (declarators.length > 1) {
-      // Multiple vars: return as separate nodes, first one here, rest via chain
-      return declarators[0]
-    }
+    if (declarators.length > 0) return declarators
 
-    if (declarators.length === 1) {
-      return declarators[0]
-    }
-
-    // Fallback: single NAME field (old format)
-    const name = block.getFieldValue('NAME') ?? block.getFieldValue('NAME_0') ?? 'x'
+    // Fallback: single NAME field
+    const name = block.getFieldValue('NAME') ?? 'x'
     const initBlock = block.getInputTargetBlock('INIT') ?? block.getInputTargetBlock('INIT_0')
     const initNode = initBlock ? this.extractBlock(initBlock) : null
-    return createNode('var_declare', { name, type }, {
+    const node = createNode('var_declare', { name, type }, {
       initializer: initNode ? [initNode] : [],
     })
+    node.metadata = { blockId: block.id }
+    return [node]
+  }
+
+  private extractVarDeclare(block: Blockly.Block): SemanticNode {
+    return this.extractVarDeclareAll(block)[0]
   }
 
   private extractVarAssign(block: Blockly.Block): SemanticNode {
@@ -204,13 +316,44 @@ export class BlocklyPanel {
     const cond = condBlock ? this.extractBlock(condBlock) : createNode('var_ref', { name: 'true' })
 
     const thenBody = this.extractStatementInput(block, 'THEN')
-    const elseBody = this.extractStatementInput(block, 'ELSE')
+
+    // Build else-if chain (mutator-based u_if_else) using bottom-up nesting
+    let elseBody: SemanticNode[] = []
+    if (this.countElseIfs(block) > 0) {
+      elseBody = this.buildElseIfChain(block, 0)
+    } else {
+      elseBody = this.extractStatementInput(block, 'ELSE')
+    }
 
     return createNode('if', {}, {
       condition: cond ? [cond] : [],
       then_body: thenBody,
       else_body: elseBody,
     })
+  }
+
+  private countElseIfs(block: Blockly.Block): number {
+    let count = 0
+    while (block.getInput(`ELSEIF_CONDITION_${count}`)) count++
+    return count
+  }
+
+  private buildElseIfChain(block: Blockly.Block, index: number): SemanticNode[] {
+    const total = this.countElseIfs(block)
+    if (index >= total) {
+      return this.extractStatementInput(block, 'ELSE')
+    }
+
+    const condBlock = block.getInputTargetBlock(`ELSEIF_CONDITION_${index}`)
+    const cond = condBlock ? this.extractBlock(condBlock) : createNode('var_ref', { name: 'true' })
+    const thenBody = this.extractStatementInput(block, `ELSEIF_THEN_${index}`)
+    const elseBody = this.buildElseIfChain(block, index + 1)
+
+    return [createNode('if', {}, {
+      condition: cond ? [cond] : [],
+      then_body: thenBody,
+      else_body: elseBody,
+    })]
   }
 
   private extractWhileLoop(block: Blockly.Block): SemanticNode {
@@ -258,6 +401,17 @@ export class BlocklyPanel {
 
   private extractFuncCall(block: Blockly.Block): SemanticNode {
     const name = block.getFieldValue('NAME') ?? 'f'
+    const args = this.extractFuncArgs(block)
+    return createNode('func_call', { name }, { args })
+  }
+
+  private extractFuncCallExpr(block: Blockly.Block): SemanticNode {
+    const name = block.getFieldValue('NAME') ?? 'f'
+    const args = this.extractFuncArgs(block)
+    return createNode('func_call_expr', { name }, { args })
+  }
+
+  private extractFuncArgs(block: Blockly.Block): SemanticNode[] {
     const args: SemanticNode[] = []
     let i = 0
     while (true) {
@@ -267,7 +421,7 @@ export class BlocklyPanel {
       if (argNode) args.push(argNode)
       i++
     }
-    return createNode('func_call', { name }, { args })
+    return args
   }
 
   private extractReturn(block: Blockly.Block): SemanticNode {
@@ -308,8 +462,11 @@ export class BlocklyPanel {
   private extractArrayDeclare(block: Blockly.Block): SemanticNode {
     const type = block.getFieldValue('TYPE') ?? 'int'
     const name = block.getFieldValue('NAME') ?? 'arr'
-    const size = String(block.getFieldValue('SIZE') ?? 10)
-    return createNode('array_declare', { type, name, size })
+    const sizeBlock = block.getInputTargetBlock('SIZE')
+    const sizeNode = sizeBlock ? this.extractBlock(sizeBlock) : createNode('number_literal', { value: '10' })
+    return createNode('array_declare', { type, name }, {
+      size: sizeNode ? [sizeNode] : [],
+    })
   }
 
   private extractArrayAccess(block: Blockly.Block): SemanticNode {
@@ -328,6 +485,13 @@ export class BlocklyPanel {
     return node
   }
 
+  private extractRawExpression(block: Blockly.Block): SemanticNode {
+    const code = block.getFieldValue('CODE') ?? '0'
+    const node = createNode('raw_code', { code })
+    node.metadata = { rawCode: code }
+    return node
+  }
+
   private extractComment(block: Blockly.Block): SemanticNode {
     const text = block.getFieldValue('TEXT') ?? ''
     return createNode('comment', { text })
@@ -337,6 +501,28 @@ export class BlocklyPanel {
     const firstBlock = block.getInputTargetBlock(inputName)
     if (!firstBlock) return []
     return this.extractBlockChain(firstBlock)
+  }
+
+  onBlockSelect(callback: (blockId: string | null) => void): void {
+    this.onBlockSelectCallback = callback
+  }
+
+  highlightBlock(blockId: string | null): void {
+    this.clearHighlight()
+    if (!blockId || !this.workspace) return
+    const block = this.workspace.getBlockById(blockId)
+    if (block) {
+      block.addSelect()
+      this.highlightedBlockId = blockId
+    }
+  }
+
+  clearHighlight(): void {
+    if (this.highlightedBlockId && this.workspace) {
+      const block = this.workspace.getBlockById(this.highlightedBlockId)
+      if (block) block.removeSelect()
+    }
+    this.highlightedBlockId = null
   }
 
   undo(): void { this.workspace?.undo(false) }
