@@ -543,7 +543,7 @@ export class App {
       Blockly.Blocks['u_endl'] = {
         init: function (this: Blockly.Block) {
           this.appendDummyInput()
-            .appendField('endl')
+            .appendField(Blockly.Msg['U_ENDL_MSG0'] || '換行')
           this.setOutput(true, 'Expression')
           this.setColour('#5CB1D6')
           this.setTooltip(Blockly.Msg['U_ENDL_TOOLTIP'] || '換行')
