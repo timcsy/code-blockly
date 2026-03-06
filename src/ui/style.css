@@ -326,6 +326,310 @@ html, body {
 .toast-success { background: rgba(39, 174, 96, 0.95); }
 .toast-error { background: rgba(231, 76, 60, 0.95); }
 
+/* ─── Bottom panel ─── */
+
+.bottom-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bottom-panel-divider {
+  height: 4px;
+  background: #252526;
+  cursor: row-resize;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+
+.bottom-panel-divider:hover {
+  background: #007acc;
+}
+
+.bottom-panel-tabs {
+  display: flex;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+  flex-shrink: 0;
+}
+
+.bottom-tab-btn {
+  padding: 4px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.bottom-tab-btn:hover {
+  color: #ccc;
+}
+
+.bottom-tab-btn.active {
+  color: #fff;
+  border-bottom-color: #007acc;
+}
+
+.bottom-panel-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.bottom-panel-content > * {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
+}
+
+/* ─── Right side layout ─── */
+
+.right-column {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.right-column > .monaco-wrapper {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ─── Console input ─── */
+
+.console-input-row {
+  display: flex;
+  align-items: center;
+  padding: 2px 8px;
+  gap: 4px;
+  border-top: 1px solid #3c3c3c;
+}
+
+.console-input {
+  flex: 1;
+  background: #2d2d2d;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #ccc;
+  padding: 3px 6px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  outline: none;
+}
+
+.console-input:focus {
+  border-color: #007acc;
+}
+
+.console-input-btn {
+  padding: 3px 8px;
+  border: none;
+  border-radius: 3px;
+  background: #007acc;
+  color: white;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.console-status {
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #999;
+  border-top: 1px solid #3c3c3c;
+  flex-shrink: 0;
+}
+
+.console-status:empty { display: none; }
+
+.console-status.running {
+  color: #4fc1ff;
+  background: rgba(79, 193, 255, 0.12);
+  border-radius: 10px;
+  display: inline-block;
+  padding: 1px 10px;
+  margin: 2px 8px;
+  border-top: none;
+}
+.console-status.error {
+  color: #f44747;
+  background: rgba(244, 71, 71, 0.12);
+  border-radius: 10px;
+  display: inline-block;
+  padding: 1px 10px;
+  margin: 2px 8px;
+  border-top: none;
+}
+.console-status.completed {
+  color: #6a9955;
+  background: rgba(106, 153, 85, 0.12);
+  border-radius: 10px;
+  display: inline-block;
+  padding: 1px 10px;
+  margin: 2px 8px;
+  border-top: none;
+}
+
+/* ─── Variable panel scope groups ─── */
+
+.scope-group {
+  margin-bottom: 2px;
+}
+
+.scope-group-header {
+  display: flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: #2d2d2d;
+  cursor: pointer;
+  font-size: 11px;
+  color: #999;
+  user-select: none;
+}
+
+.scope-group-header:hover {
+  background: #333;
+}
+
+.scope-group-toggle {
+  margin-right: 4px;
+  font-size: 10px;
+}
+
+.scope-group.collapsed .scope-group-body {
+  display: none;
+}
+
+.var-changed {
+  background: rgba(255, 255, 0, 0.08) !important;
+}
+
+.var-changed .var-value {
+  color: #dcdcaa;
+  font-weight: 600;
+}
+
+/* ─── Execution toolbar ─── */
+
+.exec-btn {
+  padding: 4px 8px !important;
+}
+
+.exec-btn.run {
+  color: #fff !important;
+  background: rgba(39, 174, 96, 0.35) !important;
+  border: 1px solid #27ae60 !important;
+}
+.exec-btn.run:hover { background: rgba(39, 174, 96, 0.55) !important; }
+
+.exec-btn.stop {
+  color: #fff !important;
+  background: rgba(231, 76, 60, 0.35) !important;
+  border: 1px solid #e74c3c !important;
+}
+.exec-btn.stop:hover { background: rgba(231, 76, 60, 0.55) !important; }
+
+.exec-btn.pause {
+  color: #fff !important;
+  background: rgba(243, 156, 18, 0.35) !important;
+  border: 1px solid #f39c12 !important;
+}
+.exec-btn.pause:hover { background: rgba(243, 156, 18, 0.55) !important; }
+
+.exec-btn:not(.run):not(.stop):not(.pause) {
+  color: #4fc1ff !important;
+  background: rgba(52, 152, 219, 0.25) !important;
+  border: 1px solid #3498db !important;
+}
+.exec-btn:not(.run):not(.stop):not(.pause):hover {
+  background: rgba(52, 152, 219, 0.45) !important;
+}
+
+.speed-select {
+  padding: 2px 4px;
+  border: 1px solid #555;
+  border-radius: 3px;
+  background: #3c3c3c;
+  color: #ccc;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* ─── Sync hint ─── */
+
+.sync-hint {
+  animation: sync-pulse 1.5s ease-in-out infinite;
+  border: 1px solid #f39c12 !important;
+  box-shadow: 0 0 6px rgba(243, 156, 18, 0.6);
+}
+
+@keyframes sync-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(243, 156, 18, 0.4); }
+  50% { box-shadow: 0 0 10px rgba(243, 156, 18, 0.8); }
+}
+
+/* ─── Block highlight ─── */
+
+.blockly-highlight .blocklyPath,
+.blocklySelected > .blocklyPath {
+  stroke: #f39c12 !important;
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 0 6px rgba(243, 156, 18, 0.8));
+}
+
+/* ─── Monaco line highlight ─── */
+
+.monaco-line-highlight {
+  background: rgba(0, 122, 204, 0.15) !important;
+}
+
+.monaco-line-highlight-gutter {
+  background: #007acc;
+  width: 3px !important;
+}
+
+/* ─── Quick access bar ─── */
+
+.quick-access-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #3c3c3c;
+  flex-shrink: 0;
+}
+
+.qa-btn {
+  padding: 2px 8px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: #bbb;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.qa-btn:hover {
+  background: #505050;
+  color: #fff;
+}
+
+/* ─── Breakpoint ─── */
+
+.breakpoint-glyph {
+  background: #e51400;
+  border-radius: 50%;
+  width: 10px !important;
+  height: 10px !important;
+  margin-top: 4px;
+  margin-left: 4px;
+  cursor: pointer;
+}
+
 /* ─── Utility ─── */
 
 .hidden {
