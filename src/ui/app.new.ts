@@ -297,6 +297,34 @@ export class App {
         ] as Array<[string, string]>
       }
 
+      // Mutator helper blocks for u_var_declare
+      Blockly.Blocks['u_var_declare_container'] = {
+        init: function (this: Blockly.Block) {
+          this.appendDummyInput().appendField(Blockly.Msg['U_VAR_DECLARE_HEADER'] || '宣告')
+          this.appendStatementInput('STACK')
+          this.setColour('#FF8C1A')
+          this.contextMenu = false
+        },
+      }
+      Blockly.Blocks['u_var_declare_var_input'] = {
+        init: function (this: Blockly.Block) {
+          this.appendDummyInput().appendField(Blockly.Msg['U_VAR_DECLARE_VAR_LABEL'] || '變數')
+          this.setPreviousStatement(true)
+          this.setNextStatement(true)
+          this.setColour('#FF8C1A')
+          this.contextMenu = false
+        },
+      }
+      Blockly.Blocks['u_var_declare_var_init_input'] = {
+        init: function (this: Blockly.Block) {
+          this.appendDummyInput().appendField(Blockly.Msg['U_VAR_DECLARE_VAR_INIT_LABEL'] || '變數 = 值')
+          this.setPreviousStatement(true)
+          this.setNextStatement(true)
+          this.setColour('#FF8C1A')
+          this.contextMenu = false
+        },
+      }
+
       Blockly.Blocks['u_var_declare'] = {
         items_: ['var_init'] as string[],
         init: function (this: any) {
@@ -315,6 +343,10 @@ export class App {
           this.setNextStatement(true, 'Statement')
           this.setColour('#FF8C1A')
           this.setTooltip(Blockly.Msg['U_VAR_DECLARE_TOOLTIP'] || '宣告變數')
+          this.setMutator(new Blockly.icons.MutatorIcon(
+            ['u_var_declare_var_input', 'u_var_declare_var_init_input'],
+            this as unknown as Blockly.BlockSvg,
+          ))
         },
         plus_: function (this: any) {
           const idx = this.items_.length
@@ -384,6 +416,36 @@ export class App {
             .appendField(new Blockly.FieldImage(
               this.items_.length <= 1 ? MINUS_DISABLED_IMG : MINUS_IMG,
               20, 20, '-', () => this.minus_()), 'MINUS_BTN')
+        },
+        decompose: function (this: any, workspace: Blockly.WorkspaceSvg) {
+          const containerBlock = workspace.newBlock('u_var_declare_container')
+          containerBlock.initSvg()
+          let connection = containerBlock.getInput('STACK')!.connection!
+          for (let i = 0; i < this.items_.length; i++) {
+            const type = this.items_[i] === 'var_init'
+              ? 'u_var_declare_var_init_input'
+              : 'u_var_declare_var_input'
+            const itemBlock = workspace.newBlock(type)
+            itemBlock.initSvg()
+            connection.connect(itemBlock.previousConnection!)
+            connection = itemBlock.nextConnection!
+          }
+          return containerBlock
+        },
+        compose: function (this: any, containerBlock: Blockly.Block) {
+          const newItems: string[] = []
+          let clauseBlock = containerBlock.getInputTargetBlock('STACK')
+          while (clauseBlock) {
+            if (clauseBlock.type === 'u_var_declare_var_init_input') {
+              newItems.push('var_init')
+            } else if (clauseBlock.type === 'u_var_declare_var_input') {
+              newItems.push('var')
+            }
+            clauseBlock = clauseBlock.getNextBlock()
+          }
+          if (newItems.length === 0) newItems.push('var_init')
+          this.items_ = newItems
+          this.rebuildInputs_()
         },
       }
     }
