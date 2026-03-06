@@ -1,0 +1,107 @@
+import { describe, it, expect } from 'vitest'
+import { runDiagnostics } from '../../src/core/diagnostics'
+import type { DiagnosticBlock } from '../../src/core/diagnostics'
+
+function makeBlock(overrides: Partial<DiagnosticBlock> & { id: string; type: string }): DiagnosticBlock {
+  return {
+    getFieldValue: () => null,
+    getInputTargetBlock: () => null,
+    getInput: () => null,
+    ...overrides,
+  }
+}
+
+describe('Block mutations integration', () => {
+  describe('if-else with else-if chains', () => {
+    it('should diagnose missing condition in u_if_else', () => {
+      const block = makeBlock({ id: 'if1', type: 'u_if_else' })
+      const result = runDiagnostics([block])
+      expect(result).toHaveLength(1)
+      expect(result[0].message).toBe('DIAG_MISSING_CONDITION')
+    })
+
+    it('should pass when condition is present', () => {
+      const block = makeBlock({
+        id: 'if1',
+        type: 'u_if_else',
+        getInputTargetBlock: (name: string) =>
+          name === 'CONDITION' ? makeBlock({ id: 'c', type: 'u_compare' }) : null,
+      })
+      expect(runDiagnostics([block])).toEqual([])
+    })
+  })
+
+  describe('multi-variable var_declare', () => {
+    it('should diagnose empty first variable name', () => {
+      const block = makeBlock({
+        id: 'v1',
+        type: 'u_var_declare',
+        getFieldValue: (name: string) => {
+          if (name === 'NAME_0') return ''
+          return null
+        },
+      })
+      const result = runDiagnostics([block])
+      expect(result).toHaveLength(1)
+      expect(result[0].message).toBe('DIAG_MISSING_VALUE')
+    })
+
+    it('should pass when all variables have names', () => {
+      const block = makeBlock({
+        id: 'v1',
+        type: 'u_var_declare',
+        getFieldValue: (name: string) => {
+          if (name === 'NAME_0') return 'x'
+          if (name === 'NAME_1') return 'y'
+          return null
+        },
+      })
+      expect(runDiagnostics([block])).toEqual([])
+    })
+
+    it('should detect empty name among multiple vars', () => {
+      const block = makeBlock({
+        id: 'v2',
+        type: 'u_var_declare',
+        getFieldValue: (name: string) => {
+          if (name === 'NAME_0') return 'x'
+          if (name === 'NAME_1') return '  '
+          if (name === 'NAME_2') return 'z'
+          return null
+        },
+      })
+      const result = runDiagnostics([block])
+      expect(result).toHaveLength(1)
+    })
+  })
+
+  describe('input block multi-variable', () => {
+    it('should not diagnose u_input (no current rule)', () => {
+      const block = makeBlock({ id: 'i1', type: 'u_input' })
+      expect(runDiagnostics([block])).toEqual([])
+    })
+  })
+
+  describe('mixed workspace diagnostics', () => {
+    it('should detect multiple issues across blocks', () => {
+      const blocks = [
+        makeBlock({ id: 'b1', type: 'u_if' }), // missing condition
+        makeBlock({ id: 'b2', type: 'u_while_loop' }), // missing condition
+        makeBlock({
+          id: 'b3',
+          type: 'u_print',
+          getInputTargetBlock: (name: string) =>
+            name === 'EXPR0' ? makeBlock({ id: 'e', type: 'u_string' }) : null,
+        }), // OK
+        makeBlock({
+          id: 'b4',
+          type: 'u_var_declare',
+          getFieldValue: (name: string) => name === 'NAME' ? '' : null,
+        }), // empty name
+      ]
+      const result = runDiagnostics(blocks)
+      expect(result).toHaveLength(3)
+      expect(result.map(d => d.blockId).sort()).toEqual(['b1', 'b2', 'b4'])
+    })
+  })
+})

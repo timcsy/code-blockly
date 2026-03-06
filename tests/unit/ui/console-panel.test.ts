@@ -1,0 +1,80 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { ConsolePanel } from '../../../src/ui/panels/console-panel'
+
+describe('ConsolePanel', () => {
+  let container: HTMLElement
+  let panel: ConsolePanel
+
+  beforeEach(() => {
+    container = document.createElement('div')
+    panel = new ConsolePanel(container)
+  })
+
+  it('should create panel structure', () => {
+    expect(container.querySelector('.panel-header')).toBeTruthy()
+    expect(container.querySelector('.console-output')).toBeTruthy()
+    expect(container.querySelector('.console-status')).toBeTruthy()
+  })
+
+  it('should log text and add console-line element', () => {
+    panel.log('Hello')
+    const lines = container.querySelectorAll('.console-line')
+    expect(lines.length).toBe(1)
+    expect(lines[0].textContent).toBe('Hello')
+  })
+
+  it('should log error with error class', () => {
+    panel.error('Something failed')
+    const lines = container.querySelectorAll('.console-error')
+    expect(lines.length).toBe(1)
+    expect(lines[0].textContent).toBe('Something failed')
+  })
+
+  it('should clear all output', () => {
+    panel.log('Line 1')
+    panel.log('Line 2')
+    panel.clear()
+    const lines = container.querySelectorAll('.console-line')
+    expect(lines.length).toBe(0)
+    expect(panel.getLines().length).toBe(0)
+  })
+
+  it('should set status text and class', () => {
+    panel.setStatus('Running', 'running')
+    const status = container.querySelector('.console-status') as HTMLElement
+    expect(status.textContent).toBe('Running')
+    expect(status.classList.contains('running')).toBe(true)
+  })
+
+  it('should track lines via getLines()', () => {
+    panel.log('A')
+    panel.log('B')
+    panel.error('C')
+    const lines = panel.getLines()
+    expect(lines).toEqual(['A', 'B', '[ERROR] C'])
+  })
+
+  it('should show output up to a count', () => {
+    panel.log('Line 1')
+    panel.log('Line 2')
+    panel.log('Line 3')
+    panel.showOutputUpTo(2)
+    const children = container.querySelectorAll('.console-line')
+    expect((children[0] as HTMLElement).style.display).toBe('')
+    expect((children[1] as HTMLElement).style.display).toBe('')
+    expect((children[2] as HTMLElement).style.display).toBe('none')
+  })
+
+  it('should prompt input and resolve on submit', async () => {
+    const promise = panel.promptInput('Enter value:')
+    const input = container.querySelector('.console-input') as HTMLInputElement
+    expect(input).toBeTruthy()
+
+    input.value = '42'
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+
+    const result = await promise
+    expect(result).toBe('42')
+    expect(container.querySelector('.console-input-row')).toBeNull()
+  })
+})
