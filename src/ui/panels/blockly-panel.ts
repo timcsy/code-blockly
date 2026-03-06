@@ -69,13 +69,8 @@ export class BlocklyPanel {
     const nodes: SemanticNode[] = []
     let current: Blockly.Block | null = block
     while (current) {
-      // u_var_declare can produce multiple nodes (multi-variable)
-      if (current.type === 'u_var_declare') {
-        nodes.push(...this.extractVarDeclareAll(current))
-      } else {
-        const node = this.extractBlock(current)
-        if (node) nodes.push(node)
-      }
+      const node = this.extractBlock(current)
+      if (node) nodes.push(node)
       current = current.getNextBlock()
     }
     return nodes
@@ -211,7 +206,7 @@ export class BlocklyPanel {
   }
 
   /** Extract all declarators from a multi-variable block */
-  private extractVarDeclareAll(block: Blockly.Block): SemanticNode[] {
+  private extractVarDeclare(block: Blockly.Block): SemanticNode {
     const type = block.getFieldValue('TYPE') ?? 'int'
     const declarators: SemanticNode[] = []
 
@@ -222,29 +217,35 @@ export class BlocklyPanel {
       if (name === null || name === undefined) break
       const initBlock = block.getInputTargetBlock(`INIT_${i}`)
       const initNode = initBlock ? this.extractBlock(initBlock) : null
-      const node = createNode('var_declare', { name, type }, {
+      declarators.push(createNode('var_declarator', { name }, {
         initializer: initNode ? [initNode] : [],
-      })
-      node.metadata = { blockId: block.id }
-      declarators.push(node)
+      }))
       i++
     }
 
-    if (declarators.length > 0) return declarators
+    if (declarators.length > 1) {
+      // Multi-variable: single var_declare with declarators children
+      const node = createNode('var_declare', { type }, { declarators })
+      node.metadata = { blockId: block.id }
+      return node
+    }
 
-    // Fallback: single NAME field
-    const name = block.getFieldValue('NAME') ?? 'x'
-    const initBlock = block.getInputTargetBlock('INIT') ?? block.getInputTargetBlock('INIT_0')
-    const initNode = initBlock ? this.extractBlock(initBlock) : null
+    // Single variable (or fallback)
+    const name = declarators.length === 1
+      ? declarators[0].properties.name
+      : (block.getFieldValue('NAME') ?? 'x')
+    const initChildren = declarators.length === 1
+      ? declarators[0].children.initializer ?? []
+      : (() => {
+          const initBlock = block.getInputTargetBlock('INIT') ?? block.getInputTargetBlock('INIT_0')
+          const initNode = initBlock ? this.extractBlock(initBlock) : null
+          return initNode ? [initNode] : []
+        })()
     const node = createNode('var_declare', { name, type }, {
-      initializer: initNode ? [initNode] : [],
+      initializer: initChildren,
     })
     node.metadata = { blockId: block.id }
-    return [node]
-  }
-
-  private extractVarDeclare(block: Blockly.Block): SemanticNode {
-    return this.extractVarDeclareAll(block)[0]
+    return node
   }
 
   private extractVarAssign(block: Blockly.Block): SemanticNode {
@@ -455,8 +456,22 @@ export class BlocklyPanel {
   }
 
   private extractInput(block: Blockly.Block): SemanticNode {
-    const variable = block.getFieldValue('NAME_0') ?? block.getFieldValue('NAME') ?? 'x'
-    return createNode('input', { variable })
+    // Collect all NAME_0, NAME_1, ... variables
+    const variables: string[] = []
+    let i = 0
+    while (true) {
+      const name = block.getFieldValue(`NAME_${i}`)
+      if (name === null || name === undefined) break
+      variables.push(name)
+      i++
+    }
+    if (variables.length === 0) {
+      variables.push(block.getFieldValue('NAME') ?? 'x')
+    }
+    return createNode('input', {
+      variable: variables[0],
+      variables: variables.length > 1 ? variables : undefined,
+    })
   }
 
   private extractArrayDeclare(block: Blockly.Block): SemanticNode {

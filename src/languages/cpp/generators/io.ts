@@ -14,11 +14,11 @@ export function registerIOGenerators(g: Map<string, NodeGenerator>, style: Style
   })
 
   g.set('input', (node, ctx) => {
-    const varName = node.properties.variable ?? 'x'
+    const vars = (node.properties.variables as string[] | undefined) ?? [node.properties.variable ?? 'x']
     if (style.io_style === 'cout') {
-      return `${indent(ctx)}cin >> ${varName};\n`
+      return `${indent(ctx)}cin >> ${vars.join(' >> ')};\n`
     }
-    return `${indent(ctx)}scanf("%d", &${varName});\n`
+    return vars.map(v => `${indent(ctx)}scanf("%d", &${v});\n`).join('')
   })
 
   g.set('endl', (_node, _ctx) => 'endl')

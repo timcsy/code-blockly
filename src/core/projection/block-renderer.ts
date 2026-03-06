@@ -235,15 +235,38 @@ function renderBlock(node: SemanticNode): BlockState | null {
 
 function renderVarDeclare(node: SemanticNode, block: BlockState): void {
   block.fields.TYPE = node.properties.type ?? 'int'
-  block.fields.NAME_0 = node.properties.name ?? 'x'
-  const inits = node.children.initializer ?? []
-  if (inits.length > 0) {
-    const initBlock = renderExpression(inits[0])
-    if (initBlock) {
-      block.inputs.INIT_0 = { block: initBlock }
+  const declarators = node.children.declarators ?? []
+
+  if (declarators.length > 0) {
+    // Multi-variable declaration
+    const items: string[] = []
+    for (let i = 0; i < declarators.length; i++) {
+      const d = declarators[i]
+      block.fields[`NAME_${i}`] = d.properties.name ?? 'x'
+      const inits = d.children.initializer ?? []
+      if (inits.length > 0) {
+        const initBlock = renderExpression(inits[0])
+        if (initBlock) {
+          block.inputs[`INIT_${i}`] = { block: initBlock }
+        }
+        items.push('var_init')
+      } else {
+        items.push('var')
+      }
     }
+    block.extraState = { items }
+  } else {
+    // Single variable
+    block.fields.NAME_0 = node.properties.name ?? 'x'
+    const inits = node.children.initializer ?? []
+    if (inits.length > 0) {
+      const initBlock = renderExpression(inits[0])
+      if (initBlock) {
+        block.inputs.INIT_0 = { block: initBlock }
+      }
+    }
+    block.extraState = { items: [inits.length > 0 ? 'var_init' : 'var'] }
   }
-  block.extraState = { items: [inits.length > 0 ? 'var_init' : 'var'] }
 }
 
 function renderVarAssign(node: SemanticNode, block: BlockState): void {

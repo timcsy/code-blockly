@@ -4,6 +4,22 @@ import { indent, generateExpression } from '../../../core/projection/code-genera
 export function registerDeclarationGenerators(g: Map<string, NodeGenerator>): void {
   g.set('var_declare', (node, ctx) => {
     const type = node.properties.type ?? 'int'
+    const declarators = node.children.declarators ?? []
+
+    // Multi-variable: int x, v1 = 0;
+    if (declarators.length > 0) {
+      const parts = declarators.map(d => {
+        const name = d.properties.name ?? 'x'
+        const inits = d.children.initializer ?? []
+        if (inits.length > 0) {
+          return `${name} = ${generateExpression(inits[0], ctx)}`
+        }
+        return name
+      })
+      return `${indent(ctx)}${type} ${parts.join(', ')};\n`
+    }
+
+    // Single variable
     const name = node.properties.name ?? 'x'
     const inits = node.children.initializer ?? []
     if (inits.length > 0) {
