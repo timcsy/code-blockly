@@ -492,7 +492,7 @@ export class App {
       // Mutator helper blocks
       Blockly.Blocks['u_if_container'] = {
         init: function (this: Blockly.Block) {
-          this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_IF_LABEL'] || 'if')
+          this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_IF_LABEL'] || '如果')
           this.appendStatementInput('STACK')
           this.setColour('#FFAB19')
           this.contextMenu = false
@@ -500,7 +500,7 @@ export class App {
       }
       Blockly.Blocks['u_if_elseif_input'] = {
         init: function (this: Blockly.Block) {
-          this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_ELSEIF_MSG'] || 'else if')
+          this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_ELSEIF_MSG'] || '否則，如果')
           this.setPreviousStatement(true)
           this.setNextStatement(true)
           this.setColour('#FFAB19')
@@ -509,7 +509,7 @@ export class App {
       }
       Blockly.Blocks['u_if_else_input'] = {
         init: function (this: Blockly.Block) {
-          this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE'] || 'else')
+          this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_MSG2'] || '否則')
           this.setPreviousStatement(true)
           this.setColour('#FFAB19')
           this.contextMenu = false
@@ -586,7 +586,7 @@ export class App {
           // Re-add ELSE if needed
           if (this.hasElse_) {
             this.appendStatementInput('ELSE')
-              .appendField(Blockly.Msg['U_IF_ELSE'] || '否則')
+              .appendField(Blockly.Msg['U_IF_ELSE_MSG2'] || '否則')
           }
         },
         saveExtraState: function (this: any) {
