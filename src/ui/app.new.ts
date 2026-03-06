@@ -261,14 +261,15 @@ export class App {
 
   private registerDynamicBlocks(): void {
     // +/- button SVG icons (shared across all dynamic blocks)
+    // Plus: mint green, Minus: pink, Disabled: light gray
     const PLUS_IMG = 'data:image/svg+xml,' + encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">' +
-      '<circle cx="10" cy="10" r="9" fill="#4A90D9"/>' +
+      '<circle cx="10" cy="10" r="9" fill="#66CDAA"/>' +
       '<path d="M6 10h8M10 6v8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>'
     )
     const MINUS_IMG = 'data:image/svg+xml,' + encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">' +
-      '<circle cx="10" cy="10" r="9" fill="#9E9E9E"/>' +
+      '<circle cx="10" cy="10" r="9" fill="#F08080"/>' +
       '<path d="M6 10h8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>'
     )
     const MINUS_DISABLED_IMG = 'data:image/svg+xml,' + encodeURIComponent(
