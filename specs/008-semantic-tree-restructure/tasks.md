@@ -33,21 +33,21 @@
 
 ### 測試（先寫，確認 Red）
 
-- [ ] T005 [P] 撰寫 SemanticNode 資料結構的單元測試 in tests/unit/core/semantic-tree.test.ts
-- [ ] T006 [P] 撰寫 ConceptRegistry 三層概念註冊與查詢的單元測試 in tests/unit/core/concept-registry.test.ts
-- [ ] T007 [P] 撰寫 BlockSpecRegistry JSON 載入與 AST pattern 匹配的單元測試 in tests/unit/core/block-spec-registry.test.ts
+- [x] T005 [P] 撰寫 SemanticNode 資料結構的單元測試 in tests/unit/core/semantic-tree.test.ts
+- [x] T006 [P] 撰寫 ConceptRegistry 三層概念註冊與查詢的單元測試 in tests/unit/core/concept-registry.test.ts
+- [x] T007 [P] 撰寫 BlockSpecRegistry JSON 載入與 AST pattern 匹配的單元測試 in tests/unit/core/block-spec-registry.test.ts
 
 ### 實作
 
-- [ ] T008 定義核心型別（SemanticNode, ConceptDef, BlockSpec, Annotation, NodeMetadata, LiftContext, StylePreset, WorkspaceState）in src/core/types.ts
-- [ ] T009 實作 SemanticTree 操作函式（createEmpty, addChild, removeChild, updateProperty, findById, toJSON, fromJSON）in src/core/semantic-tree.ts
-- [ ] T010 實作 ConceptRegistry（三層概念註冊 + 按 layer/level 查詢 + findAbstract）in src/core/concept-registry.ts
-- [ ] T011 實作 BlockSpecRegistry（loadFromJSON + getByConceptId + getByAstPattern + listByCategory）in src/core/block-spec-registry.ts
-- [ ] T012 遷移既有 Universal 積木定義為新 JSON 格式（新增 level、concept 欄位）in src/blocks/universal.json
-- [ ] T013 [P] 遷移既有 C++ core 積木定義為新 JSON 格式 in src/languages/cpp/blocks/core.json
-- [ ] T014 [P] 遷移既有 C++ stdlib I/O 積木定義為新 JSON 格式 in src/languages/cpp/blocks/stdlib/io.json
-- [ ] T015 [P] 遷移既有 i18n 翻譯檔更新（配合新積木 ID 和新增的 message key）in src/i18n/zh-TW/blocks.json 和 src/i18n/en/blocks.json
-- [ ] T016 更新 i18n loader 以支援新的 JSON 格式 in src/i18n/loader.ts
+- [x] T008 定義核心型別（SemanticNode, ConceptDef, BlockSpec, Annotation, NodeMetadata, LiftContext, StylePreset, WorkspaceState）in src/core/types.ts
+- [x] T009 實作 SemanticTree 操作函式（createEmpty, addChild, removeChild, updateProperty, findById, toJSON, fromJSON）in src/core/semantic-tree.ts
+- [x] T010 實作 ConceptRegistry（三層概念註冊 + 按 layer/level 查詢 + findAbstract）in src/core/concept-registry.ts
+- [x] T011 實作 BlockSpecRegistry（loadFromJSON + getByConceptId + getByAstPattern + listByCategory）in src/core/block-spec-registry.ts
+- [x] T012 遷移既有 Universal 積木定義為新 JSON 格式（新增 level、concept 欄位）in src/blocks/universal.json
+- [x] T013 [P] 遷移既有 C++ core 積木定義為新 JSON 格式 in src/languages/cpp/blocks/core.json
+- [x] T014 [P] 遷移既有 C++ stdlib I/O 積木定義為新 JSON 格式 in src/languages/cpp/blocks/stdlib/io.json
+- [x] T015 [P] 遷移既有 i18n 翻譯檔更新（配合新積木 ID 和新增的 message key）in src/i18n/zh-TW/blocks.json 和 src/i18n/en/blocks.json
+- [x] T016 更新 i18n loader 以支援新的 JSON 格式 in src/i18n/loader.ts
 
 **Checkpoint**: 核心資料結構和註冊表就緒，所有 T005~T007 測試通過
 
