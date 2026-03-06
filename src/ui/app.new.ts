@@ -610,10 +610,9 @@ export class App {
             .appendField(Blockly.Msg['U_IF_ELSE_ELSEIF_MSG'] || '否則，如果')
           this.appendStatementInput(`ELSEIF_THEN_${idx}`)
             .appendField(Blockly.Msg['U_IF_THEN'] || '則')
-          // Move before TAIL (or ELSE if present)
-          const beforeInput = this.hasElse_ ? 'ELSE' : 'TAIL'
-          this.moveInputBefore(`ELSEIF_CONDITION_${idx}`, beforeInput)
-          this.moveInputBefore(`ELSEIF_THEN_${idx}`, beforeInput)
+          // Move before TAIL (TAIL is always before ELSE)
+          this.moveInputBefore(`ELSEIF_CONDITION_${idx}`, 'TAIL')
+          this.moveInputBefore(`ELSEIF_THEN_${idx}`, 'TAIL')
           setMinusState(this, false)
         },
         minusElseIf_: function (this: any) {
