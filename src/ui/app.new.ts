@@ -260,7 +260,29 @@ export class App {
   }
 
   private registerDynamicBlocks(): void {
-    // u_var_declare with mutator gear (must override JSON-registered version)
+    // +/- button SVG icons (shared across all dynamic blocks)
+    const PLUS_IMG = 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">' +
+      '<circle cx="10" cy="10" r="9" fill="#4A90D9"/>' +
+      '<path d="M6 10h8M10 6v8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>'
+    )
+    const MINUS_IMG = 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">' +
+      '<circle cx="10" cy="10" r="9" fill="#9E9E9E"/>' +
+      '<path d="M6 10h8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>'
+    )
+    const MINUS_DISABLED_IMG = 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">' +
+      '<circle cx="10" cy="10" r="9" fill="#E0E0E0"/>' +
+      '<path d="M6 10h8" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round"/></svg>'
+    )
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const setMinusState = (block: any, isAtMin: boolean) => {
+      const f = block.getField('MINUS_BTN')
+      if (f) f.setValue(isAtMin ? MINUS_DISABLED_IMG : MINUS_IMG)
+    }
+
+    // u_var_declare with +/- buttons + inline layout
     {
       const getTypeOptions = () => {
         return [
@@ -276,29 +298,49 @@ export class App {
 
       Blockly.Blocks['u_var_declare'] = {
         items_: ['var_init'] as string[],
-        init: function (this: Blockly.Block & { items_: string[]; rebuildInputs_: () => void }) {
+        init: function (this: any) {
+          this.items_ = ['var_init']
           this.appendDummyInput('HEADER')
             .appendField(Blockly.Msg['U_VAR_DECLARE_HEADER'] || '宣告')
             .appendField(new Blockly.FieldDropdown(getTypeOptions) as Blockly.Field, 'TYPE')
-          // Default shape: one var with init
           this.appendValueInput('INIT_0')
             .appendField(new Blockly.FieldTextInput('x') as Blockly.Field, 'NAME_0')
             .appendField('=')
-          this.setInputsInline(false)
+          this.appendDummyInput('TAIL')
+            .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plus_()))
+            .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minus_()), 'MINUS_BTN')
+          this.setInputsInline(true)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#FF8C1A')  // Data: orange
+          this.setColour('#FF8C1A')
           this.setTooltip(Blockly.Msg['U_VAR_DECLARE_TOOLTIP'] || '宣告變數')
         },
-        saveExtraState: function (this: Blockly.Block & { items_: string[] }) {
+        plus_: function (this: any) {
+          const idx = this.items_.length
+          this.items_.push('var_init')
+          this.appendValueInput(`INIT_${idx}`)
+            .appendField(new Blockly.FieldTextInput(`v${idx}`) as Blockly.Field, `NAME_${idx}`)
+            .appendField('=')
+          this.moveInputBefore(`INIT_${idx}`, 'TAIL')
+          setMinusState(this, false)
+        },
+        minus_: function (this: any) {
+          if (this.items_.length <= 1) return
+          const idx = this.items_.length - 1
+          this.items_.pop()
+          if (this.getInput(`INIT_${idx}`)) this.removeInput(`INIT_${idx}`)
+          if (this.getInput(`VAR_${idx}`)) this.removeInput(`VAR_${idx}`)
+          setMinusState(this, this.items_.length <= 1)
+        },
+        saveExtraState: function (this: any) {
           return { items: this.items_ }
         },
-        loadExtraState: function (this: Blockly.Block & { items_: string[]; rebuildInputs_: () => void }, state: { items?: string[] }) {
+        loadExtraState: function (this: any, state: { items?: string[] }) {
           this.items_ = state?.items ?? ['var_init']
           this.rebuildInputs_()
         },
-        rebuildInputs_: function (this: Blockly.Block & { items_: string[] }) {
-          // Save connected blocks
+        rebuildInputs_: function (this: any) {
+          // Save connected blocks and names
           const savedBlocks: (Blockly.Block | null)[] = []
           const savedNames: string[] = []
           for (let i = 0; ; i++) {
@@ -314,19 +356,19 @@ export class App {
           }
           // Remove all existing var rows
           for (let i = 0; ; i++) {
-            const removed = this.getInput(`INIT_${i}`) || this.getInput(`VAR_${i}`)
-            if (!removed) break
+            if (!this.getInput(`INIT_${i}`) && !this.getInput(`VAR_${i}`)) break
             if (this.getInput(`INIT_${i}`)) this.removeInput(`INIT_${i}`)
             if (this.getInput(`VAR_${i}`)) this.removeInput(`VAR_${i}`)
           }
-          // Rebuild rows based on items_
+          // Remove and re-add TAIL
+          if (this.getInput('TAIL')) this.removeInput('TAIL')
+          // Rebuild rows
           for (let j = 0; j < this.items_.length; j++) {
             const name = savedNames[j] ?? `v${j}`
             if (this.items_[j] === 'var_init') {
               this.appendValueInput(`INIT_${j}`)
                 .appendField(new Blockly.FieldTextInput(name) as Blockly.Field, `NAME_${j}`)
                 .appendField('=')
-              // Reconnect
               if (savedBlocks[j] && this.getInput(`INIT_${j}`)?.connection) {
                 this.getInput(`INIT_${j}`)!.connection!.connect(savedBlocks[j]!.outputConnection!)
               }
@@ -335,84 +377,96 @@ export class App {
                 .appendField(new Blockly.FieldTextInput(name) as Blockly.Field, `NAME_${j}`)
             }
           }
+          // Re-add TAIL
+          this.appendDummyInput('TAIL')
+            .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plus_()))
+            .appendField(new Blockly.FieldImage(
+              this.items_.length <= 1 ? MINUS_DISABLED_IMG : MINUS_IMG,
+              20, 20, '-', () => this.minus_()), 'MINUS_BTN')
         },
       }
     }
 
-    // u_print with dynamic inputs
+    // u_print with +/- buttons + inline layout
     {
       Blockly.Blocks['u_print'] = {
         itemCount_: 1,
-        init: function (this: Blockly.Block & { itemCount_: number; updateShape_: () => void }) {
+        init: function (this: any) {
+          this.itemCount_ = 1
           this.appendValueInput('EXPR0')
             .appendField(Blockly.Msg['U_PRINT_MSG'] || '輸出')
+          this.appendDummyInput('TAIL')
+            .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plus_()))
+            .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minus_()), 'MINUS_BTN')
           this.setInputsInline(true)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
           this.setColour('#5CB1D6')
           this.setTooltip(Blockly.Msg['U_PRINT_TOOLTIP'] || '輸出值')
         },
-        saveExtraState: function (this: Blockly.Block & { itemCount_: number }) {
+        plus_: function (this: any) {
+          this.appendValueInput('EXPR' + this.itemCount_)
+          this.moveInputBefore('EXPR' + this.itemCount_, 'TAIL')
+          this.itemCount_++
+          setMinusState(this, false)
+        },
+        minus_: function (this: any) {
+          if (this.itemCount_ <= 1) return
+          this.itemCount_--
+          this.removeInput('EXPR' + this.itemCount_)
+          setMinusState(this, this.itemCount_ <= 1)
+        },
+        saveExtraState: function (this: any) {
           return { itemCount: this.itemCount_ }
         },
-        loadExtraState: function (this: Blockly.Block & { itemCount_: number; updateShape_: () => void }, state: { itemCount: number }) {
-          this.itemCount_ = state.itemCount ?? 1
-          this.updateShape_()
-        },
-        updateShape_: function (this: Blockly.Block & { itemCount_: number }) {
-          // Remove excess inputs
-          let i = this.itemCount_
-          while (this.getInput(`EXPR${i}`)) {
-            this.removeInput(`EXPR${i}`)
-            i++
-          }
-          // Add missing inputs
-          for (let j = 1; j < this.itemCount_; j++) {
-            if (!this.getInput(`EXPR${j}`)) {
-              this.appendValueInput(`EXPR${j}`)
-            }
+        loadExtraState: function (this: any, state: { itemCount?: number }) {
+          const count = state?.itemCount ?? 1
+          while (this.itemCount_ < count) {
+            this.plus_()
           }
         },
       }
     }
 
-    // u_input with dynamic +/- for multiple variables
+    // u_input with +/- buttons + inline layout
     {
-      type InputBlock = Blockly.Block & { varCount_: number; updateShape_: () => void }
-
       Blockly.Blocks['u_input'] = {
         varCount_: 1,
-        init: function (this: InputBlock) {
-          this.appendDummyInput('HEADER')
+        init: function (this: any) {
+          this.varCount_ = 1
+          this.appendDummyInput('VAR_0')
             .appendField(Blockly.Msg['U_INPUT_MSG'] || '輸入')
             .appendField(new Blockly.FieldTextInput('x') as Blockly.Field, 'NAME_0')
+          this.appendDummyInput('TAIL')
+            .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plus_()))
+            .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minus_()), 'MINUS_BTN')
+          this.setInputsInline(true)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
           this.setColour('#5CB1D6')
           this.setTooltip(Blockly.Msg['U_INPUT_TOOLTIP'] || '讀取輸入')
         },
-        saveExtraState: function (this: InputBlock) {
+        plus_: function (this: any) {
+          this.appendDummyInput('VAR_' + this.varCount_)
+            .appendField(new Blockly.FieldTextInput('v' + this.varCount_) as Blockly.Field, 'NAME_' + this.varCount_)
+          this.moveInputBefore('VAR_' + this.varCount_, 'TAIL')
+          this.varCount_++
+          setMinusState(this, false)
+        },
+        minus_: function (this: any) {
+          if (this.varCount_ <= 1) return
+          this.varCount_--
+          this.removeInput('VAR_' + this.varCount_)
+          setMinusState(this, this.varCount_ <= 1)
+        },
+        saveExtraState: function (this: any) {
           if (this.varCount_ <= 1) return null
           return { varCount: this.varCount_ }
         },
-        loadExtraState: function (this: InputBlock, state: { varCount?: number }) {
-          this.varCount_ = state?.varCount ?? 1
-          this.updateShape_()
-        },
-        updateShape_: function (this: InputBlock) {
-          // Remove old extra inputs
-          let i = 1
-          while (this.getInput(`VAR_${i}`)) {
-            this.removeInput(`VAR_${i}`)
-            i++
-          }
-          // Add extra variable inputs
-          for (let j = 1; j < this.varCount_; j++) {
-            if (!this.getInput(`VAR_${j}`)) {
-              this.appendDummyInput(`VAR_${j}`)
-                .appendField('>>')
-                .appendField(new Blockly.FieldTextInput(`v${j}`) as Blockly.Field, `NAME_${j}`)
-            }
+        loadExtraState: function (this: any, state: { varCount?: number }) {
+          const count = state?.varCount ?? 1
+          while (this.varCount_ < count) {
+            this.plus_()
           }
         },
       }
@@ -431,26 +485,11 @@ export class App {
       }
     }
 
-    // u_if — simple if (no mutator)
-    {
-      Blockly.Blocks['u_if'] = {
-        init: function (this: Blockly.Block) {
-          this.appendValueInput('CONDITION')
-            .appendField(Blockly.Msg['U_IF_MSG'] || '如果')
-          this.appendStatementInput('THEN')
-            .appendField(Blockly.Msg['U_IF_THEN'] || '則')
-          this.setPreviousStatement(true, 'Statement')
-          this.setNextStatement(true, 'Statement')
-          this.setColour('#FFAB19')
-          this.setTooltip(Blockly.Msg['U_IF_TOOLTIP'] || '條件判斷')
-        },
-      }
-    }
-
-    // u_if_else — with mutator gear + +/- buttons for else-if / else
+    // u_if — unified progressive block (P4: progressive disclosure)
+    // Starts as simple if, +/- adds else-if, mutator gear adds/removes else
     {
       // Mutator helper blocks
-      Blockly.Blocks['u_if_else_container'] = {
+      Blockly.Blocks['u_if_container'] = {
         init: function (this: Blockly.Block) {
           this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_IF_LABEL'] || 'if')
           this.appendStatementInput('STACK')
@@ -458,7 +497,7 @@ export class App {
           this.contextMenu = false
         },
       }
-      Blockly.Blocks['u_if_else_elseif_input'] = {
+      Blockly.Blocks['u_if_elseif_input'] = {
         init: function (this: Blockly.Block) {
           this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_ELSEIF_MSG'] || 'else if')
           this.setPreviousStatement(true)
@@ -467,7 +506,7 @@ export class App {
           this.contextMenu = false
         },
       }
-      Blockly.Blocks['u_if_else_else_input'] = {
+      Blockly.Blocks['u_if_else_input'] = {
         init: function (this: Blockly.Block) {
           this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE'] || 'else')
           this.setPreviousStatement(true)
@@ -476,69 +515,116 @@ export class App {
         },
       }
 
-      type IfElseBlock = Blockly.Block & {
-        elseifCount_: number
-        hasElse_: boolean
-        updateShape_: () => void
-      }
-
-      Blockly.Blocks['u_if_else'] = {
+      Blockly.Blocks['u_if'] = {
         elseifCount_: 0,
-        hasElse_: true,
-        init: function (this: IfElseBlock) {
+        hasElse_: false,
+        init: function (this: any) {
+          this.elseifCount_ = 0
+          this.hasElse_ = false
           this.appendValueInput('CONDITION')
             .appendField(Blockly.Msg['U_IF_MSG'] || '如果')
           this.appendStatementInput('THEN')
             .appendField(Blockly.Msg['U_IF_THEN'] || '則')
-          this.appendStatementInput('ELSE')
-            .appendField(Blockly.Msg['U_IF_ELSE'] || '否則')
+          this.appendDummyInput('TAIL')
+            .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusElseIf_()))
+            .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minusElseIf_()), 'MINUS_BTN')
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
           this.setColour('#FFAB19')
-          this.setTooltip(Blockly.Msg['U_IF_ELSE_TOOLTIP'] || '條件判斷（含否則）')
-
+          this.setTooltip(Blockly.Msg['U_IF_TOOLTIP'] || '條件判斷')
           this.setMutator(new Blockly.icons.MutatorIcon(
-            ['u_if_else_elseif_input', 'u_if_else_else_input'],
+            ['u_if_elseif_input', 'u_if_else_input'],
             this as unknown as Blockly.BlockSvg,
           ))
         },
-        saveExtraState: function (this: IfElseBlock) {
-          if (this.elseifCount_ === 0 && this.hasElse_) return null
+        plusElseIf_: function (this: any) {
+          const idx = this.elseifCount_
+          this.elseifCount_++
+          this.appendValueInput(`ELSEIF_CONDITION_${idx}`)
+            .appendField(Blockly.Msg['U_IF_ELSE_ELSEIF_MSG'] || '否則，如果')
+          this.appendStatementInput(`ELSEIF_THEN_${idx}`)
+            .appendField(Blockly.Msg['U_IF_THEN'] || '則')
+          // Move before TAIL (or ELSE if present)
+          const beforeInput = this.hasElse_ ? 'ELSE' : 'TAIL'
+          this.moveInputBefore(`ELSEIF_CONDITION_${idx}`, beforeInput)
+          this.moveInputBefore(`ELSEIF_THEN_${idx}`, beforeInput)
+          setMinusState(this, false)
+        },
+        minusElseIf_: function (this: any) {
+          if (this.elseifCount_ <= 0) return
+          this.elseifCount_--
+          const idx = this.elseifCount_
+          this.removeInput(`ELSEIF_THEN_${idx}`)
+          this.removeInput(`ELSEIF_CONDITION_${idx}`)
+          setMinusState(this, this.elseifCount_ <= 0)
+        },
+        updateShape_: function (this: any) {
+          // Remove old else-if inputs
+          let i = 0
+          while (this.getInput(`ELSEIF_CONDITION_${i}`)) {
+            this.removeInput(`ELSEIF_CONDITION_${i}`)
+            this.removeInput(`ELSEIF_THEN_${i}`)
+            i++
+          }
+          // Remove ELSE, TAIL
+          if (this.getInput('ELSE')) this.removeInput('ELSE')
+          if (this.getInput('TAIL')) this.removeInput('TAIL')
+          // Re-add else-if inputs
+          for (let j = 0; j < this.elseifCount_; j++) {
+            this.appendValueInput(`ELSEIF_CONDITION_${j}`)
+              .appendField(Blockly.Msg['U_IF_ELSE_ELSEIF_MSG'] || '否則，如果')
+            this.appendStatementInput(`ELSEIF_THEN_${j}`)
+              .appendField(Blockly.Msg['U_IF_THEN'] || '則')
+          }
+          // Re-add TAIL (with +/- for else-if)
+          this.appendDummyInput('TAIL')
+            .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusElseIf_()))
+            .appendField(new Blockly.FieldImage(
+              this.elseifCount_ <= 0 ? MINUS_DISABLED_IMG : MINUS_IMG,
+              20, 20, '-', () => this.minusElseIf_()), 'MINUS_BTN')
+          // Re-add ELSE if needed
+          if (this.hasElse_) {
+            this.appendStatementInput('ELSE')
+              .appendField(Blockly.Msg['U_IF_ELSE'] || '否則')
+          }
+        },
+        saveExtraState: function (this: any) {
+          if (this.elseifCount_ === 0 && !this.hasElse_) return null
           const state: Record<string, unknown> = {}
           if (this.elseifCount_ > 0) state.elseifCount = this.elseifCount_
-          if (!this.hasElse_) state.hasElse = false
+          if (this.hasElse_) state.hasElse = true
           return state
         },
-        loadExtraState: function (this: IfElseBlock, state: Record<string, unknown>) {
+        loadExtraState: function (this: any, state: Record<string, unknown>) {
           this.elseifCount_ = (state?.elseifCount as number) ?? 0
-          this.hasElse_ = state?.hasElse !== false
+          this.hasElse_ = state?.hasElse === true
           this.updateShape_()
         },
-        decompose: function (this: IfElseBlock, workspace: Blockly.WorkspaceSvg) {
-          const containerBlock = workspace.newBlock('u_if_else_container')
+        decompose: function (this: any, workspace: Blockly.WorkspaceSvg) {
+          const containerBlock = workspace.newBlock('u_if_container')
           containerBlock.initSvg()
           let connection = containerBlock.getInput('STACK')!.connection!
           for (let i = 0; i < this.elseifCount_; i++) {
-            const elseifBlock = workspace.newBlock('u_if_else_elseif_input')
+            const elseifBlock = workspace.newBlock('u_if_elseif_input')
             elseifBlock.initSvg()
             connection.connect(elseifBlock.previousConnection!)
             connection = elseifBlock.nextConnection!
           }
           if (this.hasElse_) {
-            const elseBlock = workspace.newBlock('u_if_else_else_input')
+            const elseBlock = workspace.newBlock('u_if_else_input')
             elseBlock.initSvg()
             connection.connect(elseBlock.previousConnection!)
           }
           return containerBlock
         },
-        compose: function (this: IfElseBlock, containerBlock: Blockly.Block) {
+        compose: function (this: any, containerBlock: Blockly.Block) {
           let elseifCount = 0
           let hasElse = false
           let clauseBlock = containerBlock.getInputTargetBlock('STACK')
           while (clauseBlock) {
-            if (clauseBlock.type === 'u_if_else_elseif_input') {
+            if (clauseBlock.type === 'u_if_elseif_input') {
               elseifCount++
-            } else if (clauseBlock.type === 'u_if_else_else_input') {
+            } else if (clauseBlock.type === 'u_if_else_input') {
               hasElse = true
             }
             clauseBlock = clauseBlock.getNextBlock()
@@ -547,33 +633,12 @@ export class App {
           this.hasElse_ = hasElse
           this.updateShape_()
         },
-        updateShape_: function (this: IfElseBlock) {
-          // Remove old else-if inputs
-          let i = 0
-          while (this.getInput(`ELSEIF_CONDITION_${i}`)) {
-            this.removeInput(`ELSEIF_CONDITION_${i}`)
-            this.removeInput(`ELSEIF_THEN_${i}`)
-            i++
-          }
-          // Remove old ELSE
-          if (this.getInput('ELSE')) {
-            this.removeInput('ELSE')
-          }
-          // Add else-if inputs
-          for (let j = 0; j < this.elseifCount_; j++) {
-            this.appendValueInput(`ELSEIF_CONDITION_${j}`)
-              .appendField(Blockly.Msg['U_IF_ELSE_ELSEIF_MSG'] || '否則，如果')
-            this.appendStatementInput(`ELSEIF_THEN_${j}`)
-              .appendField(Blockly.Msg['U_IF_THEN'] || '則')
-          }
-          // Add else
-          if (this.hasElse_) {
-            this.appendStatementInput('ELSE')
-              .appendField(Blockly.Msg['U_IF_ELSE'] || '否則')
-          }
-        },
       }
+
+      // Keep u_if_else as alias — loads old saved state and converts to u_if
+      Blockly.Blocks['u_if_else'] = Blockly.Blocks['u_if']
     }
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     // u_while_loop
     {
@@ -927,7 +992,7 @@ export class App {
         name: Blockly.Msg['CATEGORY_CONTROL'] || '控制',
         colour: '#FFAB19',
         contents: filterBlocks([
-          'u_if', 'u_if_else', 'u_while_loop', 'u_count_loop', 'u_break', 'u_continue',
+          'u_if', 'u_while_loop', 'u_count_loop', 'u_break', 'u_continue',
         ]),
       },
       {

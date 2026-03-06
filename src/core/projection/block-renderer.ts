@@ -259,13 +259,12 @@ function renderBinaryOp(node: SemanticNode, block: BlockState): void {
 
 function renderIf(node: SemanticNode, block: BlockState): void {
   const elseBody = node.children.else_body ?? []
-  if (elseBody.length > 0) {
-    block.type = 'u_if_else'
-  }
+  // Always use u_if (unified progressive block), set extraState for else
   renderChild(node, 'condition', block, 'CONDITION')
   renderStatementChild(node, 'then_body', block, 'THEN')
   if (elseBody.length > 0) {
     renderStatementChild(node, 'else_body', block, 'ELSE')
+    block.extraState = { hasElse: true }
   }
 }
 

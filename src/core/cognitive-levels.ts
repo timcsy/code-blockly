@@ -16,7 +16,7 @@ const BLOCK_LEVELS: Record<string, CognitiveLevel> = {
   u_arithmetic: 0,
   u_compare: 0,
   u_if: 0,
-  u_if_else: 0,
+  u_if_else: 0, // alias for u_if (backward compat)
   u_while_loop: 0,
   u_print: 0,
   u_input: 0,
@@ -31,11 +31,25 @@ const BLOCK_LEVELS: Record<string, CognitiveLevel> = {
   u_continue: 1,
   u_func_def: 1,
   u_func_call: 1,
+  u_func_call_expr: 1,
   u_return: 1,
 
   // L2 - Advanced
   u_array_declare: 2,
   u_array_access: 2,
+
+  // C++ Basic (L1 - Intermediate)
+  c_char_literal: 1,
+  c_increment: 1,
+  c_compound_assign: 1,
+  c_for_loop: 1,
+  c_do_while: 1,
+  c_switch: 1,
+  c_case: 1,
+  c_printf: 1,
+  c_scanf: 1,
+
+  // C++ Special (L2 - Advanced)
   c_raw_code: 2,
   c_raw_expression: 2,
   c_include: 2,
@@ -45,6 +59,44 @@ const BLOCK_LEVELS: Record<string, CognitiveLevel> = {
   c_ifndef: 2,
   c_comment_line: 2,
   c_using_namespace: 2,
+
+  // C++ Advanced — Pointers (L2)
+  c_pointer_declare: 2,
+  c_pointer_deref: 2,
+  c_address_of: 2,
+  c_malloc: 2,
+  c_free: 2,
+
+  // C++ Advanced — Structures (L2)
+  c_struct_declare: 2,
+  c_struct_member_access: 2,
+  c_struct_pointer_access: 2,
+
+  // C++ Advanced — Strings (L2)
+  c_strlen: 2,
+  c_strcmp: 2,
+  c_strcpy: 2,
+
+  // C++ Advanced — Containers (L2)
+  cpp_vector_declare: 2,
+  cpp_vector_push_back: 2,
+  cpp_vector_size: 2,
+  cpp_map_declare: 2,
+  cpp_string_declare: 2,
+  cpp_stack_declare: 2,
+  cpp_queue_declare: 2,
+  cpp_set_declare: 2,
+  cpp_method_call: 2,
+  cpp_method_call_expr: 2,
+
+  // C++ Advanced — Algorithms (L2)
+  cpp_sort: 2,
+
+  // C++ Advanced — OOP (L2)
+  cpp_class_def: 2,
+  cpp_new: 2,
+  cpp_delete: 2,
+  cpp_template_function: 2,
 }
 
 /** Get the cognitive level for a block type. Unknown blocks default to L2. */

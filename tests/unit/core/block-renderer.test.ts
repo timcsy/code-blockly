@@ -59,10 +59,11 @@ describe('block-renderer', () => {
     })
     const state = renderToBlocklyState(makeProgram(ifStmt))
     const block = state.blocks.blocks[0]
-    expect(block.type).toBe('u_if_else')
+    expect(block.type).toBe('u_if')
     expect(block.inputs.CONDITION).toBeDefined()
     expect(block.inputs.THEN).toBeDefined()
     expect(block.inputs.ELSE).toBeDefined()
+    expect(block.extraState).toEqual({ hasElse: true })
   })
 
   it('should render if without else as u_if', () => {
