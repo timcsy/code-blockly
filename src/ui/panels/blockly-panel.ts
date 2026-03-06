@@ -90,6 +90,8 @@ export class BlocklyPanel {
       case 'u_endl': return createNode('endl', {})
       case 'u_array_declare': return this.extractArrayDeclare(block)
       case 'u_array_access': return this.extractArrayAccess(block)
+      case 'c_raw_code': return this.extractRawCode(block)
+      case 'c_comment_line': return this.extractComment(block)
       default: {
           const node = createNode('raw_code', {})
           node.metadata = { rawCode: `/* unknown: ${type} */` }
@@ -239,12 +241,12 @@ export class BlocklyPanel {
     const name = block.getFieldValue('NAME') ?? 'f'
     const returnType = block.getFieldValue('RETURN_TYPE') ?? 'void'
 
-    // Extract params (dynamic inputs PARAM_0, PARAM_1, ...)
+    // Extract params (TYPE_0/PARAM_0, TYPE_1/PARAM_1, ...)
     const params: string[] = []
     let i = 0
     while (true) {
-      const paramType = block.getFieldValue(`PARAM_TYPE_${i}`)
-      const paramName = block.getFieldValue(`PARAM_NAME_${i}`)
+      const paramType = block.getFieldValue(`TYPE_${i}`)
+      const paramName = block.getFieldValue(`PARAM_${i}`)
       if (paramType === null && paramName === null) break
       params.push(`${paramType ?? 'int'} ${paramName ?? `p${i}`}`)
       i++
@@ -319,6 +321,18 @@ export class BlocklyPanel {
     })
   }
 
+  private extractRawCode(block: Blockly.Block): SemanticNode {
+    const code = block.getFieldValue('CODE') ?? ''
+    const node = createNode('raw_code', { code })
+    node.metadata = { rawCode: code }
+    return node
+  }
+
+  private extractComment(block: Blockly.Block): SemanticNode {
+    const text = block.getFieldValue('TEXT') ?? ''
+    return createNode('comment', { text })
+  }
+
   private extractStatementInput(block: Blockly.Block, inputName: string): SemanticNode[] {
     const firstBlock = block.getInputTargetBlock(inputName)
     if (!firstBlock) return []
@@ -336,7 +350,12 @@ export class BlocklyPanel {
 
   setState(state: object): void {
     if (!this.workspace) return
-    Blockly.serialization.workspaces.load(state, this.workspace)
+    Blockly.Events.disable()
+    try {
+      Blockly.serialization.workspaces.load(state, this.workspace)
+    } finally {
+      Blockly.Events.enable()
+    }
   }
 
   dispose(): void {

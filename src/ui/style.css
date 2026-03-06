@@ -78,6 +78,60 @@ html, body {
   margin: 0 4px;
 }
 
+/* ─── Toolbar selects ─── */
+
+.toolbar-select {
+  padding: 2px 6px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #3c3c3c;
+  color: #ccc;
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+}
+
+.toolbar-select:hover {
+  border-color: #007acc;
+}
+
+.toolbar-select:focus {
+  border-color: #007acc;
+}
+
+/* ─── Level selector ─── */
+
+.level-selector {
+  display: inline-flex;
+  gap: 1px;
+  background: #3c3c3c;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.level-btn {
+  padding: 2px 8px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: #3c3c3c !important;
+  color: #999 !important;
+  cursor: pointer;
+  font-size: 11px !important;
+  font-weight: 500;
+  line-height: 18px !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.level-btn:hover {
+  background: #505050 !important;
+  color: #ccc !important;
+}
+
+.level-btn.active {
+  background: #007acc !important;
+  color: #fff !important;
+}
+
 /* ─── Main editor area ─── */
 
 #editors {
@@ -133,6 +187,119 @@ html, body {
   font-size: 12px;
   flex-shrink: 0;
 }
+
+.status-item {
+  margin: 0 4px;
+}
+
+.status-sep {
+  margin: 0 2px;
+  opacity: 0.6;
+}
+
+.status-spacer {
+  flex: 1;
+}
+
+.status-sync {
+  opacity: 0.9;
+}
+
+.status-message {
+  font-weight: 500;
+}
+
+/* ─── Console panel ─── */
+
+.console-panel {
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  border-top: 1px solid #3c3c3c;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #cccccc;
+}
+
+.panel-clear-btn {
+  border: none;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+.panel-clear-btn:hover {
+  color: #fff;
+}
+
+.console-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 8px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.console-line {
+  padding: 1px 0;
+  color: #cccccc;
+  white-space: pre-wrap;
+}
+
+.console-error {
+  color: #f44747;
+}
+
+/* ─── Variable panel ─── */
+
+.variable-panel {
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  border-top: 1px solid #3c3c3c;
+}
+
+.variable-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.variable-table th {
+  background: #252526;
+  color: #999;
+  text-align: left;
+  padding: 3px 8px;
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.variable-table td {
+  padding: 2px 8px;
+  border-bottom: 1px solid #2d2d2d;
+}
+
+.var-name { color: #9cdcfe; }
+.var-type { color: #4ec9b0; }
+.var-value { color: #ce9178; }
+.var-empty { color: #666; text-align: center; padding: 8px !important; }
 
 /* ─── Toast ─── */
 

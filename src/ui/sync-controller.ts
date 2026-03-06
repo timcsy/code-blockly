@@ -1,7 +1,13 @@
 import type { SemanticNode, StylePreset } from '../core/types'
 import { generateCode } from '../core/projection/code-generator'
+import { renderToBlocklyState } from '../core/projection/block-renderer'
+import { Lifter } from '../core/lift/lifter'
 import type { BlocklyPanel } from './panels/blockly-panel'
 import type { MonacoPanel } from './panels/monaco-panel'
+
+export interface CodeParser {
+  parse(code: string): { rootNode: unknown }
+}
 
 export class SyncController {
   private blocklyPanel: BlocklyPanel
@@ -9,6 +15,10 @@ export class SyncController {
   private language: string
   private style: StylePreset
   private currentTree: SemanticNode | null = null
+  private lifter: Lifter | null = null
+  private parser: CodeParser | null = null
+  private syncing = false
+  private onErrorCallback: ((errors: SyncError[]) => void) | null = null
 
   constructor(
     blocklyPanel: BlocklyPanel,
@@ -22,12 +32,56 @@ export class SyncController {
     this.style = style
   }
 
+  /** Set lifter and parser for code→blocks direction (US2) */
+  setCodeToBlocksPipeline(lifter: Lifter, parser: CodeParser): void {
+    this.lifter = lifter
+    this.parser = parser
+  }
+
+  onError(callback: (errors: SyncError[]) => void): void {
+    this.onErrorCallback = callback
+  }
+
   /** Sync blocks → semantic tree → code (US1 direction) */
   syncBlocksToCode(): void {
-    const tree = this.blocklyPanel.extractSemanticTree()
-    this.currentTree = tree
-    const code = generateCode(tree, this.language, this.style)
-    this.monacoPanel.setCode(code)
+    if (this.syncing) return
+    this.syncing = true
+    try {
+      const tree = this.blocklyPanel.extractSemanticTree()
+      this.currentTree = tree
+      const code = generateCode(tree, this.language, this.style)
+      this.monacoPanel.setCode(code)
+    } finally {
+      this.syncing = false
+    }
+  }
+
+  /** Sync code → semantic tree → blocks (US2 direction) */
+  syncCodeToBlocks(): boolean {
+    if (this.syncing || !this.lifter || !this.parser) return false
+    this.syncing = true
+    try {
+      const code = this.monacoPanel.getCode()
+      const parseResult = this.parser.parse(code)
+      const rootNode = parseResult.rootNode as import('../core/lift/types').AstNode
+
+      // Check for parse errors
+      const errors = this.findErrors(rootNode)
+      if (errors.length > 0) {
+        this.onErrorCallback?.(errors)
+        // Continue with partial sync — lift what we can
+      }
+
+      const tree = this.lifter.lift(rootNode)
+      if (!tree) return false
+
+      this.currentTree = tree
+      const blockState = renderToBlocklyState(tree)
+      this.blocklyPanel.setState(blockState)
+      return true
+    } finally {
+      this.syncing = false
+    }
   }
 
   getCurrentTree(): SemanticNode | null {
@@ -41,4 +95,35 @@ export class SyncController {
   setLanguage(language: string): void {
     this.language = language
   }
+
+  isSyncing(): boolean {
+    return this.syncing
+  }
+
+  private findErrors(node: import('../core/lift/types').AstNode): SyncError[] {
+    const errors: SyncError[] = []
+    this.walkForErrors(node, errors)
+    return errors
+  }
+
+  private walkForErrors(node: import('../core/lift/types').AstNode, errors: SyncError[]): void {
+    if (node.type === 'ERROR') {
+      errors.push({
+        message: `Syntax error at line ${node.startPosition.row + 1}`,
+        line: node.startPosition.row,
+        column: node.startPosition.column,
+        text: node.text,
+      })
+    }
+    for (const child of node.children) {
+      this.walkForErrors(child, errors)
+    }
+  }
+}
+
+export interface SyncError {
+  message: string
+  line: number
+  column: number
+  text: string
 }

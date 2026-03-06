@@ -1,0 +1,10 @@
+{
+  "id": "apcs",
+  "name": { "zh-TW": "APCS 風格", "en": "APCS Style" },
+  "io_style": "cout",
+  "naming_convention": "camelCase",
+  "indent_size": 4,
+  "brace_style": "K&R",
+  "namespace_style": "using",
+  "header_style": "individual"
+}

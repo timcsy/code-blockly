@@ -34,7 +34,14 @@ export function generateNode(node: SemanticNode, ctx: GeneratorContext): string 
 
   // raw_code fallback
   if (node.concept === 'raw_code') {
-    return node.metadata?.rawCode ?? ''
+    const raw = node.metadata?.rawCode ?? ''
+    return raw.endsWith('\n') ? raw : raw + '\n'
+  }
+
+  // unresolved node — output raw code with comment marker
+  if (node.concept === 'unresolved') {
+    const raw = node.metadata?.rawCode ?? ''
+    return raw.endsWith('\n') ? raw : raw + '\n'
   }
 
   // comment node
@@ -49,6 +56,7 @@ export function generateExpression(node: SemanticNode, ctx: GeneratorContext): s
   const generator = ctx.generators.get(node.concept)
   if (generator) return generator(node, ctx)
   if (node.concept === 'raw_code') return node.metadata?.rawCode ?? ''
+  if (node.concept === 'unresolved') return node.metadata?.rawCode ?? ''
   return `/* ${node.concept} */`
 }
 

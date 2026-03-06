@@ -1,0 +1,321 @@
+import type { SemanticNode } from '../types'
+
+interface BlockState {
+  type: string
+  id: string
+  fields: Record<string, unknown>
+  inputs: Record<string, { block: BlockState }>
+  next?: { block: BlockState }
+  extraState?: Record<string, unknown>
+  x?: number
+  y?: number
+}
+
+interface WorkspaceBlockState {
+  blocks: {
+    languageVersion: number
+    blocks: BlockState[]
+  }
+}
+
+const CONCEPT_TO_BLOCK: Record<string, string> = {
+  var_declare: 'u_var_declare',
+  var_assign: 'u_var_assign',
+  var_ref: 'u_var_ref',
+  number_literal: 'u_number',
+  string_literal: 'u_string',
+  arithmetic: 'u_arithmetic',
+  compare: 'u_compare',
+  logic: 'u_logic',
+  logic_not: 'u_logic_not',
+  negate: 'u_negate',
+  if: 'u_if',
+  count_loop: 'u_count_loop',
+  while_loop: 'u_while_loop',
+  break: 'u_break',
+  continue: 'u_continue',
+  func_def: 'u_func_def',
+  func_call: 'u_func_call',
+  return: 'u_return',
+  print: 'u_print',
+  input: 'u_input',
+  endl: 'u_endl',
+  array_declare: 'u_array_declare',
+  array_access: 'u_array_access',
+  comment: 'c_comment_line',
+}
+
+let blockIdCounter = 0
+
+function nextBlockId(): string {
+  return `block_${++blockIdCounter}`
+}
+
+export function renderToBlocklyState(tree: SemanticNode): WorkspaceBlockState {
+  blockIdCounter = 0
+  if (tree.concept !== 'program') {
+    return { blocks: { languageVersion: 0, blocks: [] } }
+  }
+
+  const body = tree.children.body ?? []
+  if (body.length === 0) {
+    return { blocks: { languageVersion: 0, blocks: [] } }
+  }
+
+  // Chain top-level statements into a single block chain
+  const firstBlock = renderStatementChain(body)
+  if (!firstBlock) {
+    return { blocks: { languageVersion: 0, blocks: [] } }
+  }
+
+  firstBlock.x = 30
+  firstBlock.y = 30
+
+  return {
+    blocks: {
+      languageVersion: 0,
+      blocks: [firstBlock],
+    },
+  }
+}
+
+function renderStatementChain(nodes: SemanticNode[]): BlockState | null {
+  if (nodes.length === 0) return null
+
+  const first = renderBlock(nodes[0])
+  if (!first) return null
+
+  let current = first
+  for (let i = 1; i < nodes.length; i++) {
+    const next = renderBlock(nodes[i])
+    if (next) {
+      current.next = { block: next }
+      current = next
+    }
+  }
+
+  return first
+}
+
+function renderBlock(node: SemanticNode): BlockState | null {
+  const blockType = CONCEPT_TO_BLOCK[node.concept]
+
+  if (!blockType) {
+    // raw_code or unknown
+    if (node.concept === 'raw_code') {
+      return {
+        type: 'c_raw_code',
+        id: nextBlockId(),
+        fields: { CODE: node.metadata?.rawCode ?? node.properties.code ?? '' },
+        inputs: {},
+      }
+    }
+    // unresolved — render as raw_code block with visual distinction
+    if (node.concept === 'unresolved') {
+      return {
+        type: 'c_raw_code',
+        id: nextBlockId(),
+        fields: { CODE: node.metadata?.rawCode ?? '' },
+        inputs: {},
+        extraState: { unresolved: true, nodeType: node.properties.node_type },
+      }
+    }
+    return null
+  }
+
+  const block: BlockState = {
+    type: blockType,
+    id: nextBlockId(),
+    fields: {},
+    inputs: {},
+  }
+
+  switch (node.concept) {
+    case 'var_declare':
+      renderVarDeclare(node, block)
+      break
+    case 'var_assign':
+      renderVarAssign(node, block)
+      break
+    case 'var_ref':
+      block.fields.NAME = node.properties.name ?? 'x'
+      break
+    case 'number_literal':
+      block.fields.NUM = Number(node.properties.value ?? 0)
+      break
+    case 'string_literal':
+      block.fields.TEXT = node.properties.value ?? ''
+      break
+    case 'arithmetic':
+    case 'compare':
+    case 'logic':
+      renderBinaryOp(node, block)
+      break
+    case 'logic_not':
+      renderChild(node, 'operand', block, 'VALUE')
+      break
+    case 'negate':
+      renderChild(node, 'value', block, 'VALUE')
+      break
+    case 'if':
+      renderIf(node, block)
+      break
+    case 'while_loop':
+      renderWhileLoop(node, block)
+      break
+    case 'count_loop':
+      renderCountLoop(node, block)
+      break
+    case 'func_def':
+      renderFuncDef(node, block)
+      break
+    case 'func_call':
+      renderFuncCall(node, block)
+      break
+    case 'return':
+      renderChild(node, 'value', block, 'VALUE')
+      break
+    case 'print':
+      renderPrint(node, block)
+      break
+    case 'input':
+      block.fields.NAME_0 = node.properties.variable ?? 'x'
+      break
+    case 'array_declare':
+      block.fields.TYPE = node.properties.type ?? 'int'
+      block.fields.NAME = node.properties.name ?? 'arr'
+      block.fields.SIZE = Number(node.properties.size ?? 10)
+      break
+    case 'array_access':
+      block.fields.NAME = node.properties.name ?? 'arr'
+      renderChild(node, 'index', block, 'INDEX')
+      break
+    case 'comment':
+      block.fields.TEXT = node.properties.text ?? ''
+      break
+    case 'break':
+    case 'continue':
+    case 'endl':
+      // No fields or inputs
+      break
+  }
+
+  return block
+}
+
+function renderVarDeclare(node: SemanticNode, block: BlockState): void {
+  block.fields.TYPE = node.properties.type ?? 'int'
+  block.fields.NAME_0 = node.properties.name ?? 'x'
+  const inits = node.children.initializer ?? []
+  if (inits.length > 0) {
+    const initBlock = renderExpression(inits[0])
+    if (initBlock) {
+      block.inputs.INIT_0 = { block: initBlock }
+    }
+  }
+  block.extraState = { items: [inits.length > 0 ? 'var_init' : 'var'] }
+}
+
+function renderVarAssign(node: SemanticNode, block: BlockState): void {
+  block.fields.NAME = node.properties.name ?? 'x'
+  renderChild(node, 'value', block, 'VALUE')
+}
+
+function renderBinaryOp(node: SemanticNode, block: BlockState): void {
+  block.fields.OP = node.properties.operator ?? '+'
+  renderChild(node, 'left', block, 'A')
+  renderChild(node, 'right', block, 'B')
+}
+
+function renderIf(node: SemanticNode, block: BlockState): void {
+  const elseBody = node.children.else_body ?? []
+  if (elseBody.length > 0) {
+    block.type = 'u_if_else'
+  }
+  renderChild(node, 'condition', block, 'CONDITION')
+  renderStatementChild(node, 'then_body', block, 'THEN')
+  if (elseBody.length > 0) {
+    renderStatementChild(node, 'else_body', block, 'ELSE')
+  }
+}
+
+function renderWhileLoop(node: SemanticNode, block: BlockState): void {
+  renderChild(node, 'condition', block, 'CONDITION')
+  renderStatementChild(node, 'body', block, 'BODY')
+}
+
+function renderCountLoop(node: SemanticNode, block: BlockState): void {
+  block.fields.VAR = node.properties.var_name ?? 'i'
+  renderChild(node, 'from', block, 'FROM')
+  renderChild(node, 'to', block, 'TO')
+  renderStatementChild(node, 'body', block, 'BODY')
+}
+
+function renderFuncDef(node: SemanticNode, block: BlockState): void {
+  block.fields.NAME = node.properties.name ?? 'f'
+  block.fields.RETURN_TYPE = node.properties.return_type ?? 'void'
+  const params = node.properties.params
+  if (Array.isArray(params)) {
+    const paramCount = params.length
+    for (let i = 0; i < paramCount; i++) {
+      const parts = (params[i] as string).split(/\s+/)
+      block.fields[`TYPE_${i}`] = parts[0] ?? 'int'
+      block.fields[`PARAM_${i}`] = parts.slice(1).join(' ') || `p${i}`
+    }
+    if (paramCount > 0) {
+      block.extraState = { paramCount }
+    }
+  }
+  renderStatementChild(node, 'body', block, 'BODY')
+}
+
+function renderFuncCall(node: SemanticNode, block: BlockState): void {
+  block.fields.NAME = node.properties.name ?? 'f'
+  const args = node.children.args ?? []
+  for (let i = 0; i < args.length; i++) {
+    const argBlock = renderExpression(args[i])
+    if (argBlock) {
+      block.inputs[`ARG_${i}`] = { block: argBlock }
+    }
+  }
+  if (args.length > 0) {
+    block.extraState = { ...block.extraState, argCount: args.length }
+  }
+}
+
+function renderPrint(node: SemanticNode, block: BlockState): void {
+  const values = node.children.values ?? []
+  for (let i = 0; i < values.length; i++) {
+    const valBlock = renderExpression(values[i])
+    if (valBlock) {
+      block.inputs[`EXPR${i}`] = { block: valBlock }
+    }
+  }
+  if (values.length > 0) {
+    block.extraState = { itemCount: values.length }
+  }
+}
+
+function renderChild(node: SemanticNode, childName: string, block: BlockState, inputName: string): void {
+  const children = node.children[childName] ?? []
+  if (children.length > 0) {
+    const childBlock = renderExpression(children[0])
+    if (childBlock) {
+      block.inputs[inputName] = { block: childBlock }
+    }
+  }
+}
+
+function renderStatementChild(node: SemanticNode, childName: string, block: BlockState, inputName: string): void {
+  const children = node.children[childName] ?? []
+  if (children.length > 0) {
+    const chain = renderStatementChain(children)
+    if (chain) {
+      block.inputs[inputName] = { block: chain }
+    }
+  }
+}
+
+function renderExpression(node: SemanticNode): BlockState | null {
+  return renderBlock(node)
+}

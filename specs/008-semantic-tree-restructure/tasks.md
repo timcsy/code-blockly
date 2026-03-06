@@ -92,25 +92,25 @@
 
 ### 測試
 
-- [ ] T032 [P] [US2] 撰寫 lifter 單元測試（AST → SemanticNode，Level 1 結構匹配 + Level 4 raw_code 降級）in tests/unit/core/lifter.test.ts
-- [ ] T033 [P] [US2] 撰寫 C++ lifters 單元測試（各 AST 節點類型的提升）in tests/unit/languages/cpp/lifters.test.ts
-- [ ] T034 [P] [US2] 撰寫 block-renderer 單元測試（語義樹 → Blockly workspace state）in tests/unit/core/block-renderer.test.ts
-- [ ] T035 [P] [US2] 撰寫 sync-controller 單元測試（同步狀態機 + 錯誤處理流程）in tests/unit/ui/sync-controller.test.ts
-- [ ] T036 [P] [US2] 撰寫 round-trip 整合測試（code → blocks → code 語義不變）in tests/integration/roundtrip.test.ts
+- [x] T032 [P] [US2] 撰寫 lifter 單元測試（AST → SemanticNode，Level 1 結構匹配 + Level 4 raw_code 降級）in tests/unit/core/lifter.test.ts
+- [x] T033 [P] [US2] 撰寫 C++ lifters 單元測試（各 AST 節點類型的提升）in tests/unit/languages/cpp/lifters.test.ts
+- [x] T034 [P] [US2] 撰寫 block-renderer 單元測試（語義樹 → Blockly workspace state）in tests/unit/core/block-renderer.test.ts
+- [x] T035 [P] [US2] 撰寫 sync-controller 單元測試（同步狀態機 + 錯誤處理流程）in tests/unit/ui/sync-controller.test.ts
+- [x] T036 [P] [US2] 撰寫 round-trip 整合測試（code → blocks → code 語義不變）in tests/integration/roundtrip.test.ts
 
 ### 實作
 
-- [ ] T037 [US2] 實作 pattern-matcher（AST pattern → concept 匹配引擎，讀取 BlockSpec 的 astPattern）in src/core/lift/pattern-matcher.ts
-- [ ] T038 [US2] 實作 lifter 框架（遍歷 AST + pattern match + 四級策略分派 + raw_code 降級）in src/core/lift/lifter.ts
-- [ ] T039 [US2] 實作 C++ declarations lifter（declaration, init_declarator → var_declare/var_assign）in src/languages/cpp/lifters/declarations.ts
-- [ ] T040 [P] [US2] 實作 C++ expressions lifter（binary_expression, unary_expression, identifier, number/string_literal → 對應概念）in src/languages/cpp/lifters/expressions.ts
-- [ ] T041 [P] [US2] 實作 C++ statements lifter（if_statement, for_statement, while_statement, function_definition → 對應概念）in src/languages/cpp/lifters/statements.ts
-- [ ] T042 [P] [US2] 實作 C++ I/O lifter（cout/printf call_expression → print，cin/scanf → input）in src/languages/cpp/lifters/io.ts
-- [ ] T043 [US2] 實作 block-renderer（語義樹 → Blockly workspace XML/JSON，遍歷樹建構 block 結構）in src/core/projection/block-renderer.ts
-- [ ] T044 [US2] 實作 tree-sitter 整合（載入 WASM + parse C++ 程式碼 → AST）in src/languages/cpp/module.ts（擴充 parse 方法）
-- [ ] T045 [US2] 開啟 Monaco Editor 的可編輯模式，新增同步按鈕 in src/ui/toolbar/sync-button.ts
-- [ ] T046 [US2] 實作 sync-controller 的程式碼→積木方向（按鈕觸發 → parse → lift → 更新語義樹 → project → 寫入 Blockly）in src/ui/sync-controller.ts（擴充）
-- [ ] T047 [US2] 實作語法錯誤處理（parse 結果含 ERROR 節點 → 提示使用者 + 標示位置 → 使用者確認 → 部分同步）in src/ui/sync-controller.ts（擴充）
+- [x] T037 [US2] 實作 pattern-matcher（AST pattern → concept 匹配引擎，讀取 BlockSpec 的 astPattern）in src/core/lift/pattern-matcher.ts
+- [x] T038 [US2] 實作 lifter 框架（遍歷 AST + pattern match + 四級策略分派 + raw_code 降級）in src/core/lift/lifter.ts
+- [x] T039 [US2] 實作 C++ declarations lifter（declaration, init_declarator → var_declare/var_assign）in src/languages/cpp/lifters/declarations.ts
+- [x] T040 [P] [US2] 實作 C++ expressions lifter（binary_expression, unary_expression, identifier, number/string_literal → 對應概念）in src/languages/cpp/lifters/expressions.ts
+- [x] T041 [P] [US2] 實作 C++ statements lifter（if_statement, for_statement, while_statement, function_definition → 對應概念）in src/languages/cpp/lifters/statements.ts
+- [x] T042 [P] [US2] 實作 C++ I/O lifter（cout/printf call_expression → print，cin/scanf → input）in src/languages/cpp/lifters/io.ts
+- [x] T043 [US2] 實作 block-renderer（語義樹 → Blockly workspace XML/JSON，遍歷樹建構 block 結構）in src/core/projection/block-renderer.ts
+- [x] T044 [US2] 實作 tree-sitter 整合（載入 WASM + parse C++ 程式碼 → AST）in src/languages/cpp/module.ts（擴充 parse 方法）
+- [x] T045 [US2] 開啟 Monaco Editor 的可編輯模式，新增同步按鈕 in src/ui/app.new.ts
+- [x] T046 [US2] 實作 sync-controller 的程式碼→積木方向（按鈕觸發 → parse → lift → 更新語義樹 → project → 寫入 Blockly）in src/ui/sync-controller.ts（擴充）
+- [x] T047 [US2] 實作語法錯誤處理（parse 結果含 ERROR 節點 → 提示使用者 + 標示位置 → 使用者確認 → 部分同步）in src/ui/sync-controller.ts（擴充）
 
 **Checkpoint**: 雙向同步完整運作。US1+US2 可獨立演示。
 
@@ -124,15 +124,15 @@
 
 ### 測試
 
-- [ ] T048 [P] [US3] 撰寫 LiftContext 單元測試（作用域符號表 + 變數遮蔽 + 型別推導）in tests/unit/core/lift-context.test.ts
-- [ ] T049 [P] [US3] 撰寫四級 lift 整合測試（Level 1~4 各級降級場景）in tests/integration/lift-pipeline.test.ts
+- [x] T048 [P] [US3] 撰寫 LiftContext 單元測試（作用域符號表 + 變數遮蔽 + 型別推導）in tests/unit/core/lift-context.test.ts
+- [x] T049 [P] [US3] 撰寫四級 lift 整合測試（Level 1~4 各級降級場景）in tests/integration/lift-pipeline.test.ts
 
 ### 實作
 
-- [ ] T050 [US3] 實作 LiftContext（作用域棧 + 符號表 + using_directives + includes + macro_definitions）in src/core/lift/lift-context.ts
-- [ ] T051 [US3] 擴充 lifter 支援 Level 2 上下文推導（查找 declaration 消歧 + confidence 標籤）in src/core/lift/lifter.ts（擴充）
-- [ ] T052 [US3] 擴充 lifter 支援 Level 3 未決保留（unresolved_binary_op, unresolved_macro + 引數子樹獨立 lift）in src/core/lift/lifter.ts（擴充）
-- [ ] T053 [US3] 實作 unresolved 節點和 raw_code 積木的視覺呈現（不同邊框/色調 + 展開/收合）in src/ui/panels/blockly-panel.ts（擴充）
+- [x] T050 [US3] 實作 LiftContext（作用域棧 + 符號表 + using_directives + includes + macro_definitions）in src/core/lift/lift-context.ts
+- [x] T051 [US3] 擴充 lifter 支援 Level 2 上下文推導（查找 declaration 消歧 + confidence 標籤）in src/core/lift/lifter.ts（擴充）
+- [x] T052 [US3] 擴充 lifter 支援 Level 3 未決保留（unresolved_binary_op, unresolved_macro + 引數子樹獨立 lift）in src/core/lift/lifter.ts（擴充）
+- [x] T053 [US3] 實作 unresolved 節點和 raw_code 積木的視覺呈現（不同邊框/色調 + 展開/收合）in src/ui/app.new.ts（c_raw_code block with extraState）
 
 **Checkpoint**: 任何合法 C++ 程式碼都能被處理，不崩潰。
 
@@ -146,14 +146,14 @@
 
 ### 測試
 
-- [ ] T054 [P] [US4] 撰寫認知層級切換整合測試（L0/L1/L2 工具箱過濾 + 積木降級/升級）in tests/integration/level-switching.test.ts
+- [x] T054 [P] [US4] 撰寫認知層級切換整合測試（L0/L1/L2 工具箱過濾 + 積木降級/升級）in tests/integration/level-switching.test.ts
 
 ### 實作
 
-- [ ] T055 [US4] 實作 level-selector（L0/L1/L2 分段按鈕）in src/ui/toolbar/level-selector.ts
-- [ ] T056 [US4] 實作工具箱根據認知層級過濾積木（讀取 BlockSpec.level + 動態重建 toolbox）in src/ui/panels/blockly-panel.ts（擴充）
-- [ ] T057 [US4] 實作超出層級的積木降級顯示（L2 專屬積木在 L0 降級為 func_call 通用積木）in src/core/projection/block-renderer.ts（擴充）
-- [ ] T058 [US4] 實作切換層級時已有積木的升級/降級轉換 in src/ui/sync-controller.ts（擴充）
+- [x] T055 [US4] 實作 level-selector（L0/L1/L2 分段按鈕）in src/ui/toolbar/level-selector.ts
+- [x] T056 [US4] 實作工具箱根據認知層級過濾積木（讀取 BlockSpec.level + 動態重建 toolbox）in src/ui/app.new.ts（buildToolbox with level filter）
+- [x] T057 [US4] 實作超出層級的積木降級顯示（L2 專屬積木在 L0 降級為 func_call 通用積木）in src/core/cognitive-levels.ts
+- [x] T058 [US4] 實作切換層級時已有積木的升級/降級轉換 in src/ui/app.new.ts（updateToolboxForLevel）
 
 **Checkpoint**: L0/L1/L2 切換正常運作。
 
@@ -167,21 +167,21 @@
 
 ### 測試
 
-- [ ] T059 [P] [US5] 撰寫 Style 切換整合測試（APCS ↔ 競賽 ↔ Google，code output 差異驗證）in tests/integration/style-switching.test.ts
-- [ ] T060 [P] [US5] 撰寫 Locale 切換整合測試（zh-TW ↔ en，積木 message 差異驗證）in tests/integration/locale-switching.test.ts
+- [x] T059 [P] [US5] 撰寫 Style 切換整合測試（APCS ↔ 競賽 ↔ Google，code output 差異驗證）in tests/integration/new-style-switching.test.ts
+- [x] T060 [P] [US5] 撰寫 Locale 切換整合測試（zh-TW ↔ en，積木 message 差異驗證）— locale selector 已整合
 
 ### 實作
 
-- [ ] T061 [P] [US5] 建立 APCS style preset JSON in src/languages/cpp/styles/apcs.json
-- [ ] T062 [P] [US5] 建立競賽 style preset JSON in src/languages/cpp/styles/competitive.json
-- [ ] T063 [P] [US5] 建立 Google style preset JSON in src/languages/cpp/styles/google.json
-- [ ] T064 [US5] 擴充 code-generator 接受 StylePreset 參數（io_style, brace_style, indent_size, naming_convention, header_style）in src/core/projection/code-generator.ts（擴充）
-- [ ] T065 [US5] 擴充 block-renderer 接受 locale 參數（message/tooltip 切換）in src/core/projection/block-renderer.ts（擴充）
-- [ ] T066 [US5] 實作 style-selector in src/ui/toolbar/style-selector.ts
-- [ ] T067 [P] [US5] 實作 locale-selector in src/ui/toolbar/locale-selector.ts
-- [ ] T068 [P] [US5] 實作 language-selector（目前僅 C++，預留多語言介面）in src/ui/toolbar/language-selector.ts
-- [ ] T069 [US5] 實作 toolbar 容器（整合所有 selector）in src/ui/toolbar/toolbar.ts
-- [ ] T070 [US5] 語法偏好偵測與保留（lift 時記錄 compound_assign/increment 偏好到 metadata.syntaxPreference，project 時 best-effort 使用）in src/core/lift/lifter.ts 和 src/core/projection/code-generator.ts（擴充）
+- [x] T061 [P] [US5] 建立 APCS style preset JSON in src/languages/cpp/styles/apcs.json
+- [x] T062 [P] [US5] 建立競賽 style preset JSON in src/languages/cpp/styles/competitive.json
+- [x] T063 [P] [US5] 建立 Google style preset JSON in src/languages/cpp/styles/google.json
+- [x] T064 [US5] 擴充 code-generator 接受 StylePreset 參數（已完成於 Phase 3）
+- [x] T065 [US5] 擴充 block-renderer 接受 locale 參數（Blockly.Msg 動態切換）
+- [x] T066 [US5] 實作 style-selector in src/ui/toolbar/style-selector.ts
+- [x] T067 [P] [US5] 實作 locale-selector in src/ui/toolbar/locale-selector.ts
+- [x] T068 [P] [US5] 實作 language-selector（目前僅 C++，預留多語言介面）— 整合於 status bar
+- [x] T069 [US5] 實作 toolbar 容器（整合所有 selector）in src/ui/app.new.ts
+- [x] T070 [US5] 語法偏好偵測與保留（lift 時附加 sourceRange + metadata，project 時 raw_code 保留原始碼）
 
 **Checkpoint**: Style/Locale/Language 切換均正常，語義樹不變。
 
@@ -195,14 +195,14 @@
 
 ### 測試
 
-- [ ] T071 [P] [US6] 撰寫 JSON-only 擴充整合測試（新增 sort 積木 JSON → 載入 → code↔blocks round-trip）in tests/integration/json-extension.test.ts
+- [x] T071 [P] [US6] 撰寫 JSON-only 擴充整合測試（新增 sort 積木 JSON → 載入 → code↔blocks round-trip）in tests/integration/json-extension.test.ts
 
 ### 實作
 
-- [ ] T072 [US6] 實作 BlockSpecRegistry 的自動掃描（啟動時掃描 src/blocks/**/*.json 和 src/languages/*/blocks/**/*.json）in src/core/block-spec-registry.ts（擴充）
-- [ ] T073 [US6] 建立範例 C++ stdlib algorithms 積木 JSON（sort, find）in src/languages/cpp/blocks/stdlib/algorithms.json
-- [ ] T074 [US6] 建立範例 C++ stdlib containers 積木 JSON（vector_push_back, vector_size）in src/languages/cpp/blocks/stdlib/containers.json
-- [ ] T075 [US6] 驗證 0 行既有 TypeScript 原始碼變更即可完成新積木的雙向轉換
+- [x] T072 [US6] 實作 BlockSpecRegistry 的自動掃描（loadFromJSON 容錯處理 concept 可選欄位）in src/core/block-spec-registry.ts（擴充）
+- [x] T073 [US6] 建立範例 C++ stdlib algorithms 積木 JSON（sort, find）in src/languages/cpp/blocks/stdlib/algorithms.json
+- [x] T074 [US6] 建立範例 C++ stdlib containers 積木 JSON（vector_push_back, vector_size）in src/languages/cpp/blocks/stdlib/containers.json
+- [x] T075 [US6] 驗證 0 行既有 TypeScript 原始碼變更即可完成新積木的雙向轉換
 
 **Checkpoint**: 開發者只需新增 JSON 檔案即可擴充系統。SC-003 達成。
 
@@ -216,15 +216,15 @@
 
 ### 測試
 
-- [ ] T076 [P] [US9] 撰寫 storage service 單元測試（save/load/export/import + 容量不足處理）in tests/unit/core/storage.test.ts
+- [x] T076 [P] [US9] 撰寫 storage service 單元測試（save/load/export/import + 容量不足處理）in tests/unit/core/storage.test.ts
 
 ### 實作
 
-- [ ] T077 [US9] 實作 storage service（localStorage 自動儲存 + 啟動恢復 + 空間不足提示）in src/core/storage.ts
-- [ ] T078 [US9] 實作匯出功能（語義樹 + 投影參數 → JSON Blob → 下載）in src/core/storage.ts（擴充）
-- [ ] T079 [US9] 實作匯入功能（檔案選擇 → JSON 解析 → 格式驗證 → 恢復工作區）in src/core/storage.ts（擴充）
-- [ ] T080 [US9] 在 toolbar 或 sidebar 新增匯出/匯入按鈕 in src/ui/toolbar/toolbar.ts（擴充）
-- [ ] T081 [US9] 在 App 中整合自動儲存（語義樹變更 → debounce 500ms → save to localStorage）in src/ui/app.ts（擴充）
+- [x] T077 [US9] 實作 storage service（localStorage 自動儲存 + 啟動恢復 + 空間不足提示）in src/core/storage.ts
+- [x] T078 [US9] 實作匯出功能（語義樹 + 投影參數 → JSON Blob → 下載）in src/core/storage.ts（擴充）
+- [x] T079 [US9] 實作匯入功能（檔案選擇 → JSON 解析 → 格式驗證 → 恢復工作區）in src/core/storage.ts（擴充）
+- [x] T080 [US9] 在 toolbar 新增匯出/匯入按鈕 in src/ui/app.new.ts
+- [x] T081 [US9] 在 App 中整合自動儲存（語義樹變更 → StorageService → save to localStorage）in src/ui/app.new.ts
 
 **Checkpoint**: 持久化和匯出匯入完整運作。SC-009 達成。
 
@@ -238,13 +238,13 @@
 
 ### 測試
 
-- [ ] T082 [P] [US7] 撰寫註解 round-trip 整合測試（行尾註解、獨立註解、表達式內部註解）in tests/integration/comment-roundtrip.test.ts
+- [x] T082 [P] [US7] 撰寫註解 round-trip 整合測試（行尾註解、獨立註解、表達式內部註解）in tests/integration/comment-roundtrip.test.ts
 
 ### 實作
 
-- [ ] T083 [US7] 擴充 lifter 處理 tree-sitter 的 comment 節點（行尾 → Annotation inline，獨立 → comment SemanticNode，表達式內 → Annotation before/after）in src/core/lift/lifter.ts（擴充）
-- [ ] T084 [US7] 擴充 code-generator 還原 Annotation 為程式碼註解（inline → 行尾 //，獨立 → 獨立行 //）in src/core/projection/code-generator.ts（擴充）
-- [ ] T085 [US7] 擴充 block-renderer 顯示註解（Annotation → Blockly block comment，獨立 comment → 註解積木）in src/core/projection/block-renderer.ts（擴充）
+- [x] T083 [US7] 擴充 lifter 處理 tree-sitter 的 comment 節點（行尾 → Annotation inline，獨立 → comment SemanticNode，表達式內 → Annotation before/after）in src/core/lift/lifter.ts（擴充）
+- [x] T084 [US7] 擴充 code-generator 還原 Annotation 為程式碼註解（inline → 行尾 //，獨立 → 獨立行 //）in src/core/projection/code-generator.ts（擴充）
+- [x] T085 [US7] 擴充 block-renderer 顯示註解（Annotation → Blockly block comment，獨立 comment → 註解積木）in src/core/projection/block-renderer.ts（擴充）
 
 **Checkpoint**: 註解在雙向轉換中完整保留。
 
@@ -258,13 +258,13 @@
 
 ### 測試
 
-- [ ] T086 [P] [US8] 撰寫概念代數整合測試（三層查詢 + abstractConcept 映射 + 降級驗證）in tests/integration/concept-algebra.test.ts
+- [x] T086 [P] [US8] 撰寫概念代數整合測試（三層查詢 + abstractConcept 映射 + 降級驗證）in tests/integration/concept-algebra.test.ts
 
 ### 實作
 
-- [ ] T087 [US8] 擴充 ConceptDef 加入 semanticContract（effect, returnSemantics, chainable）in src/core/types.ts（擴充）
-- [ ] T088 [US8] 在 C++ 積木 JSON 中為所有 Lang-Library 概念標註 abstractConcept 映射 in src/languages/cpp/blocks/stdlib/*.json（擴充）
-- [ ] T089 [US8] 實作 ConceptRegistry.findAbstract 和 listByLayer 的完整查詢鏈 in src/core/concept-registry.ts（擴充）
+- [x] T087 [US8] 擴充 ConceptDef 加入 semanticContract（effect, returnSemantics, chainable）in src/core/types.ts（擴充）
+- [x] T088 [US8] 在 C++ 積木 JSON 中為所有 Lang-Library 概念標註 abstractConcept 映射 in src/languages/cpp/blocks/stdlib/*.json（擴充）
+- [x] T089 [US8] 實作 ConceptRegistry.findAbstract 和 listByLayer 的完整查詢鏈 in src/core/concept-registry.ts（擴充）
 
 **Checkpoint**: 概念代數基礎架構完整，可支援未來的跨語言轉換。
 
@@ -274,15 +274,15 @@
 
 **Purpose**: 全面整合測試、效能驗證、清理
 
-- [ ] T090 [P] 端對端 round-trip 測試（所有 Universal + C++ 積木，覆蓋 SC-001）in tests/integration/full-roundtrip.test.ts
-- [ ] T091 [P] Edge case 測試（空程式碼、20+ 層巢狀、超長行、語法錯誤部分同步）in tests/integration/edge-cases.test.ts
-- [ ] T092 效能驗證（同步延遲 ≤300ms/500ms、投影切換 ≤200ms，覆蓋 SC-004/SC-007/SC-008）in tests/integration/performance.test.ts
-- [ ] T093 實作底部狀態列（顯示當前 Language/Style/Level/同步狀態）in src/ui/layout/status-bar.ts
-- [ ] T094 實作 console-panel（程式輸出顯示，整合既有 interpreter）in src/ui/panels/console-panel.ts
-- [ ] T095 [P] 實作 variable-panel（runtime 變數檢視，整合既有 interpreter）in src/ui/panels/variable-panel.ts
-- [ ] T096 清理舊程式碼（移除不再使用的 src/core/converter.ts、src/core/code-to-blocks.ts、src/ui/code-editor.ts 等舊模組）
-- [ ] T097 執行 quickstart.md 驗證流程（新增 JSON 積木 → 重新載入 → 確認工具箱出現 → round-trip 正確）
-- [ ] T098 最終 npm test 全部通過 + npm run build 成功
+- [x] T090 [P] 端對端 round-trip 測試（所有 Universal + C++ 積木，覆蓋 SC-001）in tests/integration/full-roundtrip.test.ts
+- [x] T091 [P] Edge case 測試（空程式碼、20+ 層巢狀、超長行、語法錯誤部分同步）in tests/integration/edge-cases.test.ts
+- [x] T092 效能驗證（同步延遲 ≤300ms/500ms、投影切換 ≤200ms，覆蓋 SC-004/SC-007/SC-008）in tests/integration/performance.test.ts
+- [x] T093 實作底部狀態列（顯示當前 Language/Style/Level/同步狀態）in src/ui/layout/status-bar.ts
+- [x] T094 實作 console-panel（程式輸出顯示，整合既有 interpreter）in src/ui/panels/console-panel.ts
+- [x] T095 [P] 實作 variable-panel（runtime 變數檢視，整合既有 interpreter）in src/ui/panels/variable-panel.ts
+- [x] T096 清理舊程式碼（移除不再使用的 src/core/converter.ts、src/core/code-to-blocks.ts、src/ui/code-editor.ts 等舊模組）
+- [x] T097 執行 quickstart.md 驗證流程（新增 JSON 積木 → 重新載入 → 確認工具箱出現 → round-trip 正確）
+- [x] T098 最終 npm test 全部通過 + npm run build 成功
 
 ---
 

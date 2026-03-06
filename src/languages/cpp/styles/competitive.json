@@ -1,0 +1,10 @@
+{
+  "id": "competitive",
+  "name": { "zh-TW": "競賽風格", "en": "Competitive Style" },
+  "io_style": "printf",
+  "naming_convention": "snake_case",
+  "indent_size": 4,
+  "brace_style": "K&R",
+  "namespace_style": "using",
+  "header_style": "bits"
+}

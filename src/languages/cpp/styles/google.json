@@ -1,0 +1,10 @@
+{
+  "id": "google",
+  "name": { "zh-TW": "Google 風格", "en": "Google Style" },
+  "io_style": "cout",
+  "naming_convention": "snake_case",
+  "indent_size": 2,
+  "brace_style": "K&R",
+  "namespace_style": "explicit",
+  "header_style": "individual"
+}

@@ -7,7 +7,9 @@ export class BlockSpecRegistry {
   loadFromJSON(specs: BlockSpec[]): void {
     for (const spec of specs) {
       this.specs.set(spec.id, spec)
-      this.byConceptId.set(spec.concept.conceptId, spec)
+      if (spec.concept?.conceptId) {
+        this.byConceptId.set(spec.concept.conceptId, spec)
+      }
     }
   }
 
