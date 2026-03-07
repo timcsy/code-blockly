@@ -1541,11 +1541,11 @@ LLM（機率性，有 guardrail）：
   for(auto it=v.begin(); it!=v.end(); ++it)
     if(*it == target) return it;
   → 「這看起來是 linear_search 慣用語」
-  → confidence: 'llm_inferred'
+  → confidence: 'llm_suggested'
   → 使用者可確認或否決
 ```
 
-LLM 的推斷結果標記 `confidence: 'llm_inferred'`，不能靜默地改變語義結構——必須讓使用者看到並確認。
+LLM 的推斷結果標記 `confidence: 'llm_suggested'`，不能靜默地改變語義結構——必須讓使用者看到並確認（見下方仲裁規則）。
 
 **2. 處理語義阻抗與跨語言映射**
 
@@ -1630,6 +1630,72 @@ LLM 作為語義結構的自然語言介面——不只搜尋，還能建構：
 原則：LLM 永遠在 guardrails 之上，語義結構永遠在最底層。
       LLM 可以建議、推斷、生成，但最終決定權在確定性系統和使用者手上。
 ```
+
+#### 仲裁規則：Symbolic vs Connectionist 衝突時誰說了算
+
+當 Pattern Engine（確定性）和 LLM（機率性）對同一段程式碼給出不同結論時，需要明確的仲裁邏輯。從根公理（語義結構是 source of truth）推導：
+
+**核心原則：確定性系統是自動機，機率性系統是顧問**
+
+```
+確定性系統（Pattern Engine）= 自動機
+  → 可以自動寫入語義結構
+  → 因為它的結論可以被形式化驗證（roundtrip test、AST constraints）
+
+機率性系統（LLM）= 顧問
+  → 不可以自動寫入語義結構
+  → 它的結論需要人類或確定性系統的批准
+```
+
+**仲裁優先序**：
+
+```
+Pattern Engine（確定性驗證）> 使用者確認（人在迴路）> LLM 建議（機率推斷）> 降級（安全網）
+```
+
+**四種衝突場景及仲裁結果**：
+
+| 場景 | Pattern Engine | LLM | 仲裁結果 | confidence |
+|------|---------------|-----|---------|------------|
+| 共識 | 匹配成功 | 同意 | 採用 Pattern Engine 結論 | `high` |
+| PE 優先 | 匹配成功 | 不同意 | 採用 Pattern Engine 結論，可附帶 LLM 替代建議供參考 | `high` |
+| 人在迴路 | 無法匹配 | 有建議 | **不自動採用**，呈現為使用者可接受/否決的建議 | 接受前：`llm_suggested`，接受後：`user_confirmed` |
+| 安全網 | 無法匹配 | 也沒建議 | 降級為 raw_code | `degraded` |
+
+**confidence 的完整層級**（從高到低）：
+
+```
+confidence: 'high'            ← 確定性系統完全驗證，所有檢查通過
+confidence: 'warning'         ← 確定性系統結構匹配但語義可疑（附帶 warning_reason）
+confidence: 'inferred'        ← 確定性系統的啟發式推斷
+confidence: 'user_confirmed'  ← LLM 建議 + 使用者明確接受（人在迴路）
+confidence: 'llm_suggested'   ← LLM 建議，未經驗證，等待使用者確認（暫存狀態）
+confidence: 'degraded'        ← 降級為 raw_code
+```
+
+**`llm_suggested` 和 `user_confirmed` 的關鍵差異**：
+
+- `llm_suggested`：語義結構中的**暫存狀態**——不參與 roundtrip 驗證，視覺上明顯標記為「AI 建議」，投影為程式碼時仍使用原始文字（不按建議的概念生成）
+- `user_confirmed`：使用者明確接受後，成為語義結構的**正式部分**——參與 roundtrip，但保留 `source: 'llm'` 標記，使用者可隨時撤回
+
+**為什麼 LLM 不能自動寫入語義結構**（即使它「很有信心」）：
+
+```
+LLM：「我 95% 確定這是 linear_search」
+系統：但 Pattern Engine 無法驗證這個判斷
+
+如果自動寫入：
+  → 語義結構從「確定性 source of truth」變成「機率性推測」
+  → roundtrip test 可能在未來因為 LLM 版本更新而結果不同
+  → 違反根公理：語義結構必須是確定性的、可重現的
+
+如果等待使用者確認：
+  → 語義結構仍然是確定性的（由人類決策 + 確定性系統共同維護）
+  → LLM 提供了價值（建議），但沒有汙染 source of truth
+  → 使用者的決策是確定性的——同一個人對同一段程式碼會做相同的判斷
+```
+
+類比：LLM 像是 code review 中的 AI reviewer——它可以留言建議，但不能自己 merge PR。只有人類 reviewer（使用者）或 CI（Pattern Engine）可以批准合併。
 
 ---
 
