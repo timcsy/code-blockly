@@ -19,9 +19,13 @@ export interface Annotation {
   position: 'before' | 'after' | 'inline'
 }
 
+export type ConfidenceLevel = 'high' | 'warning' | 'inferred' | 'user_confirmed' | 'llm_suggested' | 'raw_code'
+export type DegradationCause = 'syntax_error' | 'unsupported' | 'nonstandard_but_valid'
+
 export interface NodeMetadata {
   syntaxPreference?: string
-  confidence?: 'high' | 'inferred'
+  confidence?: ConfidenceLevel
+  degradationCause?: DegradationCause
   rawCode?: string
   sourceRange?: SourceRange
   blockId?: string

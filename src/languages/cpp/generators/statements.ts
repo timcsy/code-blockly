@@ -6,7 +6,7 @@ export function registerStatementGenerators(g: Map<string, NodeGenerator>): void
     return generateBody(node.children.body ?? [], ctx)
   })
 
-  g.set('if', (node, ctx) => {
+  const ifGenerator: NodeGenerator = (node, ctx) => {
     const cond = generateExpression((node.children.condition ?? [])[0], ctx)
     const thenBody = node.children.then_body ?? []
     const elseBody = node.children.else_body ?? []
@@ -20,7 +20,9 @@ export function registerStatementGenerators(g: Map<string, NodeGenerator>): void
     }
     code += '\n'
     return code
-  })
+  }
+  g.set('if', ifGenerator)
+  g.set('if_else', ifGenerator)
 
   g.set('while_loop', (node, ctx) => {
     const cond = generateExpression((node.children.condition ?? [])[0], ctx)
