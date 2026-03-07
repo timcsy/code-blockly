@@ -51,7 +51,7 @@ Scope 4 專案（Project）    → 語義圖
 
 Scope 5 系統（System）     → 語義超圖
   多個專案/服務之間的互動（API、訊息佇列、共享資料庫）
-  包含外部語義套件（Semantic Packages）——透過語義契約引用、透過 WASM 執行
+  包含外部語義套件（Semantic Packages）——透過語義契約引用、透過可插拔後端執行
 ```
 
 **Scope 0-2 是樹**：檔案內的語法天然就是樹結構，這是已經實現的部分。
@@ -1336,8 +1336,8 @@ Scratch 風格:  zelos renderer, compact density, scratch 配色, 預設 inline
 | 積木排版要水平還是垂直 | **Block Style**：這是投影參數，不是結構決策 |
 | 要不要支援多檔案 | **根公理**：語義結構在檔案內是樹、檔案間是圖，Scope 3+ 加圖邊即可 |
 | 該用什麼方式呈現 | **P1**：scope + viewType 決定投影，所有視圖從同一結構衍生 |
-| 外部套件不理解怎麼辦 | **P2 降級 + WASM**：黑箱函式透過語義契約引用、透過 WASM 執行 |
-| 怎麼讓程式可以共享 | **語義套件**：共享語義結構 + 投影定義 + WASM 執行體 |
+| 外部套件不理解怎麼辦 | **P2 降級 + 可插拔執行**：黑箱函式透過語義契約引用、透過最適後端執行 |
+| 怎麼讓程式可以共享 | **語義套件**：共享語義結構 + 投影定義 + 多後端執行體 |
 | LLM 該放在哪裡 | **Guardrails 之上**：LLM 是語用分析師，語義結構是 source of truth |
 
 ---
@@ -1366,11 +1366,11 @@ Scratch 風格:  zelos renderer, compact density, scratch 配色, 預設 inline
 
 8. **語義契約的驗證成本**：為每個 AbstractConcept 定義完備的 semanticContract + constraints 是百科全書式的工程。初期應只覆蓋 L0-L1 概念（控制流、基本 I/O、變數操作，semanticContract 簡單、constraints 幾乎不需要），L2 概念按需補充常見陷阱，跨語言 constraints 在使用者實際做跨語言轉換時才需要（可由 LLM 輔助生成初稿）。追求「完美映射」會導致系統難以啟動。
 
-9. **WASM 的冷啟動與橋接開銷**：WASM 和 JS 之間每次跨邊界呼叫都有序列化/反序列化成本。如果語義直譯器逐節點切換 interpret ↔ wasm，在大量小操作的場景會效能崩潰。正確的粒度是「子樹」而非「節點」——一整個函式或迴圈丟給 WASM 執行，減少跨邊界次數。
+9. **執行後端的橋接開銷**：不同後端和 JS 主線程之間的跨邊界呼叫都有成本——WASM 有序列化/反序列化開銷，Remote 有網路延遲，WebGPU 有 GPU 同步代價。如果語義直譯器逐節點切換後端，在大量小操作的場景會效能崩潰。正確的粒度是「子樹」而非「節點」——一整個函式或迴圈丟給同一後端執行，減少跨邊界次數。JS native 後端因為零 bridge 開銷，特別適合大量小型運算。
 
 ---
 
-## 願景：語義網路與 WASM 執行
+## 願景：語義網路與可插拔執行
 
 從根公理和 Scope 分層自然延伸出的長期方向。
 
@@ -1404,14 +1404,14 @@ view = project(structure, scope, execution, { runtime })
 這與 P2 的概念成熟度自然銜接：
 
 ```
-階段 0: 不認識        → raw_code  → 整段丟給 WASM 執行（如果有的話）
-階段 1: 認識但無積木   → func_call → WASM 執行，只看輸入輸出
+階段 0: 不認識        → raw_code  → 整段丟給編譯執行（如果有執行體的話）
+階段 1: 認識但無積木   → func_call → 編譯執行，只看輸入輸出
 階段 2: 有專屬積木     → 完全理解  → 語義直譯器逐步執行、可視覺化
 ```
 
-對學習者來說，黑箱是合理的——你不需要理解 `sort` 的內部實作，你只需要知道「丟進去一個陣列，出來一個排好的陣列」。WASM 讓黑箱真的能跑。
+對學習者來說，黑箱是合理的——你不需要理解 `sort` 的內部實作，你只需要知道「丟進去一個陣列，出來一個排好的陣列」。執行體（不論後端）讓黑箱真的能跑。
 
-### Raw code 的不可執行擴散與 WASM 解毒
+### Raw code 的不可執行擴散與執行體解毒
 
 語義直譯器逐節點執行時，遇到 `raw_code` 就卡住。更嚴重的是，不可執行像**汙染（taint）**一樣往下游擴散：
 
@@ -1425,20 +1425,20 @@ func main() {
 一個 raw_code 節點就能讓整個後續執行鏈斷裂。
 ```
 
-如果能為 `raw_code` 提供一個**外延等價（extensionally equivalent）**的 WASM 實作，汙染就被阻斷：
+如果能為 `raw_code` 提供一個**外延等價（extensionally equivalent）**的執行體（任何後端皆可），汙染就被阻斷：
 
 ```
 func main() {
-    x = 5                          // ✅ 語義直譯器
-    y = wasm_call("complex_algo")  // ✅ WASM 執行，回傳具體值
-    z = x + y                      // ✅ 語義直譯器（y 已經是具體值）
-    print(z)                       // ✅ 語義直譯器
+    x = 5                                // ✅ 語義直譯器
+    y = compiled_call("complex_algo")    // ✅ 編譯執行（JS/WASM/...），回傳具體值
+    z = x + y                            // ✅ 語義直譯器（y 已經是具體值）
+    print(z)                             // ✅ 語義直譯器
 }
 ```
 
 **外延等價的定義**：兩個實作 A 和 B 是外延等價的，若且唯若對所有合法輸入，A(input) ≡ B(input)。不要求內部結構相同（內涵等價），只要求輸入輸出行為相同。
 
-**外延等價驗證**：系統可以用測試輸入，自動驗證 WASM 實作是否和語義直譯器的結果一致。如果不一致，標記為 `contract_violation`。
+**外延等價驗證**：系統可以用測試輸入，自動驗證執行體是否和語義直譯器的結果一致。如果不一致，標記為 `contract_violation`。
 
 ### 執行策略分層
 
@@ -1450,14 +1450,15 @@ func main() {
   透明度：完全透明——可逐步、可視覺化、可看變數變化
   適用：教學、debug、理解程式行為
 
-策略 2：WASM 執行（Compiled Execution）
+策略 2：編譯執行（Compiled Execution）
   速度：快
   透明度：黑箱——只看輸入輸出
+  後端：WASM、JS native、WebGPU、Remote 等（可插拔）
   適用：效能需求、raw_code 解毒、大量資料處理
 
 策略 3：混合執行（Hybrid）
   部分節點用語義直譯（需要看清楚的地方）
-  部分節點用 WASM（不需要看或需要效能的地方）
+  部分節點用編譯執行（不需要看或需要效能的地方）
   使用者可以選擇哪些節點「展開」、哪些「折疊」
 ```
 
@@ -1467,11 +1468,11 @@ func main() {
 學習者視角：
   main()          → 語義直譯，逐步看
     my_sort()     → 語義直譯，展開看自己寫的排序
-    std::sort()   → WASM 折疊，只看結果
+    std::sort()   → 編譯執行（WASM），只看結果
     print()       → 語義直譯，看輸出過程
 
 效能視角：
-  main()          → WASM，全速執行
+  main()          → 編譯執行，全速
   （需要 debug 時切回語義直譯）
 ```
 
@@ -1480,51 +1481,99 @@ func main() {
 ```
 view = project(structure, scope, execution, {
   runtime,
-  executionStrategy: 'interpret' | 'wasm' | 'hybrid',
-  wasmProvider: '@stdlib' | '@optimized' | ...,
+  executionStrategy: 'interpret' | 'compiled' | 'hybrid',
+  backend: 'wasm' | 'js' | 'remote' | 'webgpu' | ...,
+  provider: '@stdlib' | '@optimized' | ...,
 })
 
 混合執行時，每個節點獨立選擇策略：
   node.executionStrategy = 'interpret'  → 逐步執行，可視覺化
-  node.executionStrategy = 'wasm'       → WASM 執行，只看結果
+  node.executionStrategy = 'compiled'   → 編譯執行，只看結果
+  node.backend = 'wasm' | 'js' | ...   → 選擇執行後端
 
   預設策略：
     已知概念且有語義直譯器  → interpret（可以逐步看）
-    raw_code 且有 WASM     → wasm（解毒）
-    raw_code 且無 WASM     → 不可執行（汙染下游）
-    使用者手動切換          → 任何節點都可在 interpret ↔ wasm 間切換
+    raw_code 且有執行體     → compiled（解毒，自動選最適後端）
+    raw_code 且無執行體     → 不可執行（汙染下游）
+    使用者手動切換          → 任何節點都可在 interpret ↔ compiled 間切換
 ```
 
-### WASM 效能市場
+### 可插拔執行後端（Pluggable Execution Backends）
 
-同一個語義概念可以有多個 WASM 實作，由不同來源提供，效能和適用場景各異：
+執行是語義結構的**行為投影**。根據外延等價原則——相同輸入產生相同輸出，內部實作方式不影響語義正確性——執行後端天然應該是可插拔的：
+
+```
+執行後端（Execution Backend）：
+
+  interpret — 語義直譯器
+    逐節點解釋執行，全透明
+    零編譯成本，最慢但最適合教學
+    所有已知概念都支援
+
+  js — JavaScript Native
+    瀏覽器原生執行，零 bridge 開銷
+    小型運算（arithmetic、string ops）比 WASM 更快
+    撰寫成本最低——任何人都能寫一個符合契約的 JS 函數
+    適合：輕量概念、快速原型、社群貢獻入門
+
+  wasm — WebAssembly
+    跨語言編譯產物，沙箱隔離
+    大量運算場景效能最佳
+    適合：計算密集、從 C++/Rust 編譯的現有庫
+
+  remote — 遠端執行
+    Server-side 執行，適合需要 OS API 或大量資源的情況
+    網路延遲是代價，但突破了瀏覽器沙箱限制
+    適合：檔案系統操作、資料庫查詢、GPU 運算
+
+  webgpu — WebGPU 平行運算
+    瀏覽器端 GPU 加速
+    適合：矩陣運算、大規模資料處理、機器學習推論
+
+每個執行體只需滿足語義契約（相同輸入 → 相同輸出），
+後端選擇是效能/透明度的取捨，不影響語義正確性。
+```
+
+**自動後端選擇**：系統可根據輸入規模和可用後端自動選擇——小陣列排序用 JS（避免 WASM bridge 開銷）、大陣列用 WASM、超大陣列用 WebGPU。使用者也可手動覆蓋。
+
+**降低貢獻門檻**：不是所有語義套件的作者都會編譯 WASM，但寫一個符合契約的 JS 函數幾乎零成本。JS 後端讓社群貢獻的門檻從「會編譯 WASM」降到「會寫 JavaScript」。
+
+### 效能市場（Performance Marketplace）
+
+同一個語義概念可以有多個執行體實作，由不同來源、不同後端提供，效能和適用場景各異：
 
 ```
 Semantic Package: sort
   語義契約：input: array<T> → output: array<T>（已排序）
 
-  實作 A：@stdlib/sort.wasm
+  實作 A：@stdlib/sort.wasm       [backend: wasm]
     來源：std::sort 編譯
     benchmark：1M items → 120ms
     適用：通用場景
 
-  實作 B：@optimized/sort.wasm
+  實作 B：@optimized/sort.wasm    [backend: wasm]
     來源：hand-tuned radix sort
     benchmark：1M items → 45ms
     constraints：只適用於整數陣列
 
-  實作 C：@student/sort.wasm
+  實作 C：@community/sort.js      [backend: js]
+    來源：社群貢獻的 JS 實作
+    benchmark：1M items → 280ms，1K items → 0.3ms
+    適用：小陣列最快（無 WASM bridge 開銷）
+
+  實作 D：@student/sort.js        [backend: js]
     來源：學生的 bubble sort
     benchmark：1M items → 8500ms
     教學價值：可展開看實作，理解 O(n²)
 ```
 
 **使用者根據需求選擇**：
-- **學習者**：選 C——可以展開看實作、理解演算法、對比效能差異
-- **效能導向**：選 B——最快，但有 constraints 限制
+- **學習者**：選 D——可以展開看實作、理解演算法、對比效能差異
+- **效能導向**：選 B——大資料最快，但有 constraints 限制
 - **通用場景**：選 A——最穩定、無限制
+- **輕量場景**：選 C——小資料零開銷，JS 原生
 
-**自動化基準測試**：同一語義契約的所有 WASM 實作，用相同的測試輸入跑 benchmark，自動排名。使用者可以看到「這個排序實作比那個快 3 倍，但只能用在整數」的量化比較。
+**自動化基準測試**：同一語義契約的所有執行體（不論後端），用相同的測試輸入跑 benchmark，自動排名。使用者可以看到「WASM 版在大陣列快 3 倍，但 JS 版在小陣列反而更快」的量化比較。系統可根據輸入規模自動選擇最適執行體。
 
 **教學價值**：效能市場讓學習者**直觀感受演算法複雜度**——不是課本上的 O(n²) 符號，而是「bubble sort 跑了 8.5 秒，std::sort 跑了 0.12 秒」的真實數字。這是 CLT 增生負荷（germane load）的絕佳來源。
 
@@ -1547,12 +1596,13 @@ Semantic Package = 語義契約 + 投影定義 + 執行體
   Python:   sorted(arr)
 
 執行體（Implementations）：
-  cpp.wasm   — 從 std::sort 編譯
-  rust.wasm  — 從 slice::sort 編譯
-  js native  — Array.prototype.sort
+  cpp.wasm        [backend: wasm]   — 從 std::sort 編譯
+  rust.wasm       [backend: wasm]   — 從 slice::sort 編譯
+  sort.js         [backend: js]     — Array.prototype.sort 封裝
+  sort-gpu.js     [backend: webgpu] — GPU 平行排序
 ```
 
-消費者不需要懂原始語言——他們引用的是**語義概念**，執行的是 WASM，看到的是自己層級的投影。
+消費者不需要懂原始語言——他們引用的是**語義概念**，系統自動選擇最適的執行後端，看到的是自己層級的投影。
 
 ### 互聯網式的語義網路
 
@@ -1560,13 +1610,13 @@ Semantic Package = 語義契約 + 投影定義 + 執行體
 
 ```
 我的程式（語義樹）
-  ├── 引用 @stdlib/sort      （標準庫，WASM 執行）
-  ├── 引用 @stdlib/io        （I/O，瀏覽器 API 橋接）
-  ├── 引用 @community/matrix （社群分享的矩陣運算）
-  └── 引用 @school/grading   （老師分享的評分函式）
+  ├── 引用 @stdlib/sort      （標準庫，wasm 後端）
+  ├── 引用 @stdlib/io        （I/O，js 後端 + 瀏覽器 API 橋接）
+  ├── 引用 @community/matrix （社群分享，webgpu 後端）
+  └── 引用 @school/grading   （老師分享，js 後端）
 ```
 
-每個引用節點在語義結構中是一個 `semantic_package_ref`，帶有語義契約。執行時透過 WASM 呼叫實際實作。投影時根據使用者的 Concept Level 和 Locale 顯示對應的積木或程式碼。
+每個引用節點在語義結構中是一個 `semantic_package_ref`，帶有語義契約。執行時系統根據可用後端和輸入特性選擇最適的執行體。投影時根據使用者的 Concept Level 和 Locale 顯示對應的積木或程式碼。
 
 ### 教學場景
 
@@ -1706,7 +1756,7 @@ Semantic Package = 語義契約 + 投影定義 + 執行體
   對應 P4：L1 進階——鷹架開始退場
 
 效能（專家模式）：
-  策略：wasm + 無快照
+  策略：compiled（wasm/js/webgpu/remote）+ 無快照
   時空旅行：不可用（或僅在 pure 節點可重新執行）
   副作用：直接作用於真實環境
   適合：關注結果正確性而非過程理解
@@ -1717,7 +1767,7 @@ Semantic Package = 語義契約 + 投影定義 + 執行體
 
 ### 相關工作與差異
 
-業界已有多個專案在不同維度上探索類似的理念，但尚無系統能完整整合語義結構投影、雙向轉換、全球語義網和 WASM 執行。
+業界已有多個專案在不同維度上探索類似的理念，但尚無系統能完整整合語義結構投影、雙向轉換、全球語義網和可插拔執行。
 
 | 專案 | 做了什麼 | 對應本框架的哪個原則 | 本質差異 |
 |------|---------|-------------------|---------|
@@ -1725,7 +1775,7 @@ Semantic Package = 語義契約 + 投影定義 + 執行體
 | **Hedy** | 漸進式教學語言，Level 1-18 語法逐步嚴謹化 | P4 漸進揭露 | Hedy 的每個 Level 是不同的語法（學習者必須「忘掉」舊語法學新語法）。我們的 Level 切換是投影解析度變更——語義結構不變，學習者一直接觸同一語言的真實結構（S2 鷹架可退場） |
 | **Blockly / Scratch** | 積木式視覺編程，積木→程式碼單向生成 | P1 投影定理 | 大多是「積木生成程式碼」的單向流，缺乏深度語義 lift 的回轉能力。積木和程式碼沒有共同的語義模型 |
 | **LSP / LSIF** | 跨檔案符號索引，提供 references/definitions | Scope 3-5 的語義圖 | LSP 是位置導向的索引（「第 42 行第 5 列有一個 symbol」），我們是語義導向的圖（「這個 func_call 節點引用那個 func_def 節點」）。LSP 可作為建構語義圖邊的輸入源 |
-| **WebContainers (StackBlitz)** | 瀏覽器中用 WASM 跑完整 Node.js | WASM 黑箱執行 | WebContainers 提供通用執行環境，但沒有與語義辨識結合。我們的定位是語義直譯器優先、WASM 只用於黑箱函式 |
+| **WebContainers (StackBlitz)** | 瀏覽器中用 WASM 跑完整 Node.js | 可插拔執行後端 | WebContainers 提供通用執行環境，但沒有與語義辨識結合。我們的定位是語義直譯器優先、編譯執行（WASM/JS/WebGPU/Remote）用於黑箱函式，後端可插拔 |
 | **IPFS** | 內容定址的分散式儲存 | 語義套件的分發基礎設施 | IPFS 是儲存層協議，不理解內容的語義。語義套件需要在 IPFS 之上加語義契約和投影定義 |
 
 **本框架的獨特定位**：
@@ -1937,4 +1987,4 @@ LLM：「我 95% 確定這是 linear_search」
 
 ## 一句話總結
 
-> **程式是語義結構——檔案內是樹、檔案間是圖、系統間是超圖。程式碼、積木、流程圖、執行都是它的參數化投影，由 scope 和 viewType 決定觀察角度。概念形成可分層、可映射的代數結構，可封裝為語義套件透過 WASM 執行與共享。LLM 作為語用分析師在確定性 guardrails 之上輔助推斷與生成。系統透過開放擴充成長，透過漸進揭露（概念層級 × 結構範圍）適應從初學者到系統架構師的所有使用者。積木是認知鷹架——降低外在負荷、在近側發展區內引導學習，並最終退場。**
+> **程式是語義結構——檔案內是樹、檔案間是圖、系統間是超圖。程式碼、積木、流程圖、執行都是它的參數化投影，由 scope 和 viewType 決定觀察角度。概念形成可分層、可映射的代數結構，可封裝為語義套件透過可插拔後端（JS/WASM/WebGPU/Remote）執行與共享。LLM 作為語用分析師在確定性 guardrails 之上輔助推斷與生成。系統透過開放擴充成長，透過漸進揭露（概念層級 × 結構範圍）適應從初學者到系統架構師的所有使用者。積木是認知鷹架——降低外在負荷、在近側發展區內引導學習，並最終退場。**
