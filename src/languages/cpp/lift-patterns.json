@@ -32,6 +32,13 @@
     ]
   },
   {
+    "id": "cpp_endl",
+    "astNodeType": "identifier",
+    "concept": { "conceptId": "endl" },
+    "constraints": [{ "field": "$text", "text": "endl" }],
+    "priority": 5
+  },
+  {
     "id": "cpp_true",
     "astNodeType": "true",
     "concept": { "conceptId": "var_ref" },

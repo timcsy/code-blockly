@@ -135,8 +135,8 @@
 - [X] T037 透過 grep 驗證整個程式碼庫中 `preferHandWritten` 和 `SWITCH_CASE_CONCEPTS` 的引用為零
 - [X] T038 驗證 `src/languages/cpp/lifters/` 中無殘留未使用的 hand-written lifter 函數
 - [X] T039 執行完整測試套件 `npx vitest run`——確認全部測試通過
-- [ ] T040 瀏覽器驗證：測試 10 個程式碼→積木轉換場景（include、using namespace、main、var_declare、if、cin、cout、return、算術運算、字串），確認行為與遷移前一致
-- [ ] T041 執行 quickstart.md 驗證——僅用 JSON 新增一個 Layer 1 概念並驗證雙向轉換
+- [X] T040 瀏覽器驗證：測試 10 個程式碼→積木轉換場景（include、using namespace、main、var_declare、if、cin、cout、return、算術運算、字串），確認行為與遷移前一致
+- [X] T041 執行 quickstart.md 驗證——僅用 JSON 新增一個 Layer 1 概念並驗證雙向轉換
 
 ---
 

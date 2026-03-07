@@ -402,6 +402,10 @@ export class PatternLifter {
   private checkConstraints(node: AstNode, constraints: AstPattern['constraints']): boolean {
     if (!constraints) return true
     for (const c of constraints) {
+      if (c.field === '$text') {
+        if (c.text && node.text !== c.text) return false
+        continue
+      }
       const child = node.childForFieldName(c.field)
       if (!child) return false
       if (c.text && child.text !== c.text) return false
