@@ -37,6 +37,11 @@ export class PatternLifter {
     this.liftStrategyRegistry = registry
   }
 
+  /** Check if any pattern exists for the given AST node type */
+  hasPatternForNodeType(nodeType: string): boolean {
+    return this.patterns.has(nodeType)
+  }
+
   /** Load patterns from BlockSpec JSON definitions (simple/constrained patterns).
    *  skipNodeTypes: set of AST node types to skip (handled by hand-written lifters or lift-patterns.json) */
   loadBlockSpecs(specs: BlockSpec[], skipNodeTypes?: Set<string>): void {

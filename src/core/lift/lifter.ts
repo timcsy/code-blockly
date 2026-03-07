@@ -1,5 +1,6 @@
-import type { SemanticNode } from '../types'
+import type { SemanticNode, DegradationCause } from '../types'
 import type { AstNode, NodeLifter, LiftContext } from './types'
+import type { ConceptRegistry } from '../concept-registry'
 import { createNode } from '../semantic-tree'
 import { LiftContextData } from './lift-context'
 import { PatternLifter } from './pattern-lifter'
@@ -7,6 +8,8 @@ import { PatternLifter } from './pattern-lifter'
 export class Lifter {
   private lifters = new Map<string, NodeLifter>()
   private patternLifter: PatternLifter | null = null
+  private conceptRegistry: ConceptRegistry | null = null
+  private astNodeConceptMap: Map<string, string> | null = null
 
   register(nodeType: string, lifter: NodeLifter): void {
     this.lifters.set(nodeType, lifter)
@@ -15,6 +18,16 @@ export class Lifter {
   /** Set the JSON-driven pattern lifter engine */
   setPatternLifter(pl: PatternLifter): void {
     this.patternLifter = pl
+  }
+
+  /** Set ConceptRegistry for degradationCause lookup */
+  setConceptRegistry(registry: ConceptRegistry): void {
+    this.conceptRegistry = registry
+  }
+
+  /** Set AST nodeType → conceptId mapping for unsupported detection */
+  setAstNodeConceptMap(map: Map<string, string>): void {
+    this.astNodeConceptMap = map
   }
 
   lift(node: AstNode): SemanticNode | null {
@@ -41,6 +54,11 @@ export class Lifter {
       }
     }
 
+    const setConfidenceHigh = (r: SemanticNode): void => {
+      if (!r.metadata) r.metadata = {}
+      if (!r.metadata.confidence) r.metadata.confidence = 'high'
+    }
+
     // Single pipeline: PatternLifter first, hand-written fallback
     if (this.patternLifter) {
       const patternResult = this.patternLifter.tryLift(node, ctx)
@@ -49,9 +67,11 @@ export class Lifter {
         if (patternResult.concept === 'func_call_expr' && node.type === 'expression_statement') {
           const converted = createNode('func_call', patternResult.properties, patternResult.children)
           addSourceRange(converted)
+          setConfidenceHigh(converted)
           return converted
         }
         addSourceRange(patternResult)
+        setConfidenceHigh(patternResult)
         return patternResult
       }
     }
@@ -61,6 +81,7 @@ export class Lifter {
       const handWrittenResult = lifter(node, ctx)
       if (handWrittenResult) {
         addSourceRange(handWrittenResult)
+        setConfidenceHigh(handWrittenResult)
         return handWrittenResult
       }
     }
@@ -91,6 +112,8 @@ export class Lifter {
     const raw = createNode('raw_code', {})
     raw.metadata = {
       rawCode: node.text,
+      confidence: 'raw_code',
+      degradationCause: this.determineDegradationCause(node),
       sourceRange: {
         startLine: node.startPosition.row,
         startColumn: node.startPosition.column,
@@ -120,5 +143,43 @@ export class Lifter {
       }
     }
     return results
+  }
+
+  /** Determine why a node was degraded to raw_code */
+  private determineDegradationCause(node: AstNode): DegradationCause {
+    // Check for syntax error (tree-sitter ERROR node)
+    if (node.type === 'ERROR' || this.hasErrorDescendant(node)) {
+      return 'syntax_error'
+    }
+
+    // Check if AST nodeType maps to a known concept
+    if (this.isKnownNodeType(node.type)) {
+      return 'unsupported'
+    }
+
+    // Unknown node type entirely
+    return 'nonstandard_but_valid'
+  }
+
+  private hasErrorDescendant(node: AstNode): boolean {
+    if (node.type === 'ERROR') return true
+    for (const child of node.children) {
+      if (child.type === 'ERROR') return true
+    }
+    return false
+  }
+
+  /** Check if an AST node type corresponds to a known concept */
+  private isKnownNodeType(nodeType: string): boolean {
+    // Check explicit AST→concept mapping
+    if (this.astNodeConceptMap?.has(nodeType)) return true
+
+    // Check if PatternLifter has patterns for this node type
+    if (this.patternLifter?.hasPatternForNodeType(nodeType)) return true
+
+    // Check if we have a hand-written lifter for this node type
+    if (this.lifters.has(nodeType)) return true
+
+    return false
   }
 }
