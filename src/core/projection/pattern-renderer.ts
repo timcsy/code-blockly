@@ -28,6 +28,7 @@ function nextBlockId(): string {
 export class PatternRenderer {
   private renderSpecs = new Map<string, RenderSpec>()
   private renderStrategyRegistry: RenderStrategyRegistry | null = null
+  private activeRenderCtx: RenderContext | undefined = undefined
 
   setRenderStrategyRegistry(registry: RenderStrategyRegistry): void {
     this.renderStrategyRegistry = registry
@@ -54,15 +55,19 @@ export class PatternRenderer {
 
   /** Render a SemanticNode to a BlockState. Returns null if no render spec found. */
   render(node: SemanticNode, renderCtx?: RenderContext): BlockState | null {
+    // Store renderCtx so recursive calls (auto-derive children) can use strategies
+    if (renderCtx) this.activeRenderCtx = renderCtx
+    const ctx = renderCtx ?? this.activeRenderCtx
+
     const spec = this.renderSpecs.get(node.concept)
     if (!spec) return null
 
     // Layer 3: renderStrategy takes priority over auto-derive mapping
-    if (spec.mapping.strategy && this.renderStrategyRegistry && renderCtx) {
+    if (spec.mapping.strategy && this.renderStrategyRegistry && ctx) {
       const strategyFn = this.renderStrategyRegistry.get(spec.mapping.strategy)
       if (strategyFn) {
         try {
-          const result = strategyFn(node, renderCtx)
+          const result = strategyFn(node, ctx!)
           if (result) return result
         } catch {
           // Strategy threw — fall through to auto-derive
@@ -222,6 +227,9 @@ export class PatternRenderer {
     const commonMappings: Record<string, string[]> = {
       'COND': ['condition'],
       'CONDITION': ['condition'],
+      'THEN': ['then_body', 'then'],
+      'ELSE': ['else_body', 'else'],
+      'BODY': ['body', 'then_body'],
       'A': ['left', 'operand'],
       'B': ['right'],
       'EXPR': ['values', 'expression'],

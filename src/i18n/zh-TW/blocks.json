@@ -331,6 +331,7 @@
 
   "PANEL_CONSOLE": "主控台",
   "PANEL_VARIABLES": "變數",
+  "PANEL_CLEAR": "清除",
   "PANEL_SCOPE_GLOBAL": "全域",
 
   "DIAG_MISSING_CONDITION": "缺少條件",
@@ -343,5 +344,29 @@
   "TOAST_UPLOAD_SUCCESS": "自訂積木已上傳",
   "TOAST_UPLOAD_FAIL": "上傳失敗：格式不正確",
   "TOAST_EXEC_COMPLETE": "程式執行完畢",
-  "TOAST_EXEC_ERROR": "執行錯誤"
+  "TOAST_EXEC_ERROR": "執行錯誤",
+
+  "DEGRADATION_SYNTAX_ERROR": "程式碼含語法錯誤",
+  "DEGRADATION_UNSUPPORTED": "系統尚未支援此寫法",
+  "DEGRADATION_ADVANCED": "進階寫法",
+  "CONFIDENCE_WARNING": "結構匹配但語義可疑",
+  "CONFIDENCE_INFERRED": "系統推測",
+
+  "BLOCK_STYLE_SCRATCH": "Scratch 風格",
+  "BLOCK_STYLE_CLASSIC": "經典風格",
+  "BLOCK_STYLE_TEACHING": "教學風格",
+
+  "CATEGORY_DATA": "資料",
+  "CATEGORY_OPERATORS": "運算",
+  "CATEGORY_CONTROL": "控制",
+  "CATEGORY_FUNCTIONS": "函式",
+  "CATEGORY_IO": "輸入/輸出",
+  "CATEGORY_ARRAYS": "陣列",
+  "CATEGORY_CPP_BASIC": "C++ 基礎",
+  "CATEGORY_CPP_POINTERS": "C++ 指標",
+  "CATEGORY_CPP_STRUCTS": "C++ 結構/類別",
+  "CATEGORY_CPP_STRINGS": "C++ 字串",
+  "CATEGORY_CPP_CONTAINERS": "C++ 容器",
+  "CATEGORY_CPP_ALGORITHMS": "C++ 演算法",
+  "CATEGORY_CPP_SPECIAL": "C++ 特殊"
 }

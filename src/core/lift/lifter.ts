@@ -185,7 +185,7 @@ export class Lifter {
   private hasErrorDescendant(node: AstNode): boolean {
     if (node.type === 'ERROR') return true
     for (const child of node.children) {
-      if (child.type === 'ERROR') return true
+      if (this.hasErrorDescendant(child)) return true
     }
     return false
   }

@@ -12,6 +12,8 @@ export interface SavedState {
   styleId: string
   level: CognitiveLevel
   lastModified: string
+  blockStyleId?: string
+  locale?: string
 }
 
 export class StorageService {

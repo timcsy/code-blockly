@@ -3,6 +3,7 @@
     "id": "c_char_literal",
     "language": "cpp",
     "category": "values",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_char_literal",
@@ -41,6 +42,7 @@
     "id": "c_increment",
     "language": "cpp",
     "category": "operators",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_increment",
@@ -88,6 +90,7 @@
     "id": "c_compound_assign",
     "language": "cpp",
     "category": "operators",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_compound_assign",
@@ -138,6 +141,7 @@
     "id": "c_switch",
     "language": "cpp",
     "category": "conditions",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_switch",
@@ -178,6 +182,7 @@
     "id": "c_case",
     "language": "cpp",
     "category": "conditions",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_case",
@@ -214,6 +219,7 @@
     "id": "c_for_loop",
     "language": "cpp",
     "category": "loops",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_for_loop",
@@ -258,6 +264,7 @@
     "id": "c_do_while",
     "language": "cpp",
     "category": "loops",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_do_while",
@@ -298,6 +305,7 @@
     "id": "c_printf",
     "language": "cpp",
     "category": "io",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_printf",
@@ -331,6 +339,7 @@
     "id": "c_scanf",
     "language": "cpp",
     "category": "io",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_scanf",

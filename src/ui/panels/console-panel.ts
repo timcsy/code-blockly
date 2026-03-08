@@ -10,14 +10,6 @@ export class ConsolePanel {
     this.container = container
     this.container.classList.add('console-panel')
 
-    const header = document.createElement('div')
-    header.className = 'panel-header'
-    header.innerHTML = `
-      <span class="panel-title">Console</span>
-      <button class="panel-clear-btn" title="Clear">✕</button>
-    `
-    this.container.appendChild(header)
-
     this.outputEl = document.createElement('div')
     this.outputEl.className = 'console-output'
     this.container.appendChild(this.outputEl)
@@ -26,7 +18,6 @@ export class ConsolePanel {
     this.statusEl.className = 'console-status'
     this.container.appendChild(this.statusEl)
 
-    header.querySelector('.panel-clear-btn')?.addEventListener('click', () => this.clear())
   }
 
   log(text: string): void {

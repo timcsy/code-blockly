@@ -9,8 +9,15 @@ export function registerIOGenerators(g: Map<string, NodeGenerator>, style: Style
       const parts = values.map(v => generateExpression(v, ctx))
       return `${indent(ctx)}cout << ${parts.join(' << ')};\n`
     }
-    const parts = values.map(v => generateExpression(v, ctx))
-    return `${indent(ctx)}printf("%d", ${parts.join(', ')});\n`
+    // printf mode: separate endl nodes from value expressions
+    const exprValues = values.filter(v => v.concept !== 'endl')
+    const hasEndl = values.some(v => v.concept === 'endl')
+    const parts = exprValues.map(v => generateExpression(v, ctx))
+    if (parts.length === 0 && hasEndl) {
+      return `${indent(ctx)}printf("\\n");\n`
+    }
+    const fmt = parts.map(() => '%d').join(' ') + (hasEndl ? '\\n' : '')
+    return `${indent(ctx)}printf("${fmt}", ${parts.join(', ')});\n`
   })
 
   g.set('input', (node, ctx) => {

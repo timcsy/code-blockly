@@ -90,29 +90,57 @@ function renderBlock(node: SemanticNode): BlockState | null {
   // Single pipeline: delegate all rendering to PatternRenderer
   if (globalPatternRenderer) {
     const patternResult = globalPatternRenderer.render(node, renderCtx)
-    if (patternResult) return patternResult
+    if (patternResult) {
+      propagateMetadata(patternResult, node)
+      return patternResult
+    }
   }
 
   // Special cases not handled by PatternRenderer (no BlockSpec)
   if (node.concept === 'raw_code') {
-    return {
+    const block: BlockState = {
       type: 'c_raw_code',
       id: nextBlockId(),
       fields: { CODE: node.metadata?.rawCode ?? node.properties.code ?? '' },
       inputs: {},
     }
+    propagateMetadata(block, node)
+    // 預設降級原因為 unsupported（若無明確標記）
+    if (!block.extraState?.degradationCause) {
+      block.extraState = { ...block.extraState, degradationCause: node.metadata?.degradationCause ?? 'unsupported' }
+    }
+    return block
   }
   if (node.concept === 'unresolved') {
-    return {
+    const block: BlockState = {
       type: 'c_raw_code',
       id: nextBlockId(),
       fields: { CODE: node.metadata?.rawCode ?? '' },
       inputs: {},
       extraState: { unresolved: true, nodeType: node.properties.node_type },
     }
+    propagateMetadata(block, node)
+    if (!block.extraState?.degradationCause) {
+      block.extraState = { ...block.extraState, degradationCause: node.metadata?.degradationCause ?? 'unsupported' }
+    }
+    return block
   }
 
   return null
+}
+
+/** 將 SemanticNode 的 metadata 和 annotations 傳遞到 BlockState.extraState */
+function propagateMetadata(block: BlockState, node: SemanticNode): void {
+  const meta = node.metadata
+  const annotations = node.annotations
+
+  if (!meta?.degradationCause && !meta?.confidence && !annotations?.length) return
+
+  const extra: Record<string, unknown> = { ...block.extraState }
+  if (meta?.degradationCause) extra.degradationCause = meta.degradationCause
+  if (meta?.confidence && meta.confidence !== 'high') extra.confidence = meta.confidence
+  if (annotations?.length) extra.annotations = annotations
+  block.extraState = extra
 }
 
 function renderExpression(node: SemanticNode): BlockState | null {

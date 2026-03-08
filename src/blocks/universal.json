@@ -3,6 +3,7 @@
     "id": "u_var_declare",
     "language": "universal",
     "category": "data",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "var_declare",
@@ -29,6 +30,7 @@
     "id": "u_var_assign",
     "language": "universal",
     "category": "data",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "var_assign",
@@ -63,6 +65,7 @@
     "id": "u_var_ref",
     "language": "universal",
     "category": "data",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "var_ref",
@@ -89,6 +92,7 @@
     "id": "u_number",
     "language": "universal",
     "category": "data",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "number_literal",
@@ -115,6 +119,7 @@
     "id": "u_string",
     "language": "universal",
     "category": "data",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "string_literal",
@@ -141,6 +146,7 @@
     "id": "u_arithmetic",
     "language": "universal",
     "category": "operators",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "arithmetic",
@@ -185,6 +191,7 @@
     "id": "u_compare",
     "language": "universal",
     "category": "operators",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "compare",
@@ -230,6 +237,7 @@
     "id": "u_logic",
     "language": "universal",
     "category": "operators",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "logic",
@@ -271,6 +279,7 @@
     "id": "u_logic_not",
     "language": "universal",
     "category": "operators",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "logic_not",
@@ -298,6 +307,7 @@
     "id": "u_negate",
     "language": "universal",
     "category": "operators",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "negate",
@@ -325,11 +335,12 @@
     "id": "u_if",
     "language": "universal",
     "category": "control",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "if",
       "abstractConcept": "if",
-      "children": { "condition": "expression", "body": "statements" },
+      "children": { "condition": "expression", "then_body": "statements" },
       "role": "statement"
     },
     "blockDef": {
@@ -338,7 +349,7 @@
       "args0": [
         {
           "type": "input_value",
-          "name": "COND",
+          "name": "CONDITION",
           "check": "Expression"
         }
       ],
@@ -346,7 +357,7 @@
       "args1": [
         {
           "type": "input_statement",
-          "name": "BODY",
+          "name": "THEN",
           "check": "Statement"
         }
       ],
@@ -366,6 +377,7 @@
     "id": "u_if_else",
     "language": "universal",
     "category": "control",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "if_else",
@@ -379,7 +391,7 @@
       "args0": [
         {
           "type": "input_value",
-          "name": "COND",
+          "name": "CONDITION",
           "check": "Expression"
         }
       ],
@@ -410,6 +422,7 @@
     "id": "u_count_loop",
     "language": "universal",
     "category": "control",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "count_loop",
@@ -457,6 +470,7 @@
     "id": "u_while_loop",
     "language": "universal",
     "category": "control",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "while_loop",
@@ -470,7 +484,7 @@
       "args0": [
         {
           "type": "input_value",
-          "name": "COND",
+          "name": "CONDITION",
           "check": "Expression"
         }
       ],
@@ -492,6 +506,7 @@
     "id": "u_break",
     "language": "universal",
     "category": "control",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "break",
@@ -511,6 +526,7 @@
     "id": "u_continue",
     "language": "universal",
     "category": "control",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "continue",
@@ -530,6 +546,7 @@
     "id": "u_func_def",
     "language": "universal",
     "category": "functions",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "func_def",
@@ -591,6 +608,7 @@
     "id": "u_func_call",
     "language": "universal",
     "category": "functions",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "func_call",
@@ -629,6 +647,7 @@
     "id": "u_func_call_expr",
     "language": "universal",
     "category": "functions",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "func_call_expr",
@@ -650,6 +669,7 @@
     "id": "u_return",
     "language": "universal",
     "category": "functions",
+    "level": 1,
     "version": "1.0.0",
     "concept": {
       "conceptId": "return",
@@ -677,6 +697,7 @@
     "id": "u_print",
     "language": "universal",
     "category": "io",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "print",
@@ -711,6 +732,7 @@
     "id": "u_endl",
     "language": "universal",
     "category": "io",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "endl",
@@ -729,6 +751,7 @@
     "id": "u_input",
     "language": "universal",
     "category": "io",
+    "level": 0,
     "version": "1.0.0",
     "concept": {
       "conceptId": "input",
@@ -762,6 +785,7 @@
     "id": "u_array_declare",
     "language": "universal",
     "category": "arrays",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "array_declare",
@@ -807,6 +831,7 @@
     "id": "u_array_access",
     "language": "universal",
     "category": "arrays",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "array_access",

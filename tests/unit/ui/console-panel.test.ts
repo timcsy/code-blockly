@@ -11,7 +11,6 @@ describe('ConsolePanel', () => {
   })
 
   it('should create panel structure', () => {
-    expect(container.querySelector('.panel-header')).toBeTruthy()
     expect(container.querySelector('.console-output')).toBeTruthy()
     expect(container.querySelector('.console-status')).toBeTruthy()
   })

@@ -1,12 +1,21 @@
+export interface TabAction {
+  icon: string
+  title: string
+  onClick: () => void
+}
+
 export interface TabDefinition {
   id: string
   label: string
   panel: HTMLElement
+  actions?: TabAction[]
 }
 
 export class BottomPanel {
   private container: HTMLElement
   private tabBar: HTMLElement
+  private tabButtonsArea: HTMLElement
+  private tabActionsArea: HTMLElement
   private contentArea: HTMLElement
   private divider: HTMLElement
   private tabs: TabDefinition[] = []
@@ -27,11 +36,20 @@ export class BottomPanel {
     this.tabBar.className = 'bottom-panel-tabs'
     this.container.appendChild(this.tabBar)
 
+    this.tabButtonsArea = document.createElement('div')
+    this.tabButtonsArea.className = 'bottom-panel-tab-buttons'
+    this.tabBar.appendChild(this.tabButtonsArea)
+
+    this.tabActionsArea = document.createElement('div')
+    this.tabActionsArea.className = 'bottom-panel-tab-actions'
+    this.tabBar.appendChild(this.tabActionsArea)
+
     this.contentArea = document.createElement('div')
     this.contentArea.className = 'bottom-panel-content'
     this.container.appendChild(this.contentArea)
 
     this.setupDrag()
+    this.applyHeight()
   }
 
   addTab(tab: TabDefinition): void {
@@ -42,7 +60,7 @@ export class BottomPanel {
     tabBtn.dataset.tabId = tab.id
     tabBtn.textContent = tab.label
     tabBtn.addEventListener('click', () => this.activateTab(tab.id))
-    this.tabBar.appendChild(tabBtn)
+    this.tabButtonsArea.appendChild(tabBtn)
 
     tab.panel.style.display = 'none'
     this.contentArea.appendChild(tab.panel)
@@ -53,21 +71,34 @@ export class BottomPanel {
   }
 
   activateTab(id: string): void {
-    this.activeTabId = id
-    if (this.collapsed) {
-      this.collapsed = false
+    // Toggle collapse when clicking the already-active tab
+    if (this.activeTabId === id && !this.collapsed) {
+      this.collapsed = true
       this.applyHeight()
+      // Remove active highlight and actions when collapsed
+      this.tabButtonsArea.querySelectorAll('.bottom-tab-btn').forEach(btn => {
+        (btn as HTMLElement).classList.remove('active')
+      })
+      this.tabActionsArea.innerHTML = ''
+      window.dispatchEvent(new Event('resize'))
+      return
     }
+
+    this.activeTabId = id
+    this.collapsed = false
+    this.applyHeight()
 
     for (const tab of this.tabs) {
       tab.panel.style.display = tab.id === id ? '' : 'none'
     }
 
-    const buttons = this.tabBar.querySelectorAll('.bottom-tab-btn')
+    const buttons = this.tabButtonsArea.querySelectorAll('.bottom-tab-btn')
     buttons.forEach(btn => {
       const el = btn as HTMLElement
       el.classList.toggle('active', el.dataset.tabId === id)
     })
+    this.updateActions(id)
+    window.dispatchEvent(new Event('resize'))
   }
 
   getActiveTabId(): string | null {
@@ -90,6 +121,20 @@ export class BottomPanel {
 
   getElement(): HTMLElement {
     return this.container
+  }
+
+  private updateActions(tabId: string): void {
+    this.tabActionsArea.innerHTML = ''
+    const tab = this.tabs.find(t => t.id === tabId)
+    if (!tab?.actions) return
+    for (const action of tab.actions) {
+      const btn = document.createElement('button')
+      btn.className = 'bottom-panel-action-btn'
+      btn.title = action.title
+      btn.textContent = action.icon
+      btn.addEventListener('click', action.onClick)
+      this.tabActionsArea.appendChild(btn)
+    }
   }
 
   private setupDrag(): void {

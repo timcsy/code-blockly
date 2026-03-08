@@ -1,7 +1,9 @@
 import * as Blockly from 'blockly'
-import type { SemanticNode, BlockSpec } from '../../core/types'
+import type { SemanticNode, BlockSpec, DegradationCause, ConfidenceLevel, Annotation } from '../../core/types'
 import { createNode } from '../../core/semantic-tree'
 import type { BlockSpecRegistry } from '../../core/block-spec-registry'
+import { DEGRADATION_VISUALS, CONFIDENCE_VISUALS } from '../theme/category-colors'
+import type { BlockStylePreset } from '../../languages/style'
 
 export interface BlocklyPanelOptions {
   container: HTMLElement
@@ -16,16 +18,20 @@ export class BlocklyPanel {
   private onBlockSelectCallback: ((blockId: string | null) => void) | null = null
   private highlightedBlockId: string | null = null
   private blockSpecRegistry: BlockSpecRegistry | null = null
+  private currentRenderer: string = 'zelos'
 
   constructor(options: BlocklyPanelOptions) {
     this.container = options.container
     this.blockSpecRegistry = options.blockSpecRegistry ?? null
   }
 
-  init(toolboxDef: object): void {
+  init(toolboxDef: object, blockStylePreset?: BlockStylePreset): void {
+    const renderer = blockStylePreset?.renderer ?? 'zelos'
+    this.currentRenderer = renderer
+
     this.workspace = Blockly.inject(this.container, {
       toolbox: toolboxDef as Blockly.utils.toolbox.ToolboxDefinition,
-      renderer: 'zelos',
+      renderer,
       grid: { spacing: 20, length: 3, colour: '#555', snap: true },
       zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
       trashcan: true,
@@ -554,9 +560,120 @@ export class BlocklyPanel {
     Blockly.Events.disable()
     try {
       Blockly.serialization.workspaces.load(state, this.workspace)
+      this.applyExtraStateVisuals()
     } finally {
       Blockly.Events.enable()
     }
+  }
+
+  /** 遍歷所有積木，根據 extraState 套用降級/confidence/annotation 視覺樣式 */
+  applyExtraStateVisuals(): void {
+    if (!this.workspace) return
+    const allBlocks = this.workspace.getAllBlocks(false)
+    for (const block of allBlocks) {
+      const extra = (block as unknown as { extraState_?: Record<string, unknown> }).extraState_
+        ?? (block.saveExtraState?.() as Record<string, unknown> | null)
+      if (!extra) continue
+
+      // 降級視覺
+      const cause = extra.degradationCause as DegradationCause | undefined
+      if (cause && DEGRADATION_VISUALS[cause]) {
+        const visual = DEGRADATION_VISUALS[cause]
+        if (visual.colour) {
+          block.setColour(visual.colour)
+        }
+        const tooltipKey = visual.tooltipKey
+        const tooltipText = (Blockly.Msg as Record<string, string>)[tooltipKey]
+        if (tooltipText) {
+          block.setTooltip(tooltipText)
+        }
+      }
+
+      // Confidence 視覺
+      const confidence = extra.confidence as ConfidenceLevel | undefined
+      if (confidence && CONFIDENCE_VISUALS[confidence]) {
+        const visual = CONFIDENCE_VISUALS[confidence]
+        if (visual.tooltipKey) {
+          const existing = block.getTooltip()
+          const confText = (Blockly.Msg as Record<string, string>)[visual.tooltipKey] ?? ''
+          if (confText) {
+            block.setTooltip(existing ? `${existing}\n${confText}` : confText)
+          }
+        }
+      }
+
+      // Apply CSS-level border styles on SVG path elements
+      const svgPath = (block as any).pathObject?.svgPath as SVGElement | undefined
+      const svgRoot = (block as Blockly.BlockSvg).getSvgRoot?.()
+
+      // Degradation borderColour takes priority
+      if (cause && DEGRADATION_VISUALS[cause]) {
+        const visual = DEGRADATION_VISUALS[cause]
+        if (visual.borderColour && svgPath) {
+          svgPath.style.stroke = visual.borderColour
+          svgPath.style.strokeWidth = '3px'
+        }
+      }
+
+      // Confidence visuals (only if degradation didn't set a border)
+      const hasDegradationBorder = cause && DEGRADATION_VISUALS[cause]?.borderColour
+      if (confidence && CONFIDENCE_VISUALS[confidence] && !hasDegradationBorder) {
+        const visual = CONFIDENCE_VISUALS[confidence]
+        if (svgPath) {
+          if (visual.borderStyle === 'dashed') {
+            svgPath.style.strokeDasharray = '8,4'
+          } else if (visual.borderStyle === 'solid') {
+            svgPath.style.strokeDasharray = ''
+          }
+          if (visual.borderColour) {
+            svgPath.style.stroke = visual.borderColour
+            svgPath.style.strokeWidth = '3px'
+          }
+        }
+        if (visual.opacity < 1 && svgRoot) {
+          svgRoot.style.opacity = String(visual.opacity)
+        }
+      }
+
+      // Annotation 視覺
+      const annotations = extra.annotations as Annotation[] | undefined
+      if (annotations?.length) {
+        const inlineTexts = annotations
+          .filter(a => a.position === 'inline' || a.position === 'after')
+          .map(a => a.text)
+        if (inlineTexts.length > 0) {
+          block.setCommentText(inlineTexts.join('\n'))
+        }
+      }
+    }
+  }
+
+  /** 取得目前使用的 renderer 名稱 */
+  getRenderer(): string {
+    return this.currentRenderer
+  }
+
+  /** 以新的 BlockStylePreset 重建 workspace（renderer 變更時需要） */
+  reinitWithPreset(toolboxDef: object, preset: BlockStylePreset): object | null {
+    if (!this.workspace) return null
+    // 儲存當前狀態
+    const state = Blockly.serialization.workspaces.save(this.workspace)
+    // 銷毀舊 workspace
+    this.workspace.dispose()
+    this.workspace = null
+    // 以新 preset 重新初始化
+    this.init(toolboxDef, preset)
+    // 還原狀態
+    if (state && this.workspace) {
+      Blockly.Events.disable()
+      try {
+        Blockly.serialization.workspaces.load(state, this.workspace)
+        this.applyExtraStateVisuals()
+      } finally {
+        Blockly.Events.enable()
+      }
+    }
+    return state
   }
 
   dispose(): void {

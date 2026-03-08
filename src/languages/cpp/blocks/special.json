@@ -3,6 +3,7 @@
     "id": "c_raw_code",
     "language": "cpp",
     "category": "special",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_raw_code",
@@ -39,6 +40,7 @@
     "id": "c_raw_expression",
     "language": "cpp",
     "category": "special",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_raw_expression",
@@ -74,6 +76,7 @@
     "id": "c_include",
     "language": "cpp",
     "category": "preprocessor",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_include",
@@ -191,6 +194,7 @@
     "id": "c_include_local",
     "language": "cpp",
     "category": "preprocessor",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_include_local",
@@ -232,6 +236,7 @@
     "id": "c_define",
     "language": "cpp",
     "category": "preprocessor",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_define",
@@ -273,6 +278,7 @@
     "id": "c_ifdef",
     "language": "cpp",
     "category": "preprocessor",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_ifdef",
@@ -319,6 +325,7 @@
     "id": "c_ifndef",
     "language": "cpp",
     "category": "preprocessor",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_ifndef",
@@ -365,6 +372,7 @@
     "id": "c_comment_line",
     "language": "cpp",
     "category": "special",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "comment",
@@ -401,6 +409,7 @@
     "id": "c_using_namespace",
     "language": "cpp",
     "category": "preprocessor",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_using_namespace",

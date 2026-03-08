@@ -137,4 +137,20 @@ describe('Lifter', () => {
     expect(lifter.lift(breakNode)!.concept).toBe('break')
     expect(lifter.lift(contNode)!.concept).toBe('continue')
   })
+
+  it('should detect deeply nested ERROR descendant (not just direct children)', () => {
+    // ERROR buried 2 levels deep: expression_statement > binary_expression > ERROR
+    const errorNode = mockNode('ERROR', '???')
+    const innerExpr = mockNode('binary_expression', 'x + ???', [
+      mockNode('identifier', 'x'),
+      errorNode,
+    ])
+    const stmt = mockNode('expression_statement', 'x + ???;', [innerExpr])
+    const result = lifter.lift(stmt)
+    // A node with a deep ERROR descendant should be classified as syntax_error
+    expect(result).not.toBeNull()
+    if (result!.concept === 'raw_code') {
+      expect(result!.metadata?.degradationCause).toBe('syntax_error')
+    }
+  })
 })

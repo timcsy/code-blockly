@@ -70,4 +70,13 @@ export class BlockSpecRegistry {
   getAll(): BlockSpec[] {
     return [...this.specs.values()]
   }
+
+  /** 取得所有不重複的類別名稱 */
+  getCategories(): string[] {
+    const cats = new Set<string>()
+    for (const spec of this.specs.values()) {
+      if (spec.category) cats.add(spec.category)
+    }
+    return [...cats]
+  }
 }

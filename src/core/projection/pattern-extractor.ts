@@ -165,6 +165,9 @@ export class PatternExtractor {
     const commonMappings: Record<string, string[]> = {
       'COND': ['condition'],
       'CONDITION': ['condition'],
+      'THEN': ['then_body', 'then'],
+      'ELSE': ['else_body', 'else'],
+      'BODY': ['body', 'then_body'],
       'A': ['left', 'operand'],
       'B': ['right'],
       'EXPR': ['values', 'expression'],

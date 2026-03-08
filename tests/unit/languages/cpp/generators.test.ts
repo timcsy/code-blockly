@@ -174,4 +174,46 @@ describe('C++ I/O generator', () => {
     expect(code).toContain('scanf')
     expect(code).toContain('&n')
   })
+
+  it('should generate printf with endl as \\n in format string', () => {
+    const print = createNode('print', {}, {
+      values: [
+        createNode('var_ref', { name: 'x' }),
+        createNode('endl', {}),
+      ],
+    })
+    const code = generateCode(makeProgram(print), 'cpp', printfStyle)
+    expect(code).toContain('printf')
+    expect(code).toContain('\\n')
+    expect(code).not.toContain('endl')
+  })
+
+  it('should generate printf with only endl as newline', () => {
+    const print = createNode('print', {}, {
+      values: [createNode('endl', {})],
+    })
+    const code = generateCode(makeProgram(print), 'cpp', printfStyle)
+    expect(code).toContain('printf("\\n")')
+  })
+
+  it('should generate printf without endl (no trailing newline)', () => {
+    const print = createNode('print', {}, {
+      values: [createNode('var_ref', { name: 'x' })],
+    })
+    const code = generateCode(makeProgram(print), 'cpp', printfStyle)
+    expect(code).toContain('printf("%d", x)')
+    expect(code).not.toContain('\\n')
+  })
+
+  it('should generate printf with multiple values and endl', () => {
+    const print = createNode('print', {}, {
+      values: [
+        createNode('var_ref', { name: 'a' }),
+        createNode('var_ref', { name: 'b' }),
+        createNode('endl', {}),
+      ],
+    })
+    const code = generateCode(makeProgram(print), 'cpp', printfStyle)
+    expect(code).toContain('printf("%d %d\\n", a, b)')
+  })
 })

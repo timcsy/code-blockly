@@ -331,6 +331,7 @@
 
   "PANEL_CONSOLE": "Console",
   "PANEL_VARIABLES": "Variables",
+  "PANEL_CLEAR": "Clear",
   "PANEL_SCOPE_GLOBAL": "Global",
 
   "DIAG_MISSING_CONDITION": "Missing condition",
@@ -343,5 +344,29 @@
   "TOAST_UPLOAD_SUCCESS": "Custom blocks uploaded",
   "TOAST_UPLOAD_FAIL": "Upload failed: invalid format",
   "TOAST_EXEC_COMPLETE": "Program completed",
-  "TOAST_EXEC_ERROR": "Execution error"
+  "TOAST_EXEC_ERROR": "Execution error",
+
+  "DEGRADATION_SYNTAX_ERROR": "Code contains syntax error",
+  "DEGRADATION_UNSUPPORTED": "Unsupported syntax",
+  "DEGRADATION_ADVANCED": "Advanced syntax",
+  "CONFIDENCE_WARNING": "Structure matched but semantics uncertain",
+  "CONFIDENCE_INFERRED": "System inference",
+
+  "BLOCK_STYLE_SCRATCH": "Scratch Style",
+  "BLOCK_STYLE_CLASSIC": "Classic Style",
+  "BLOCK_STYLE_TEACHING": "Teaching Style",
+
+  "CATEGORY_DATA": "Data",
+  "CATEGORY_OPERATORS": "Operators",
+  "CATEGORY_CONTROL": "Control",
+  "CATEGORY_FUNCTIONS": "Functions",
+  "CATEGORY_IO": "Input/Output",
+  "CATEGORY_ARRAYS": "Arrays",
+  "CATEGORY_CPP_BASIC": "C++ Basic",
+  "CATEGORY_CPP_POINTERS": "C++ Pointers",
+  "CATEGORY_CPP_STRUCTS": "C++ Structs/Classes",
+  "CATEGORY_CPP_STRINGS": "C++ Strings",
+  "CATEGORY_CPP_CONTAINERS": "C++ Containers",
+  "CATEGORY_CPP_ALGORITHMS": "C++ Algorithms",
+  "CATEGORY_CPP_SPECIAL": "C++ Special"
 }

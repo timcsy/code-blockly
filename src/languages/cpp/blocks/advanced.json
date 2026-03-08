@@ -3,6 +3,7 @@
     "id": "c_pointer_declare",
     "language": "cpp",
     "category": "pointers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_pointer_declare",
@@ -75,6 +76,7 @@
     "id": "c_pointer_deref",
     "language": "cpp",
     "category": "pointers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_pointer_deref",
@@ -122,6 +124,7 @@
     "id": "c_address_of",
     "language": "cpp",
     "category": "pointers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_address_of",
@@ -169,6 +172,7 @@
     "id": "c_malloc",
     "language": "cpp",
     "category": "pointers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_malloc",
@@ -259,6 +263,7 @@
     "id": "c_free",
     "language": "cpp",
     "category": "pointers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_free",
@@ -308,6 +313,7 @@
     "id": "c_struct_declare",
     "language": "cpp",
     "category": "structures",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_struct_declare",
@@ -357,6 +363,7 @@
     "id": "c_struct_member_access",
     "language": "cpp",
     "category": "structures",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_struct_member_access",
@@ -408,6 +415,7 @@
     "id": "c_struct_pointer_access",
     "language": "cpp",
     "category": "structures",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_struct_pointer_access",
@@ -459,6 +467,7 @@
     "id": "c_strlen",
     "language": "cpp",
     "category": "strings",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_strlen",
@@ -508,6 +517,7 @@
     "id": "c_strcmp",
     "language": "cpp",
     "category": "strings",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_strcmp",
@@ -564,6 +574,7 @@
     "id": "c_strcpy",
     "language": "cpp",
     "category": "strings",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_strcpy",
@@ -620,6 +631,7 @@
     "id": "cpp_vector_declare",
     "language": "cpp",
     "category": "containers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_vector_declare",
@@ -698,6 +710,7 @@
     "id": "cpp_vector_push_back",
     "language": "cpp",
     "category": "containers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_vector_push_back",
@@ -753,6 +766,7 @@
     "id": "cpp_vector_size",
     "language": "cpp",
     "category": "containers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_vector_size",
@@ -800,6 +814,7 @@
     "id": "cpp_map_declare",
     "language": "cpp",
     "category": "containers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_map_declare",
@@ -889,6 +904,7 @@
     "id": "cpp_string_declare",
     "language": "cpp",
     "category": "containers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_string_declare",
@@ -936,6 +952,7 @@
     "id": "cpp_sort",
     "language": "cpp",
     "category": "algorithms",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_sort",
@@ -992,6 +1009,7 @@
     "id": "cpp_class_def",
     "language": "cpp",
     "category": "oop",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_class_def",
@@ -1051,6 +1069,7 @@
     "id": "cpp_new",
     "language": "cpp",
     "category": "oop",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_new",
@@ -1097,6 +1116,7 @@
     "id": "cpp_delete",
     "language": "cpp",
     "category": "oop",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_delete",
@@ -1139,6 +1159,7 @@
     "id": "cpp_template_function",
     "language": "cpp",
     "category": "templates",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_template_function",
@@ -1215,6 +1236,7 @@
     "id": "cpp_stack_declare",
     "language": "cpp",
     "category": "containers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_stack_declare",
@@ -1285,6 +1307,7 @@
     "id": "cpp_queue_declare",
     "language": "cpp",
     "category": "containers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_queue_declare",
@@ -1355,6 +1378,7 @@
     "id": "cpp_set_declare",
     "language": "cpp",
     "category": "containers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_set_declare",
@@ -1425,6 +1449,7 @@
     "id": "cpp_method_call",
     "language": "cpp",
     "category": "containers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_method_call",
@@ -1482,6 +1507,7 @@
     "id": "cpp_method_call_expr",
     "language": "cpp",
     "category": "containers",
+    "level": 2,
     "version": "1.0.0",
     "concept": {
       "conceptId": "cpp_method_call_expr",

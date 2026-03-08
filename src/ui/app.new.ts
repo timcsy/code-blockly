@@ -32,10 +32,14 @@ import type { SavedState } from '../core/storage'
 import { LocaleLoader } from '../i18n/loader'
 import { LevelSelector } from './toolbar/level-selector'
 import { StyleSelector } from './toolbar/style-selector'
+import { BlockStyleSelector } from './toolbar/block-style-selector'
 import { LocaleSelector } from './toolbar/locale-selector'
+import type { BlockStylePreset } from '../languages/style'
 import { isBlockAvailable } from '../core/cognitive-levels'
 import type { StylePreset, BlockSpec, CognitiveLevel } from '../core/types'
+import { CATEGORY_COLORS, DEGRADATION_VISUALS } from './theme/category-colors'
 import universalBlocks from '../blocks/universal.json'
+import { IF_INPUTS, WHILE_INPUTS, COUNT_LOOP_INPUTS } from '../blocks/block-input-names'
 import cppBasicBlocks from '../languages/cpp/blocks/basic.json'
 import cppSpecialBlocks from '../languages/cpp/blocks/special.json'
 import cppAdvancedBlocks from '../languages/cpp/blocks/advanced.json'
@@ -71,6 +75,7 @@ export class App {
   private blocksDirty = false
   private quickAccessBar: QuickAccessBar | null = null
   private currentLevel: CognitiveLevel = 1
+  private currentIoPreference: 'iostream' | 'cstdio' = 'iostream'
   private _codeToBlocksInProgress = false
 
   constructor() {
@@ -117,6 +122,7 @@ export class App {
         <span id="level-selector-mount"></span>
         <span class="toolbar-separator"></span>
         <span id="style-selector-mount"></span>
+        <span id="block-style-selector-mount"></span>
         <span id="locale-selector-mount"></span>
         <span class="toolbar-separator"></span>
         <button id="undo-btn" title="復原">↩</button>
@@ -150,7 +156,7 @@ export class App {
     // Create status bar
     const statusBar = document.createElement('footer')
     statusBar.id = 'status-bar'
-    statusBar.innerHTML = '<span>C++ | APCS Style | zh-TW</span>'
+    statusBar.innerHTML = '<span>Loading...</span>'
     appEl.appendChild(statusBar)
 
     // 6. Initialize Blockly panel with QuickAccessBar above
@@ -199,7 +205,12 @@ export class App {
 
     const consoleEl = document.createElement('div')
     this.consolePanel = new ConsolePanel(consoleEl)
-    this.bottomPanel.addTab({ id: 'console', label: Blockly.Msg['PANEL_CONSOLE'] || 'Console', panel: consoleEl })
+    this.bottomPanel.addTab({
+      id: 'console',
+      label: Blockly.Msg['PANEL_CONSOLE'] || 'Console',
+      panel: consoleEl,
+      actions: [{ icon: Blockly.Msg['PANEL_CLEAR'] || '清除', title: 'Clear', onClick: () => this.consolePanel?.clear() }],
+    })
 
     const variableEl = document.createElement('div')
     this.variablePanel = new VariablePanel(variableEl)
@@ -239,9 +250,13 @@ export class App {
     this.setupBidirectionalHighlight()
     this.setupLevelSelector()
     this.setupStyleSelector()
+    this.setupBlockStyleSelector()
     this.setupLocaleSelector()
 
-    // 11. Restore saved state
+    // 11. Update status bar with initial state
+    this.updateStatusBar()
+
+    // 12. Restore saved state
     this.restoreState()
   }
 
@@ -308,7 +323,7 @@ export class App {
         init: function (this: Blockly.Block) {
           this.appendDummyInput().appendField(Blockly.Msg['U_VAR_DECLARE_HEADER'] || '宣告')
           this.appendStatementInput('STACK')
-          this.setColour('#FF8C1A')
+          this.setColour(CATEGORY_COLORS.data)
           this.contextMenu = false
         },
       }
@@ -317,7 +332,7 @@ export class App {
           this.appendDummyInput().appendField(Blockly.Msg['U_VAR_DECLARE_VAR_LABEL'] || '變數')
           this.setPreviousStatement(true)
           this.setNextStatement(true)
-          this.setColour('#FF8C1A')
+          this.setColour(CATEGORY_COLORS.data)
           this.contextMenu = false
         },
       }
@@ -326,7 +341,7 @@ export class App {
           this.appendDummyInput().appendField(Blockly.Msg['U_VAR_DECLARE_VAR_INIT_LABEL'] || '變數 = 值')
           this.setPreviousStatement(true)
           this.setNextStatement(true)
-          this.setColour('#FF8C1A')
+          this.setColour(CATEGORY_COLORS.data)
           this.contextMenu = false
         },
       }
@@ -347,7 +362,7 @@ export class App {
           this.setInputsInline(true)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#FF8C1A')
+          this.setColour(CATEGORY_COLORS.data)
           this.setTooltip(Blockly.Msg['U_VAR_DECLARE_TOOLTIP'] || '宣告變數')
           this.setMutator(new Blockly.icons.MutatorIcon(
             ['u_var_declare_var_input', 'u_var_declare_var_init_input'],
@@ -473,7 +488,7 @@ export class App {
           this.setInputsInline(true)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#5CB1D6')
+          this.setColour(CATEGORY_COLORS.io)
           this.setTooltip(Blockly.Msg['U_PRINT_TOOLTIP'] || '輸出值')
         },
         plus_: function (this: any) {
@@ -515,7 +530,7 @@ export class App {
           this.setInputsInline(true)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#5CB1D6')
+          this.setColour(CATEGORY_COLORS.io)
           this.setTooltip(Blockly.Msg['U_INPUT_TOOLTIP'] || '讀取輸入')
         },
         plus_: function (this: any) {
@@ -551,7 +566,7 @@ export class App {
           this.appendDummyInput()
             .appendField(Blockly.Msg['U_ENDL_MSG0'] || '換行')
           this.setOutput(true, 'Expression')
-          this.setColour('#5CB1D6')
+          this.setColour(CATEGORY_COLORS.io)
           this.setTooltip(Blockly.Msg['U_ENDL_TOOLTIP'] || '換行')
         },
       }
@@ -565,7 +580,7 @@ export class App {
         init: function (this: Blockly.Block) {
           this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_IF_LABEL'] || '如果')
           this.appendStatementInput('STACK')
-          this.setColour('#FFAB19')
+          this.setColour(CATEGORY_COLORS.control)
           this.contextMenu = false
         },
       }
@@ -574,7 +589,7 @@ export class App {
           this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_ELSEIF_MSG'] || '否則，如果')
           this.setPreviousStatement(true)
           this.setNextStatement(true)
-          this.setColour('#FFAB19')
+          this.setColour(CATEGORY_COLORS.control)
           this.contextMenu = false
         },
       }
@@ -582,7 +597,7 @@ export class App {
         init: function (this: Blockly.Block) {
           this.appendDummyInput().appendField(Blockly.Msg['U_IF_ELSE_MSG2'] || '否則')
           this.setPreviousStatement(true)
-          this.setColour('#FFAB19')
+          this.setColour(CATEGORY_COLORS.control)
           this.contextMenu = false
         },
       }
@@ -593,16 +608,16 @@ export class App {
         init: function (this: any) {
           this.elseifCount_ = 0
           this.hasElse_ = false
-          this.appendValueInput('CONDITION')
+          this.appendValueInput(IF_INPUTS.value[0])
             .appendField(Blockly.Msg['U_IF_MSG'] || '如果')
-          this.appendStatementInput('THEN')
+          this.appendStatementInput(IF_INPUTS.statement[0])
             .appendField(Blockly.Msg['U_IF_THEN'] || '則')
           this.appendDummyInput('TAIL')
             .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusElseIf_()))
             .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minusElseIf_()), 'MINUS_BTN')
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#FFAB19')
+          this.setColour(CATEGORY_COLORS.control)
           this.setTooltip(Blockly.Msg['U_IF_TOOLTIP'] || '條件判斷')
           this.setMutator(new Blockly.icons.MutatorIcon(
             ['u_if_elseif_input', 'u_if_else_input'],
@@ -715,13 +730,13 @@ export class App {
     {
       Blockly.Blocks['u_while_loop'] = {
         init: function (this: Blockly.Block) {
-          this.appendValueInput('CONDITION')
+          this.appendValueInput(WHILE_INPUTS.value[0])
             .appendField(Blockly.Msg['U_WHILE_MSG'] || '當')
-          this.appendStatementInput('BODY')
+          this.appendStatementInput(WHILE_INPUTS.statement[0])
             .appendField(Blockly.Msg['U_WHILE_DO'] || '重複')
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#FFAB19')
+          this.setColour(CATEGORY_COLORS.control)
           this.setTooltip(Blockly.Msg['U_WHILE_TOOLTIP'] || 'while 迴圈')
         },
       }
@@ -734,15 +749,15 @@ export class App {
           this.appendDummyInput()
             .appendField(Blockly.Msg['U_COUNT_LOOP_MSG'] || '計數')
             .appendField(new Blockly.FieldTextInput('i') as Blockly.Field, 'VAR')
-          this.appendValueInput('FROM')
+          this.appendValueInput(COUNT_LOOP_INPUTS.value[0])
             .appendField(Blockly.Msg['U_COUNT_LOOP_FROM'] || '從')
-          this.appendValueInput('TO')
+          this.appendValueInput(COUNT_LOOP_INPUTS.value[1])
             .appendField(Blockly.Msg['U_COUNT_LOOP_TO'] || '到')
-          this.appendStatementInput('BODY')
+          this.appendStatementInput(COUNT_LOOP_INPUTS.statement[0])
             .appendField(Blockly.Msg['U_COUNT_LOOP_DO'] || '重複')
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#FFAB19')
+          this.setColour(CATEGORY_COLORS.control)
           this.setTooltip(Blockly.Msg['U_COUNT_LOOP_TOOLTIP'] || 'for 迴圈')
         },
       }
@@ -754,7 +769,7 @@ export class App {
         init: function (this: Blockly.Block) {
           this.appendDummyInput().appendField(Blockly.Msg['U_BREAK_MSG'] || '跳出')
           this.setPreviousStatement(true, 'Statement')
-          this.setColour('#FFAB19')
+          this.setColour(CATEGORY_COLORS.control)
           this.setTooltip('break')
         },
       }
@@ -765,7 +780,7 @@ export class App {
           this.appendDummyInput().appendField(Blockly.Msg['U_CONTINUE_MSG'] || '繼續')
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#FFAB19')
+          this.setColour(CATEGORY_COLORS.control)
           this.setTooltip('continue')
         },
       }
@@ -801,7 +816,7 @@ export class App {
           this.setInputsInline(true)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#FF6680')
+          this.setColour(CATEGORY_COLORS.functions)
           this.setTooltip(Blockly.Msg['U_FUNC_DEF_TOOLTIP'] || '定義函式')
         },
         plusParam_: function (this: any) {
@@ -852,7 +867,7 @@ export class App {
           this.setInputsInline(true)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#FF6680')
+          this.setColour(CATEGORY_COLORS.functions)
           this.setTooltip(Blockly.Msg['U_FUNC_CALL_TOOLTIP'] || '呼叫函式')
         },
         plusArg_: function (this: any) {
@@ -898,7 +913,7 @@ export class App {
             .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minusArg_()), 'MINUS_BTN')
           this.setInputsInline(true)
           this.setOutput(true, 'Expression')
-          this.setColour('#FF6680')
+          this.setColour(CATEGORY_COLORS.functions)
           this.setTooltip(Blockly.Msg['U_FUNC_CALL_EXPR_TOOLTIP'] || '呼叫函式（回傳值）')
         },
         plusArg_: function (this: any) {
@@ -936,7 +951,7 @@ export class App {
           this.appendValueInput('VALUE')
             .appendField(Blockly.Msg['U_RETURN_MSG'] || '回傳')
           this.setPreviousStatement(true, 'Statement')
-          this.setColour('#FF6680')
+          this.setColour(CATEGORY_COLORS.functions)
           this.setTooltip(Blockly.Msg['U_RETURN_TOOLTIP'] || '回傳值')
         },
       }
@@ -959,7 +974,7 @@ export class App {
               return opts
             }) as Blockly.Field, 'NAME')
           this.setOutput(true, 'Expression')
-          this.setColour('#FF8C1A')
+          this.setColour(CATEGORY_COLORS.data)
           this.setTooltip(Blockly.Msg['U_VAR_REF_TOOLTIP'] || '使用變數的值')
         },
       }
@@ -984,7 +999,7 @@ export class App {
           this.setInputsInline(true)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#FF661A')
+          this.setColour(CATEGORY_COLORS.arrays)
           this.setTooltip(Blockly.Msg['U_ARRAY_DECLARE_TOOLTIP'] || '宣告陣列')
         },
       }
@@ -998,8 +1013,8 @@ export class App {
             .appendField(new Blockly.FieldTextInput('// raw code') as Blockly.Field, 'CODE')
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#888888')
-          this.setTooltip('Raw code')
+          this.setColour(CATEGORY_COLORS.cpp_special)
+          this.setTooltip(Blockly.Msg['C_RAW_CODE_TOOLTIP'] || '直接輸入程式碼')
         },
         saveExtraState: function (this: Blockly.Block & { unresolved_?: boolean; nodeType_?: string }) {
           const state: Record<string, unknown> = {}
@@ -1013,8 +1028,16 @@ export class App {
           if (state.unresolved) {
             this.unresolved_ = true
             this.nodeType_ = (state.nodeType as string) ?? ''
-            this.setColour('#AA6644')
+            this.setColour(CATEGORY_COLORS.cpp_special)
             this.setTooltip(`Unresolved: ${this.nodeType_}`)
+          }
+          // 套用降級視覺
+          const cause = state.degradationCause as string | undefined
+          if (cause && DEGRADATION_VISUALS[cause as keyof typeof DEGRADATION_VISUALS]) {
+            const visual = DEGRADATION_VISUALS[cause as keyof typeof DEGRADATION_VISUALS]
+            if (visual.colour) this.setColour(visual.colour)
+            const tooltipText = (Blockly.Msg as Record<string, string>)[visual.tooltipKey]
+            if (tooltipText) this.setTooltip(tooltipText)
           }
         },
       }
@@ -1031,7 +1054,7 @@ export class App {
             .appendField(']')
           this.setInputsInline(true)
           this.setOutput(true, 'Expression')
-          this.setColour('#FF661A')
+          this.setColour(CATEGORY_COLORS.arrays)
           this.setTooltip(Blockly.Msg['U_ARRAY_ACCESS_TOOLTIP'] || '陣列存取')
         },
       }
@@ -1046,142 +1069,102 @@ export class App {
             .appendField(new Blockly.FieldTextInput('comment') as Blockly.Field, 'TEXT')
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
-          this.setColour('#AAAAAA')
-          this.setTooltip('Comment')
+          this.setColour(CATEGORY_COLORS.cpp_special)
+          this.setTooltip(Blockly.Msg['C_COMMENT_LINE_TOOLTIP'] || '備註說明')
         },
       }
     }
   }
 
-  private buildToolbox(level?: CognitiveLevel): object {
+  private buildToolbox(level?: CognitiveLevel, ioPreference?: 'iostream' | 'cstdio'): object {
     const lv = level ?? this.currentLevel
+    const ioPref = ioPreference ?? 'iostream'
 
-    const filterBlocks = (types: string[]) =>
-      types.filter(t => isBlockAvailable(t, lv)).map(t => ({ kind: 'block', type: t }))
+    // Registry-driven: get blocks by category and level from BlockSpec
+    const registryBlocks = (category: string): { kind: string; type: string }[] => {
+      const specs = this.blockSpecRegistry.listByCategory(category, lv)
+      return specs
+        .filter(s => {
+          const blockType = (s.blockDef as Record<string, unknown>)?.type as string | undefined
+          return blockType && isBlockAvailable(blockType, lv)
+        })
+        .map(s => ({ kind: 'block', type: (s.blockDef as Record<string, unknown>).type as string }))
+    }
 
-    const categories = [
-      {
-        kind: 'category',
-        name: Blockly.Msg['CATEGORY_DATA'] || '資料',
-        colour: '#FF8C1A',
-        contents: filterBlocks([
-          'u_var_declare', 'u_var_assign', 'u_var_ref', 'u_number', 'u_string',
-        ]),
-      },
-      {
-        kind: 'category',
-        name: Blockly.Msg['CATEGORY_OPERATORS'] || '運算',
-        colour: '#59C059',
-        contents: filterBlocks([
-          'u_arithmetic', 'u_compare', 'u_logic', 'u_logic_not', 'u_negate',
-        ]),
-      },
-      {
-        kind: 'category',
-        name: Blockly.Msg['CATEGORY_CONTROL'] || '控制',
-        colour: '#FFAB19',
-        contents: filterBlocks([
-          'u_if', 'u_while_loop', 'u_count_loop', 'u_break', 'u_continue',
-        ]),
-      },
-      {
-        kind: 'category',
-        name: Blockly.Msg['CATEGORY_FUNCTIONS'] || '函式',
-        colour: '#FF6680',
-        contents: filterBlocks([
-          'u_func_def', 'u_func_call', 'u_func_call_expr', 'u_return',
-        ]),
-      },
-      {
-        kind: 'category',
-        name: Blockly.Msg['CATEGORY_IO'] || '輸入/輸出',
-        colour: '#5CB1D6',
-        contents: filterBlocks([
-          'u_print', 'u_input', 'u_endl',
-        ]),
-      },
-      {
-        kind: 'category',
-        name: Blockly.Msg['CATEGORY_ARRAYS'] || '陣列',
-        colour: '#FF661A',
-        contents: filterBlocks([
-          'u_array_declare', 'u_array_access',
-        ]),
-      },
-      // ─── C++ Lang-Core (L1) ───
-      {
-        kind: 'category',
-        name: 'C++ 基礎',
-        colour: '#59C059',
-        contents: filterBlocks([
-          'c_char_literal', 'c_increment', 'c_compound_assign',
-          'c_for_loop', 'c_do_while', 'c_switch', 'c_case',
-        ]),
-      },
-      {
-        kind: 'category',
-        name: 'C++ 輸入/輸出',
-        colour: '#5CB1D6',
-        contents: filterBlocks([
-          'c_printf', 'c_scanf',
-        ]),
-      },
-      // ─── C++ Advanced (L2) ───
-      {
-        kind: 'category',
-        name: 'C++ 指標',
-        colour: '#9966FF',
-        contents: filterBlocks([
-          'c_pointer_declare', 'c_pointer_deref', 'c_address_of',
-          'c_malloc', 'c_free',
-        ]),
-      },
-      {
-        kind: 'category',
-        name: 'C++ 結構/類別',
-        colour: '#CF63CF',
-        contents: filterBlocks([
-          'c_struct_declare', 'c_struct_member_access', 'c_struct_pointer_access',
-          'cpp_class_def', 'cpp_new', 'cpp_delete', 'cpp_template_function',
-        ]),
-      },
-      {
-        kind: 'category',
-        name: 'C++ 字串',
-        colour: '#0FBD8C',
-        contents: filterBlocks([
-          'c_strlen', 'c_strcmp', 'c_strcpy', 'cpp_string_declare',
-        ]),
-      },
-      {
-        kind: 'category',
-        name: 'C++ 容器',
-        colour: '#4C97FF',
-        contents: filterBlocks([
-          'cpp_vector_declare', 'cpp_vector_push_back', 'cpp_vector_size',
-          'cpp_map_declare', 'cpp_stack_declare', 'cpp_queue_declare', 'cpp_set_declare',
-          'cpp_method_call', 'cpp_method_call_expr',
-        ]),
-      },
-      {
-        kind: 'category',
-        name: 'C++ 演算法',
-        colour: '#4C97FF',
-        contents: filterBlocks([
-          'cpp_sort',
-        ]),
-      },
-      {
-        kind: 'category',
-        name: 'C++ 特殊',
-        colour: '#888888',
-        contents: filterBlocks([
-          'c_raw_code', 'c_raw_expression', 'c_comment_line',
-          'c_include', 'c_include_local', 'c_define',
-          'c_ifdef', 'c_ifndef', 'c_using_namespace',
-        ]),
-      },
+    // I/O 類別需要合併 universal io + cpp io，並依 style 排序
+    const buildIoCategory = () => {
+      const ioSpecs = [
+        ...this.blockSpecRegistry.listByCategory('io', lv),
+        ...this.blockSpecRegistry.listByCategory('cpp_io', lv),
+      ]
+      const ioTypes = ioSpecs
+        .map(s => (s.blockDef as Record<string, unknown>)?.type as string)
+        .filter(t => t && isBlockAvailable(t, lv))
+
+      // 確保核心 I/O 積木在列表中（動態積木可能不在 registry 中）
+      const ensureTypes = ['u_print', 'u_input', 'u_endl', 'c_printf', 'c_scanf']
+      for (const t of ensureTypes) {
+        if (!ioTypes.includes(t) && isBlockAvailable(t, lv)) {
+          ioTypes.push(t)
+        }
+      }
+
+      // 依 ioPreference 排序
+      const universalIo = ioTypes.filter(t => t.startsWith('u_'))
+      const cppIo = ioTypes.filter(t => t.startsWith('c_'))
+      const sorted = ioPref === 'iostream'
+        ? [...universalIo, ...cppIo]
+        : [...cppIo, ...universalIo]
+      return sorted.map(t => ({ kind: 'block', type: t }))
+    }
+
+    // 類別定義（順序固定，內容由 registry 動態生成）
+    const CATEGORY_DEFS: Array<{ key: string; nameKey: string; fallback: string; colorKey: string; registryCategories: string[]; extraTypes?: string[] }> = [
+      { key: 'data', nameKey: 'CATEGORY_DATA', fallback: '資料', colorKey: 'data', registryCategories: ['data'], extraTypes: ['u_var_declare', 'u_var_assign', 'u_var_ref', 'u_number', 'u_string'] },
+      { key: 'operators', nameKey: 'CATEGORY_OPERATORS', fallback: '運算', colorKey: 'operators', registryCategories: ['operators'], extraTypes: ['u_arithmetic', 'u_compare', 'u_logic', 'u_logic_not', 'u_negate'] },
+      { key: 'control', nameKey: 'CATEGORY_CONTROL', fallback: '控制', colorKey: 'control', registryCategories: ['control'], extraTypes: ['u_if', 'u_while_loop', 'u_count_loop', 'u_break', 'u_continue'] },
+      { key: 'functions', nameKey: 'CATEGORY_FUNCTIONS', fallback: '函式', colorKey: 'functions', registryCategories: ['functions'], extraTypes: ['u_func_def', 'u_func_call', 'u_func_call_expr', 'u_return'] },
+      { key: 'arrays', nameKey: 'CATEGORY_ARRAYS', fallback: '陣列', colorKey: 'arrays', registryCategories: ['arrays'], extraTypes: ['u_array_declare', 'u_array_access'] },
+      { key: 'cpp_basic', nameKey: 'CATEGORY_CPP_BASIC', fallback: 'C++ 基礎', colorKey: 'cpp_basic', registryCategories: ['cpp_basic', 'conditions'] },
+      { key: 'cpp_pointers', nameKey: 'CATEGORY_CPP_POINTERS', fallback: 'C++ 指標', colorKey: 'cpp_pointers', registryCategories: ['pointers'] },
+      { key: 'cpp_structs', nameKey: 'CATEGORY_CPP_STRUCTS', fallback: 'C++ 結構/類別', colorKey: 'cpp_structs', registryCategories: ['structures', 'oop'] },
+      { key: 'cpp_strings', nameKey: 'CATEGORY_CPP_STRINGS', fallback: 'C++ 字串', colorKey: 'cpp_strings', registryCategories: ['strings'] },
+      { key: 'cpp_containers', nameKey: 'CATEGORY_CPP_CONTAINERS', fallback: 'C++ 容器', colorKey: 'cpp_containers', registryCategories: ['containers'] },
+      { key: 'cpp_algorithms', nameKey: 'CATEGORY_CPP_ALGORITHMS', fallback: 'C++ 演算法', colorKey: 'cpp_algorithms', registryCategories: ['algorithms'] },
+      { key: 'cpp_special', nameKey: 'CATEGORY_CPP_SPECIAL', fallback: 'C++ 特殊', colorKey: 'cpp_special', registryCategories: ['special', 'preprocessor'] },
     ]
+
+    const categories = CATEGORY_DEFS.map(def => {
+      // Merge blocks from all registry categories
+      const blockSet = new Set<string>()
+      for (const cat of def.registryCategories) {
+        for (const b of registryBlocks(cat)) {
+          blockSet.add(b.type)
+        }
+      }
+      // Ensure dynamic blocks (registered in code, not in JSON) are included
+      if (def.extraTypes) {
+        for (const t of def.extraTypes) {
+          if (isBlockAvailable(t, lv)) blockSet.add(t)
+        }
+      }
+      return {
+        kind: 'category',
+        name: (Blockly.Msg as Record<string, string>)[def.nameKey] || def.fallback,
+        colour: CATEGORY_COLORS[def.colorKey] || CATEGORY_COLORS.data,
+        contents: [...blockSet].map(t => ({ kind: 'block', type: t })),
+      }
+    })
+
+    // Insert I/O category after functions
+    const funcIdx = categories.findIndex(c => c.name === ((Blockly.Msg as Record<string, string>)['CATEGORY_FUNCTIONS'] || '函式'))
+    const ioCategory = {
+      kind: 'category',
+      name: (Blockly.Msg as Record<string, string>)['CATEGORY_IO'] || '輸入/輸出',
+      colour: CATEGORY_COLORS.io,
+      contents: buildIoCategory(),
+    }
+    categories.splice(funcIdx + 1, 0, ioCategory)
 
     // Only include categories with at least one block
     return {
@@ -1268,6 +1251,7 @@ export class App {
       this.currentLevel = level
       this.updateToolboxForLevel(level)
       this.quickAccessBar?.setLevel(level)
+      this.updateStatusBar()
     })
   }
 
@@ -1278,7 +1262,42 @@ export class App {
     selector.onChange((style) => {
       this.syncController?.setStyle(style)
       this.syncController?.syncBlocksToCode()
-      this.updateStatusBar(style)
+      this.currentStylePreset = style
+      this.updateStatusBar()
+      // 更新 toolbox I/O 排序
+      const ioPref = style.io_style === 'printf' ? 'cstdio' : 'iostream'
+      if (ioPref !== this.currentIoPreference) {
+        this.currentIoPreference = ioPref
+        this.updateToolboxForLevel(this.currentLevel)
+      }
+    })
+  }
+
+  private setupBlockStyleSelector(): void {
+    const mount = document.getElementById('block-style-selector-mount')
+    if (!mount) return
+    const selector = new BlockStyleSelector(mount)
+    selector.onChange((preset: BlockStylePreset) => {
+      if (!this.blocklyPanel) return
+      const currentRenderer = this.blocklyPanel.getRenderer()
+      if (preset.renderer !== currentRenderer) {
+        // Renderer 不同：需重建 workspace
+        const toolbox = this.buildToolbox(this.currentLevel, this.currentIoPreference)
+        this.blocklyPanel.reinitWithPreset(toolbox, preset)
+        // 重新連接 change listener
+        this.blocklyPanel.onChange(() => {
+          if (this._codeToBlocksInProgress) return
+          this.blocksDirty = true
+          this.updateSyncHints()
+          this.syncController!.syncBlocksToCode()
+          this.blocksDirty = false
+          this.updateSyncHints()
+          this.runBlockDiagnostics()
+          this.autoSave()
+        })
+      }
+      this.currentBlockStyleId = preset.id
+      this.updateStatusBar()
     })
   }
 
@@ -1288,24 +1307,35 @@ export class App {
     const selector = new LocaleSelector(mount)
     selector.onChange(async (locale) => {
       await this.localeLoader.load(locale)
+      this.currentLocale = locale
+      // Rebuild toolbox to update category names
+      this.updateToolboxForLevel(this.currentLevel)
       // Re-render blocks to update messages
       this.syncController?.syncBlocksToCode()
+      this.updateStatusBar()
     })
   }
+
+  private currentStylePreset: StylePreset = DEFAULT_STYLE
+  private currentBlockStyleId: string = 'scratch'
+  private currentLocale: string = 'zh-TW'
 
   private updateStatusBar(style?: StylePreset): void {
     const statusBar = document.getElementById('status-bar')
     if (!statusBar) return
-    const s = style ?? DEFAULT_STYLE
-    const styleName = s.name['zh-TW'] || s.id
-    statusBar.innerHTML = `<span>C++ | ${styleName}</span>`
+    if (style) this.currentStylePreset = style
+    const s = this.currentStylePreset
+    const styleName = s.name[this.currentLocale] || s.name['zh-TW'] || s.id
+    const blockStyleLabel = (Blockly.Msg as Record<string, string>)[`BLOCK_STYLE_${this.currentBlockStyleId.toUpperCase()}`] || this.currentBlockStyleId
+    const levelLabel = `L${this.currentLevel}`
+    statusBar.innerHTML = `<span>C++ | ${styleName} | ${blockStyleLabel} | ${levelLabel} | ${this.currentLocale}</span>`
   }
 
   private updateToolboxForLevel(level: CognitiveLevel): void {
     if (!this.blocklyPanel) return
     const workspace = this.blocklyPanel.getWorkspace()
     if (!workspace) return
-    const toolbox = this.buildToolbox(level)
+    const toolbox = this.buildToolbox(level, this.currentIoPreference)
     workspace.updateToolbox(toolbox as Blockly.utils.toolbox.ToolboxDefinition)
   }
 
@@ -1354,9 +1384,11 @@ export class App {
       blocklyState: this.blocklyPanel?.getState() ?? {},
       code: this.monacoPanel?.getCode() ?? '',
       language: 'cpp',
-      styleId: 'apcs',
+      styleId: this.currentStylePreset.id,
       level: this.currentLevel,
       lastModified: new Date().toISOString(),
+      blockStyleId: this.currentBlockStyleId,
+      locale: this.currentLocale,
     }
     const blob = this.storageService.exportToBlob(state)
     this.storageService.downloadBlob(blob, `code-blockly-${Date.now()}.json`)

@@ -19,11 +19,6 @@ export class VariablePanel {
     this.container = container
     this.container.classList.add('variable-panel')
 
-    const header = document.createElement('div')
-    header.className = 'panel-header'
-    header.innerHTML = '<span class="panel-title">Variables</span>'
-    this.container.appendChild(header)
-
     this.contentEl = document.createElement('div')
     this.contentEl.className = 'variable-content'
     this.container.appendChild(this.contentEl)

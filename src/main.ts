@@ -1,6 +1,7 @@
 import { App } from './ui/app.new'
 
 const app = new App()
+;(window as any).__app = app
 
 app.init().catch((err) => {
   console.error('Failed to initialize Code Blockly:', err)
