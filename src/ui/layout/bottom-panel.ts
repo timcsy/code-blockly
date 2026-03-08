@@ -101,6 +101,25 @@ export class BottomPanel {
     window.dispatchEvent(new Event('resize'))
   }
 
+  /** Switch to a tab and ensure the panel is expanded (no toggle). */
+  showTab(id: string): void {
+    this.activeTabId = id
+    this.collapsed = false
+    this.applyHeight()
+
+    for (const tab of this.tabs) {
+      tab.panel.style.display = tab.id === id ? '' : 'none'
+    }
+
+    const buttons = this.tabButtonsArea.querySelectorAll('.bottom-tab-btn')
+    buttons.forEach(btn => {
+      const el = btn as HTMLElement
+      el.classList.toggle('active', el.dataset.tabId === id)
+    })
+    this.updateActions(id)
+    window.dispatchEvent(new Event('resize'))
+  }
+
   getActiveTabId(): string | null {
     return this.activeTabId
   }

@@ -1528,7 +1528,7 @@ export class App {
     this.showExecButtons(true)
     this.consolePanel?.clear()
     this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_RUNNING'] || 'Running', 'running')
-    this.bottomPanel?.activateTab('console')
+    this.bottomPanel?.showTab('console')
 
     try {
       await this.interpreter.execute(tree as unknown as InterpreterNode)
@@ -1573,7 +1573,7 @@ export class App {
       this.consolePanel?.log(text)
     })
     this.consolePanel?.clear()
-    this.bottomPanel?.activateTab('variables')
+    this.bottomPanel?.showTab('variables')
     this.showExecButtons(true)
 
     try {
@@ -1652,7 +1652,7 @@ export class App {
 
     // Update variable panel
     this.variablePanel?.updateFromSnapshot(step.scopeSnapshot)
-    this.bottomPanel?.activateTab('variables')
+    this.bottomPanel?.showTab('variables')
 
     // Highlight block
     this.clearHighlights()
