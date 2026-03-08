@@ -366,7 +366,7 @@ html, body {
 
 .bottom-panel-action-btn {
   padding: 2px 6px;
-  border: none;
+  border: 1px solid #555;
   background: transparent;
   color: #999;
   cursor: pointer;
