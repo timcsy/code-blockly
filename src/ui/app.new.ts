@@ -73,6 +73,9 @@ export class App {
   private stepRecords: StepInfo[] = []
   private currentStepIndex = -1
   private blocksDirty = false
+  private codeDirty = false
+  private autoSync = true
+  private codeToBlocksTimer: ReturnType<typeof setTimeout> | null = null
   private quickAccessBar: QuickAccessBar | null = null
   private currentLevel: CognitiveLevel = 1
   private currentIoPreference: 'iostream' | 'cstdio' = 'iostream'
@@ -116,6 +119,7 @@ export class App {
         <span class="toolbar-title">Code Blockly</span>
       </div>
       <div class="toolbar-actions">
+        <button id="auto-sync-btn" class="auto-sync-on" title="自動同步：開啟">⇄ 自動</button>
         <button id="sync-blocks-btn" title="積木 → 程式碼">積木→程式碼</button>
         <button id="sync-code-btn" title="程式碼 → 積木">程式碼→積木</button>
         <span class="toolbar-separator"></span>
@@ -232,22 +236,30 @@ export class App {
       if (this._codeToBlocksInProgress) return
       this.blocksDirty = true
       this.updateSyncHints()
-      this.syncController!.syncBlocksToCode()
-      this.blocksDirty = false
-      this.updateSyncHints()
+      if (this.autoSync) {
+        this.syncController!.syncBlocksToCode()
+        this.blocksDirty = false
+        this.updateSyncHints()
+      }
       this.runBlockDiagnostics()
       this.autoSave()
     })
 
-    // Code change detection for sync hint
+    // Code change detection for sync hint (with debounce for auto-sync)
     this.monacoPanel.onChange(() => {
+      if (this._codeToBlocksInProgress) return
+      this.codeDirty = true
       this.updateSyncHints()
+      if (this.autoSync) {
+        this.scheduleCodeToBlocksSync()
+      }
     })
 
     // 10. Setup toolbar buttons + selectors + execution + highlighting
     this.setupToolbar()
     this.setupExecution()
     this.setupBidirectionalHighlight()
+
     this.setupLevelSelector()
     this.setupStyleSelector()
     this.setupBlockStyleSelector()
@@ -1226,10 +1238,11 @@ export class App {
       parser.parse(code).then(tree => {
         codeParser._lastTree = tree.rootNode
         originalSync()
-        // Rebuild source mappings for bidirectional highlight
-        this.syncController?.syncBlocksToCode()
-        // Clear flag after event loop settles (deferred Blockly events)
-        setTimeout(() => { this._codeToBlocksInProgress = false }, 0)
+        this.codeDirty = false
+        this.blocksDirty = false
+        this.updateSyncHints()
+        // Clear flag after Blockly deferred events settle (multiple frames)
+        setTimeout(() => { this._codeToBlocksInProgress = false }, 300)
       }).catch(err => {
         console.error('Parse error:', err)
         this._codeToBlocksInProgress = false
@@ -1291,9 +1304,11 @@ export class App {
           if (this._codeToBlocksInProgress) return
           this.blocksDirty = true
           this.updateSyncHints()
-          this.syncController!.syncBlocksToCode()
-          this.blocksDirty = false
-          this.updateSyncHints()
+          if (this.autoSync) {
+            this.syncController!.syncBlocksToCode()
+            this.blocksDirty = false
+            this.updateSyncHints()
+          }
           this.runBlockDiagnostics()
           this.autoSave()
         })
@@ -1353,8 +1368,13 @@ export class App {
       return null
     }
 
+    replaceBtn('auto-sync-btn')?.addEventListener('click', () => {
+      this.toggleAutoSync()
+    })
     replaceBtn('sync-blocks-btn')?.addEventListener('click', () => {
       this.syncController?.syncBlocksToCode()
+      this.blocksDirty = false
+      this.updateSyncHints()
     })
     replaceBtn('sync-code-btn')?.addEventListener('click', () => {
       this.syncController?.syncCodeToBlocks()
@@ -1683,24 +1703,47 @@ export class App {
     }
   }
 
+  private _highlightDirection: 'block-to-code' | 'code-to-block' | null = null
+
   private setupBidirectionalHighlight(): void {
-    // Block → Code highlighting
+    // Block → Code highlighting (yellow on both block and code)
     this.blocklyPanel?.onBlockSelect((blockId) => {
+      if (!blockId) {
+        // Deselection: only clear if we were in block-to-code mode
+        if (this._highlightDirection === 'block-to-code') {
+          this.monacoPanel?.clearHighlight()
+          this.blocklyPanel?.clearHighlight()
+          this._highlightDirection = null
+        }
+        return
+      }
       this.monacoPanel?.clearHighlight()
-      if (!blockId) return
+      this.blocklyPanel?.clearHighlight()
+      this._highlightDirection = 'block-to-code'
+      this.blocklyPanel?.highlightBlock(blockId, 'block-to-code')
       const mapping = this.syncController?.getMappingForBlock(blockId)
       if (mapping) {
-        this.monacoPanel?.addHighlight(mapping.startLine + 1, mapping.endLine + 1)
+        this.monacoPanel?.addHighlight(mapping.startLine + 1, mapping.endLine + 1, 'block-to-code')
       }
     })
 
-    // Code → Block highlighting
+    // Code → Block highlighting (green on both code and block)
     this.monacoPanel?.onCursorChange((line) => {
       this.blocklyPanel?.clearHighlight()
+      this.monacoPanel?.clearHighlight()
+      this._highlightDirection = 'code-to-block'
+      // Deselect any Blockly-selected block so next block click fires SELECTED
+      try {
+        const selected = Blockly.getSelected()
+        if (selected) {
+          Blockly.common.setSelected(null as unknown as Blockly.ISelectable)
+        }
+      } catch { /* ignore */ }
       // Monaco lines are 1-based, SourceMapping is 0-based
       const mapping = this.syncController?.getMappingForLine(line - 1)
       if (mapping) {
-        this.blocklyPanel?.highlightBlock(mapping.blockId)
+        this.blocklyPanel?.highlightBlock(mapping.blockId, 'code-to-block')
+        this.monacoPanel?.addHighlight(mapping.startLine + 1, mapping.endLine + 1, 'code-to-block')
       }
     })
   }
@@ -1771,8 +1814,36 @@ export class App {
       syncBlocksBtn.classList.toggle('sync-hint', this.blocksDirty)
     }
     if (syncCodeBtn) {
-      // Code-side dirty detection: simple approach — mark dirty when user types
-      // Cleared when syncCodeToBlocks is called
+      syncCodeBtn.classList.toggle('sync-hint', this.codeDirty)
+    }
+  }
+
+  private scheduleCodeToBlocksSync(): void {
+    if (this.codeToBlocksTimer) clearTimeout(this.codeToBlocksTimer)
+    this.codeToBlocksTimer = setTimeout(() => {
+      this.codeToBlocksTimer = null
+      this.syncController?.syncCodeToBlocks()
+    }, 800)
+  }
+
+  private toggleAutoSync(): void {
+    this.autoSync = !this.autoSync
+    const btn = document.getElementById('auto-sync-btn')
+    if (btn) {
+      btn.classList.toggle('auto-sync-on', this.autoSync)
+      btn.classList.toggle('auto-sync-off', !this.autoSync)
+      btn.title = this.autoSync ? '自動同步：開啟' : '自動同步：關閉'
+    }
+    // If turning on, sync immediately if dirty
+    if (this.autoSync) {
+      if (this.blocksDirty) {
+        this.syncController?.syncBlocksToCode()
+        this.blocksDirty = false
+        this.updateSyncHints()
+      }
+      if (this.codeDirty) {
+        this.syncController?.syncCodeToBlocks()
+      }
     }
   }
 

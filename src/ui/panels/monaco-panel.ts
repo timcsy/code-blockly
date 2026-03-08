@@ -78,15 +78,16 @@ export class MonacoPanel {
     this.editor?.updateOptions({ readOnly })
   }
 
-  addHighlight(startLine: number, endLine: number): void {
+  addHighlight(startLine: number, endLine: number, variant: 'block-to-code' | 'code-to-block' = 'block-to-code'): void {
     if (!this.editor) return
     this.clearHighlight()
+    const suffix = variant === 'code-to-block' ? '-reverse' : ''
     this.highlightDecorations = this.editor.deltaDecorations([], [{
       range: new monaco.Range(startLine, 1, endLine, 1),
       options: {
         isWholeLine: true,
-        className: 'monaco-line-highlight',
-        linesDecorationsClassName: 'monaco-line-highlight-gutter',
+        className: `monaco-line-highlight${suffix}`,
+        linesDecorationsClassName: `monaco-line-highlight-gutter${suffix}`,
       },
     }])
   }

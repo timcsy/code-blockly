@@ -17,6 +17,7 @@ export class BlocklyPanel {
   private onChangeCallback: (() => void) | null = null
   private onBlockSelectCallback: ((blockId: string | null) => void) | null = null
   private highlightedBlockId: string | null = null
+  private highlightVariant: string | null = null
   private blockSpecRegistry: BlockSpecRegistry | null = null
   private currentRenderer: string = 'zelos'
 
@@ -544,22 +545,35 @@ export class BlocklyPanel {
     this.onBlockSelectCallback = callback
   }
 
-  highlightBlock(blockId: string | null): void {
+  highlightBlock(blockId: string | null, variant: 'block-to-code' | 'code-to-block' = 'block-to-code'): void {
     this.clearHighlight()
     if (!blockId || !this.workspace) return
     const block = this.workspace.getBlockById(blockId)
     if (block) {
-      block.addSelect()
+      const svgPath = (block as unknown as { pathObject?: { svgPath?: SVGElement } }).pathObject?.svgPath
+        ?? block.getSvgRoot()?.querySelector('.blocklyPath')
+      if (svgPath) {
+        // Always remove both classes first, then add the desired one
+        svgPath.classList.remove('blockly-highlight-forward', 'blockly-highlight-reverse')
+        const cls = variant === 'code-to-block' ? 'blockly-highlight-reverse' : 'blockly-highlight-forward'
+        svgPath.classList.add(cls)
+      }
       this.highlightedBlockId = blockId
+      this.highlightVariant = variant
     }
   }
 
   clearHighlight(): void {
-    if (this.highlightedBlockId && this.workspace) {
-      const block = this.workspace.getBlockById(this.highlightedBlockId)
-      if (block) block.removeSelect()
+    // Remove highlight classes from ALL blocks (not just tracked one)
+    if (this.workspace) {
+      const svgPaths = this.workspace.getParentSvg()
+        ?.querySelectorAll('.blockly-highlight-forward, .blockly-highlight-reverse')
+      svgPaths?.forEach(el => {
+        el.classList.remove('blockly-highlight-forward', 'blockly-highlight-reverse')
+      })
     }
     this.highlightedBlockId = null
+    this.highlightVariant = null
   }
 
   undo(): void { this.workspace?.undo(false) }

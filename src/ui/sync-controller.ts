@@ -81,6 +81,9 @@ export class SyncController {
       this.currentTree = tree
       const blockState = renderToBlocklyState(tree)
       this.blocklyPanel.setState(blockState)
+
+      // Build source mappings from semantic tree sourceRange + rendered block IDs
+      this.sourceMappings = this.buildMappingsFromTree(tree, blockState)
       return true
     } finally {
       this.syncing = false
@@ -103,6 +106,18 @@ export class SyncController {
     return this.syncing
   }
 
+  /** Rebuild source mappings from generated code (for blocks→code direction) */
+  rebuildSourceMappings(): void {
+    try {
+      const tree = this.blocklyPanel.extractSemanticTree()
+      this.currentTree = tree
+      const { mappings } = generateCodeWithMapping(tree, this.language, this.style)
+      this.sourceMappings = mappings
+    } catch {
+      // silently ignore — mappings may be stale but that's acceptable
+    }
+  }
+
   getSourceMappings(): SourceMapping[] {
     return [...this.sourceMappings]
   }
@@ -112,7 +127,82 @@ export class SyncController {
   }
 
   getMappingForLine(line: number): SourceMapping | null {
-    return this.sourceMappings.find(m => line >= m.startLine && line <= m.endLine) ?? null
+    let best: SourceMapping | null = null
+    for (const m of this.sourceMappings) {
+      if (line >= m.startLine && line <= m.endLine) {
+        if (!best || (m.endLine - m.startLine) < (best.endLine - best.startLine)) {
+          best = m
+        }
+      }
+    }
+    return best
+  }
+
+  /** Walk semantic tree and block state in parallel to build blockId→sourceRange mappings */
+  private buildMappingsFromTree(
+    tree: SemanticNode,
+    blockState: { blocks: { blocks: unknown[] } },
+  ): SourceMapping[] {
+    const mappings: SourceMapping[] = []
+    const body = tree.children.body ?? []
+    if (body.length === 0 || blockState.blocks.blocks.length === 0) return mappings
+
+    interface BlockNode { id: string; inputs?: Record<string, { block?: BlockNode }>; next?: { block?: BlockNode } }
+
+    // Semantic child key → possible block input names
+    const childToInput: Record<string, string[]> = {
+      body: ['BODY', 'DO'],
+      then_body: ['THEN', 'BODY'],
+      else_body: ['ELSE'],
+      condition: ['COND', 'CONDITION'],
+      from: ['FROM'],
+      to: ['TO'],
+      value: ['VALUE', 'EXPR'],
+      args: ['ARG0', 'ARG1', 'ARG2'],
+      left: ['A'],
+      right: ['B'],
+    }
+
+    const findBlockInput = (block: BlockNode, semKey: string): BlockNode | undefined => {
+      if (!block.inputs) return undefined
+      const candidates = childToInput[semKey] ?? [semKey.toUpperCase()]
+      for (const name of candidates) {
+        if (block.inputs[name]?.block) return block.inputs[name].block
+      }
+      return undefined
+    }
+
+    const walkChain = (nodes: SemanticNode[], firstBlock: BlockNode | undefined): void => {
+      let currentBlock = firstBlock
+      for (const node of nodes) {
+        if (!currentBlock) break
+        walkPair(node, currentBlock)
+        currentBlock = currentBlock.next?.block
+      }
+    }
+
+    const walkPair = (node: SemanticNode, block: BlockNode): void => {
+      const sr = node.metadata?.sourceRange as { startLine: number; endLine: number } | undefined
+      if (sr) {
+        mappings.push({ blockId: block.id, startLine: sr.startLine, endLine: sr.endLine })
+      }
+      // Recurse into all children
+      for (const [key, children] of Object.entries(node.children)) {
+        if (!children || children.length === 0) continue
+        const inputBlock = findBlockInput(block, key)
+        if (!inputBlock) continue
+        // Statement chains: children with multiple nodes linked by .next
+        if (children.length > 1 || key.includes('body')) {
+          walkChain(children, inputBlock)
+        } else {
+          // Single expression child
+          walkPair(children[0], inputBlock)
+        }
+      }
+    }
+
+    walkChain(body, blockState.blocks.blocks[0] as BlockNode | undefined)
+    return mappings
   }
 
   private findErrors(node: import('../core/lift/types').AstNode): SyncError[] {

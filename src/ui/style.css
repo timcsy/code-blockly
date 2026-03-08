@@ -71,6 +71,58 @@ html, body {
   background: #404040;
 }
 
+/* ─── Auto-sync toggle button ─── */
+
+#auto-sync-btn {
+  font-weight: bold;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 4px 8px;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+#auto-sync-btn.auto-sync-on {
+  color: #4ec9b0;
+  border-color: #4ec9b0;
+  background: rgba(78, 201, 176, 0.12);
+}
+
+#auto-sync-btn.auto-sync-off {
+  color: #888;
+  border-color: #555;
+  background: transparent;
+}
+
+#auto-sync-btn.auto-sync-on:hover {
+  background: rgba(78, 201, 176, 0.25);
+}
+
+#auto-sync-btn.auto-sync-off:hover {
+  background: #3a3a3a;
+}
+
+/* ─── Sync direction buttons: color-coded ─── */
+
+#sync-blocks-btn {
+  color: #f0c040;
+  border: 1px solid transparent;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#sync-code-btn {
+  color: #5edc8e;
+  border: 1px solid transparent;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#sync-blocks-btn:hover {
+  background: rgba(240, 192, 64, 0.15);
+}
+
+#sync-code-btn:hover {
+  background: rgba(46, 204, 113, 0.15);
+}
+
 .toolbar-separator {
   width: 1px;
   height: 16px;
@@ -585,36 +637,74 @@ html, body {
   cursor: pointer;
 }
 
-/* ─── Sync hint ─── */
+/* ─── Sync hint: thick border when dirty ─── */
 
-.sync-hint {
-  animation: sync-pulse 1.5s ease-in-out infinite;
-  border: 1px solid #f39c12 !important;
-  box-shadow: 0 0 6px rgba(243, 156, 18, 0.6);
+#sync-blocks-btn.sync-hint {
+  animation: sync-pulse-yellow 1.5s ease-in-out infinite;
+  border: 2px solid #f0c040 !important;
+  box-shadow: 0 0 6px rgba(240, 192, 64, 0.6);
 }
 
-@keyframes sync-pulse {
-  0%, 100% { box-shadow: 0 0 4px rgba(243, 156, 18, 0.4); }
-  50% { box-shadow: 0 0 10px rgba(243, 156, 18, 0.8); }
+#sync-code-btn.sync-hint {
+  animation: sync-pulse-green 1.5s ease-in-out infinite;
+  border: 2px solid #2ecc71 !important;
+  box-shadow: 0 0 6px rgba(46, 204, 113, 0.6);
 }
 
-/* ─── Block highlight ─── */
+@keyframes sync-pulse-yellow {
+  0%, 100% { box-shadow: 0 0 4px rgba(240, 192, 64, 0.4); }
+  50% { box-shadow: 0 0 10px rgba(240, 192, 64, 0.8); }
+}
 
-.blockly-highlight .blocklyPath,
+@keyframes sync-pulse-green {
+  0%, 100% { box-shadow: 0 0 4px rgba(46, 204, 113, 0.4); }
+  50% { box-shadow: 0 0 10px rgba(46, 204, 113, 0.8); }
+}
+
+/* ─── Suppress Blockly native orange selection — our custom highlight takes over ─── */
 .blocklySelected > .blocklyPath {
-  stroke: #f39c12 !important;
-  stroke-width: 4px !important;
-  filter: drop-shadow(0 0 6px rgba(243, 156, 18, 0.8));
+  stroke: inherit !important;
+  stroke-width: inherit !important;
+  filter: none !important;
 }
 
-/* ─── Monaco line highlight ─── */
+/* ─── Block highlight: block→code direction (yellow, must override .blocklySelected) ─── */
+
+.blocklyPath.blockly-highlight-forward,
+.blocklySelected > .blocklyPath.blockly-highlight-forward {
+  stroke: #f0c040 !important;
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 0 6px rgba(240, 192, 64, 0.8)) !important;
+}
+
+/* ─── Block highlight: code→block direction (green, must override .blocklySelected) ─── */
+
+.blocklyPath.blockly-highlight-reverse,
+.blocklySelected > .blocklyPath.blockly-highlight-reverse {
+  stroke: #2ecc71 !important;
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 0 6px rgba(46, 204, 113, 0.8)) !important;
+}
+
+/* ─── Monaco line highlight: block→code direction (yellow) ─── */
 
 .monaco-line-highlight {
-  background: rgba(0, 122, 204, 0.15) !important;
+  background: rgba(240, 192, 64, 0.15) !important;
 }
 
 .monaco-line-highlight-gutter {
-  background: #007acc;
+  background: #f0c040;
+  width: 3px !important;
+}
+
+/* ─── Monaco line highlight: code→block direction (green) ─── */
+
+.monaco-line-highlight-reverse {
+  background: rgba(46, 204, 113, 0.15) !important;
+}
+
+.monaco-line-highlight-gutter-reverse {
+  background: #2ecc71;
   width: 3px !important;
 }
 
