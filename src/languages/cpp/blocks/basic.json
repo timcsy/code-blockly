@@ -66,17 +66,20 @@
             ["%{BKY_C_INCREMENT_OP_INCREMENT}", "++"],
             ["%{BKY_C_INCREMENT_OP_DECREMENT}", "--"]
           ]
+        },
+        {
+          "type": "field_dropdown",
+          "name": "POSITION",
+          "options": [
+            ["%{BKY_C_INCREMENT_POS_POSTFIX}", "postfix"],
+            ["%{BKY_C_INCREMENT_POS_PREFIX}", "prefix"]
+          ]
         }
       ],
       "previousStatement": null,
       "nextStatement": null,
       "colour": "#59C059",
       "tooltip": "%{BKY_C_INCREMENT_TOOLTIP}"
-    },
-    "codeTemplate": {
-      "pattern": "${NAME}${OP}",
-      "imports": [],
-      "order": 8
     },
     "astPattern": {
       "nodeType": "update_expression",

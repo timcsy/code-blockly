@@ -318,17 +318,15 @@ export class App {
 
     // u_var_declare with +/- buttons + inline layout
     {
-      const getTypeOptions = () => {
-        return [
-          [Blockly.Msg['TYPE_INT'] || 'int', 'int'],
-          [Blockly.Msg['TYPE_FLOAT'] || 'float', 'float'],
-          [Blockly.Msg['TYPE_DOUBLE'] || 'double', 'double'],
-          [Blockly.Msg['TYPE_CHAR'] || 'char', 'char'],
-          [Blockly.Msg['TYPE_BOOL'] || 'bool', 'bool'],
-          [Blockly.Msg['TYPE_STRING'] || 'string', 'string'],
-          [Blockly.Msg['TYPE_LONG_LONG'] || 'long long', 'long long'],
-        ] as Array<[string, string]>
-      }
+      const getTypeOptions = (): Array<[string, string]> => [
+        [Blockly.Msg['U_VAR_DECLARE_TYPE_INT'] || 'int', 'int'],
+        [Blockly.Msg['U_VAR_DECLARE_TYPE_FLOAT'] || 'float', 'float'],
+        [Blockly.Msg['U_VAR_DECLARE_TYPE_DOUBLE'] || 'double', 'double'],
+        [Blockly.Msg['U_VAR_DECLARE_TYPE_CHAR'] || 'char', 'char'],
+        [Blockly.Msg['U_VAR_DECLARE_TYPE_BOOL'] || 'bool', 'bool'],
+        [Blockly.Msg['U_VAR_DECLARE_TYPE_STRING'] || 'string', 'string'],
+        [Blockly.Msg['U_VAR_DECLARE_TYPE_LONG_LONG'] || 'long long', 'long long'],
+      ]
 
       // Mutator helper blocks for u_var_declare
       Blockly.Blocks['u_var_declare_container'] = {
@@ -365,6 +363,7 @@ export class App {
           this.appendDummyInput('HEADER')
             .appendField(Blockly.Msg['U_VAR_DECLARE_HEADER'] || '宣告')
             .appendField(new Blockly.FieldDropdown(getTypeOptions) as Blockly.Field, 'TYPE')
+            .appendField(Blockly.Msg['U_VAR_DECLARE_VAR_WORD'] || '變數')
           this.appendValueInput('INIT_0')
             .appendField(new Blockly.FieldTextInput('x') as Blockly.Field, 'NAME_0')
             .appendField('=')
@@ -534,7 +533,7 @@ export class App {
         init: function (this: any) {
           this.varCount_ = 1
           this.appendDummyInput('VAR_0')
-            .appendField(Blockly.Msg['U_INPUT_MSG'] || '輸入')
+            .appendField(Blockly.Msg['U_INPUT_LABEL'] || '讀取輸入 → 變數')
             .appendField(new Blockly.FieldTextInput('x') as Blockly.Field, 'NAME_0')
           this.appendDummyInput('TAIL')
             .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plus_()))
@@ -749,7 +748,7 @@ export class App {
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
           this.setColour(CATEGORY_COLORS.control)
-          this.setTooltip(Blockly.Msg['U_WHILE_TOOLTIP'] || 'while 迴圈')
+          this.setTooltip(Blockly.Msg['U_WHILE_TOOLTIP'] || '當條件成立時持續執行')
         },
       }
     }
@@ -770,7 +769,7 @@ export class App {
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
           this.setColour(CATEGORY_COLORS.control)
-          this.setTooltip(Blockly.Msg['U_COUNT_LOOP_TOOLTIP'] || 'for 迴圈')
+          this.setTooltip(Blockly.Msg['U_COUNT_LOOP_TOOLTIP'] || '讓程式重複執行：變數會從起始值一直數到結束值，每次加 1')
         },
       }
     }
@@ -779,21 +778,21 @@ export class App {
     {
       Blockly.Blocks['u_break'] = {
         init: function (this: Blockly.Block) {
-          this.appendDummyInput().appendField(Blockly.Msg['U_BREAK_MSG'] || '跳出')
+          this.appendDummyInput().appendField(Blockly.Msg['U_BREAK_MSG'] || '跳出迴圈')
           this.setPreviousStatement(true, 'Statement')
           this.setColour(CATEGORY_COLORS.control)
-          this.setTooltip('break')
+          this.setTooltip(Blockly.Msg['U_BREAK_TOOLTIP'] || '立刻停止迴圈，不再重複')
         },
       }
     }
     {
       Blockly.Blocks['u_continue'] = {
         init: function (this: Blockly.Block) {
-          this.appendDummyInput().appendField(Blockly.Msg['U_CONTINUE_MSG'] || '繼續')
+          this.appendDummyInput().appendField(Blockly.Msg['U_CONTINUE_MSG'] || '跳至下一次')
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
           this.setColour(CATEGORY_COLORS.control)
-          this.setTooltip('continue')
+          this.setTooltip(Blockly.Msg['U_CONTINUE_TOOLTIP'] || '跳過本次迴圈，直接執行下一次')
         },
       }
     }
@@ -801,27 +800,38 @@ export class App {
     // u_func_def with +/- for parameters
     /* eslint-disable @typescript-eslint/no-explicit-any */
     {
-      const PARAM_TYPE_OPTIONS = [
-        ['int', 'int'], ['float', 'float'], ['double', 'double'],
-        ['char', 'char'], ['bool', 'bool'], ['string', 'string'],
-      ] as Array<[string, string]>
+      const getParamTypeOptions = (): Array<[string, string]> => [
+        [Blockly.Msg['U_FUNC_DEF_PARAM_TYPE_INT'] || 'int', 'int'],
+        [Blockly.Msg['U_FUNC_DEF_PARAM_TYPE_FLOAT'] || 'float', 'float'],
+        [Blockly.Msg['U_FUNC_DEF_PARAM_TYPE_DOUBLE'] || 'double', 'double'],
+        [Blockly.Msg['U_FUNC_DEF_PARAM_TYPE_CHAR'] || 'char', 'char'],
+        [Blockly.Msg['U_FUNC_DEF_PARAM_TYPE_BOOL'] || 'bool', 'bool'],
+        [Blockly.Msg['U_FUNC_DEF_PARAM_TYPE_STRING'] || 'string', 'string'],
+      ]
+
+      const getReturnTypeOptions = (): Array<[string, string]> => [
+        [Blockly.Msg['U_FUNC_DEF_RETURN_TYPE_VOID'] || 'void', 'void'],
+        [Blockly.Msg['U_FUNC_DEF_RETURN_TYPE_INT'] || 'int', 'int'],
+        [Blockly.Msg['U_FUNC_DEF_RETURN_TYPE_FLOAT'] || 'float', 'float'],
+        [Blockly.Msg['U_FUNC_DEF_RETURN_TYPE_DOUBLE'] || 'double', 'double'],
+        [Blockly.Msg['U_FUNC_DEF_RETURN_TYPE_CHAR'] || 'char', 'char'],
+        [Blockly.Msg['U_FUNC_DEF_RETURN_TYPE_BOOL'] || 'bool', 'bool'],
+        [Blockly.Msg['U_FUNC_DEF_RETURN_TYPE_LONG_LONG'] || 'long long', 'long long'],
+        [Blockly.Msg['U_FUNC_DEF_RETURN_TYPE_STRING'] || 'string', 'string'],
+      ]
 
       Blockly.Blocks['u_func_def'] = {
         paramCount_: 0,
         init: function (this: any) {
           this.paramCount_ = 0
           this.appendDummyInput('HEADER')
-            .appendField(Blockly.Msg['U_FUNC_DEF_MSG'] || '定義函式')
-            .appendField(new Blockly.FieldDropdown([
-              ['void', 'void'], ['int', 'int'], ['float', 'float'],
-              ['double', 'double'], ['char', 'char'], ['bool', 'bool'],
-              ['long long', 'long long'], ['string', 'string'],
-            ]) as Blockly.Field, 'RETURN_TYPE')
+            .appendField(Blockly.Msg['U_FUNC_DEF_LABEL'] || '定義函式')
+            .appendField(Blockly.Msg['U_FUNC_DEF_RETURN_LABEL'] || '回傳型別')
+            .appendField(new Blockly.FieldDropdown(getReturnTypeOptions) as Blockly.Field, 'RETURN_TYPE')
             .appendField(new Blockly.FieldTextInput('main') as Blockly.Field, 'NAME')
+          // Start with no parens (0 params) — just +/- buttons
           this.appendDummyInput('PARAMS_LABEL')
-            .appendField('(')
           this.appendDummyInput('PARAMS_END')
-            .appendField(')')
             .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusParam_()))
             .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minusParam_()), 'MINUS_BTN')
           this.appendStatementInput('BODY')
@@ -831,20 +841,57 @@ export class App {
           this.setColour(CATEGORY_COLORS.functions)
           this.setTooltip(Blockly.Msg['U_FUNC_DEF_TOOLTIP'] || '定義函式')
         },
+        rebuildParamLabels_: function (this: any) {
+          // Remove and recreate PARAMS_LABEL and PARAMS_END with correct labels
+          // Save +/- button state
+          const wasAtMin = this.paramCount_ <= 0
+          // Remove old
+          if (this.getInput('PARAMS_LABEL')) this.removeInput('PARAMS_LABEL')
+          if (this.getInput('PARAMS_END')) this.removeInput('PARAMS_END')
+          // Recreate
+          if (this.paramCount_ > 0) {
+            this.appendDummyInput('PARAMS_LABEL')
+              .appendField(Blockly.Msg['U_FUNC_DEF_PARAMS_OPEN'] || '（參數')
+            // Move PARAMS_LABEL before first param
+            this.moveInputBefore('PARAMS_LABEL', 'PARAM_0')
+          } else {
+            this.appendDummyInput('PARAMS_LABEL')
+          }
+          if (this.paramCount_ > 0) {
+            this.appendDummyInput('PARAMS_END')
+              .appendField(Blockly.Msg['U_FUNC_DEF_PARAMS_CLOSE'] || '）')
+              .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusParam_()))
+              .appendField(new Blockly.FieldImage(wasAtMin ? MINUS_DISABLED_IMG : MINUS_IMG, 20, 20, '-', () => this.minusParam_()), 'MINUS_BTN')
+          } else {
+            this.appendDummyInput('PARAMS_END')
+              .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusParam_()))
+              .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minusParam_()), 'MINUS_BTN')
+          }
+          // Move PARAMS_END before BODY
+          this.moveInputBefore('PARAMS_END', 'BODY')
+        },
         plusParam_: function (this: any) {
           const idx = this.paramCount_
           const input = this.appendDummyInput(`PARAM_${idx}`)
           if (idx > 0) input.appendField(',')
-          input.appendField(new Blockly.FieldDropdown(PARAM_TYPE_OPTIONS) as Blockly.Field, `TYPE_${idx}`)
+          input.appendField(new Blockly.FieldDropdown(getParamTypeOptions) as Blockly.Field, `TYPE_${idx}`)
           input.appendField(new Blockly.FieldTextInput(`p${idx}`) as Blockly.Field, `PARAM_${idx}`)
           this.moveInputBefore(`PARAM_${idx}`, 'PARAMS_END')
           this.paramCount_++
+          // Rebuild labels when transitioning from 0 to 1
+          if (this.paramCount_ === 1) {
+            this.rebuildParamLabels_()
+          }
           setMinusState(this, false)
         },
         minusParam_: function (this: any) {
           if (this.paramCount_ <= 0) return
           this.paramCount_--
           this.removeInput(`PARAM_${this.paramCount_}`)
+          // Rebuild labels when transitioning from 1 to 0
+          if (this.paramCount_ === 0) {
+            this.rebuildParamLabels_()
+          }
           setMinusState(this, this.paramCount_ <= 0)
         },
         saveExtraState: function (this: any) {
@@ -869,11 +916,9 @@ export class App {
         init: function (this: any) {
           this.argCount_ = 0
           this.appendDummyInput('LABEL')
-            .appendField(Blockly.Msg['U_FUNC_CALL_MSG'] || '呼叫')
+            .appendField(Blockly.Msg['U_FUNC_CALL_LABEL'] || '呼叫函式')
             .appendField(new Blockly.FieldTextInput('myFunction') as Blockly.Field, 'NAME')
-            .appendField('(')
           this.appendDummyInput('TAIL')
-            .appendField(')')
             .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusArg_()))
             .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minusArg_()), 'MINUS_BTN')
           this.setInputsInline(true)
@@ -882,18 +927,50 @@ export class App {
           this.setColour(CATEGORY_COLORS.functions)
           this.setTooltip(Blockly.Msg['U_FUNC_CALL_TOOLTIP'] || '呼叫函式')
         },
+        rebuildArgLabels_: function (this: any) {
+          if (this.getInput('LABEL')) this.removeInput('LABEL')
+          if (this.getInput('TAIL')) this.removeInput('TAIL')
+          if (this.argCount_ > 0) {
+            this.appendDummyInput('LABEL')
+              .appendField(Blockly.Msg['U_FUNC_CALL_LABEL'] || '呼叫函式')
+              .appendField(new Blockly.FieldTextInput(this.getFieldValue?.('NAME') || 'myFunction') as Blockly.Field, 'NAME')
+              .appendField(Blockly.Msg['U_FUNC_CALL_OPEN'] || '（')
+            this.appendDummyInput('TAIL')
+              .appendField(Blockly.Msg['U_FUNC_CALL_CLOSE'] || '）')
+              .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusArg_()))
+              .appendField(new Blockly.FieldImage(MINUS_IMG, 20, 20, '-', () => this.minusArg_()), 'MINUS_BTN')
+          } else {
+            this.appendDummyInput('LABEL')
+              .appendField(Blockly.Msg['U_FUNC_CALL_LABEL'] || '呼叫函式')
+              .appendField(new Blockly.FieldTextInput(this.getFieldValue?.('NAME') || 'myFunction') as Blockly.Field, 'NAME')
+            this.appendDummyInput('TAIL')
+              .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusArg_()))
+              .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minusArg_()), 'MINUS_BTN')
+          }
+          this.moveInputBefore('LABEL', 'ARG_0')
+        },
         plusArg_: function (this: any) {
           const idx = this.argCount_
+          const savedName = this.getFieldValue('NAME') || 'myFunction'
           this.appendValueInput(`ARG_${idx}`)
             .appendField(idx > 0 ? ',' : '')
           this.moveInputBefore(`ARG_${idx}`, 'TAIL')
           this.argCount_++
+          if (this.argCount_ === 1) {
+            this.rebuildArgLabels_()
+            this.setFieldValue(savedName, 'NAME')
+          }
           setMinusState(this, false)
         },
         minusArg_: function (this: any) {
           if (this.argCount_ <= 0) return
+          const savedName = this.getFieldValue('NAME') || 'myFunction'
           this.argCount_--
           this.removeInput(`ARG_${this.argCount_}`)
+          if (this.argCount_ === 0) {
+            this.rebuildArgLabels_()
+            this.setFieldValue(savedName, 'NAME')
+          }
           setMinusState(this, this.argCount_ <= 0)
         },
         saveExtraState: function (this: any) {
@@ -916,11 +993,9 @@ export class App {
         init: function (this: any) {
           this.argCount_ = 0
           this.appendDummyInput('LABEL')
-            .appendField(Blockly.Msg['U_FUNC_CALL_MSG'] || '呼叫')
+            .appendField(Blockly.Msg['U_FUNC_CALL_LABEL'] || '呼叫函式')
             .appendField(new Blockly.FieldTextInput('myFunction') as Blockly.Field, 'NAME')
-            .appendField('(')
           this.appendDummyInput('TAIL')
-            .appendField(')')
             .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusArg_()))
             .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minusArg_()), 'MINUS_BTN')
           this.setInputsInline(true)
@@ -928,18 +1003,50 @@ export class App {
           this.setColour(CATEGORY_COLORS.functions)
           this.setTooltip(Blockly.Msg['U_FUNC_CALL_EXPR_TOOLTIP'] || '呼叫函式（回傳值）')
         },
+        rebuildArgLabels_: function (this: any) {
+          if (this.getInput('LABEL')) this.removeInput('LABEL')
+          if (this.getInput('TAIL')) this.removeInput('TAIL')
+          if (this.argCount_ > 0) {
+            this.appendDummyInput('LABEL')
+              .appendField(Blockly.Msg['U_FUNC_CALL_LABEL'] || '呼叫函式')
+              .appendField(new Blockly.FieldTextInput(this.getFieldValue?.('NAME') || 'myFunction') as Blockly.Field, 'NAME')
+              .appendField(Blockly.Msg['U_FUNC_CALL_OPEN'] || '（')
+            this.appendDummyInput('TAIL')
+              .appendField(Blockly.Msg['U_FUNC_CALL_CLOSE'] || '）')
+              .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusArg_()))
+              .appendField(new Blockly.FieldImage(MINUS_IMG, 20, 20, '-', () => this.minusArg_()), 'MINUS_BTN')
+          } else {
+            this.appendDummyInput('LABEL')
+              .appendField(Blockly.Msg['U_FUNC_CALL_LABEL'] || '呼叫函式')
+              .appendField(new Blockly.FieldTextInput(this.getFieldValue?.('NAME') || 'myFunction') as Blockly.Field, 'NAME')
+            this.appendDummyInput('TAIL')
+              .appendField(new Blockly.FieldImage(PLUS_IMG, 20, 20, '+', () => this.plusArg_()))
+              .appendField(new Blockly.FieldImage(MINUS_DISABLED_IMG, 20, 20, '-', () => this.minusArg_()), 'MINUS_BTN')
+          }
+          this.moveInputBefore('LABEL', 'ARG_0')
+        },
         plusArg_: function (this: any) {
           const idx = this.argCount_
+          const savedName = this.getFieldValue('NAME') || 'myFunction'
           this.appendValueInput(`ARG_${idx}`)
             .appendField(idx > 0 ? ',' : '')
           this.moveInputBefore(`ARG_${idx}`, 'TAIL')
           this.argCount_++
+          if (this.argCount_ === 1) {
+            this.rebuildArgLabels_()
+            this.setFieldValue(savedName, 'NAME')
+          }
           setMinusState(this, false)
         },
         minusArg_: function (this: any) {
           if (this.argCount_ <= 0) return
+          const savedName = this.getFieldValue('NAME') || 'myFunction'
           this.argCount_--
           this.removeInput(`ARG_${this.argCount_}`)
+          if (this.argCount_ === 0) {
+            this.rebuildArgLabels_()
+            this.setFieldValue(savedName, 'NAME')
+          }
           setMinusState(this, this.argCount_ <= 0)
         },
         saveExtraState: function (this: any) {
@@ -976,6 +1083,7 @@ export class App {
         init: function (this: Blockly.Block) {
           const block = this
           this.appendDummyInput()
+            .appendField(Blockly.Msg['U_VAR_REF_LABEL'] || '變數')
             .appendField(new Blockly.FieldDropdown(function () {
               const opts = self.getWorkspaceVarOptions()
               // Ensure current value is in the options (for function params, etc.)
@@ -996,18 +1104,22 @@ export class App {
     {
       Blockly.Blocks['u_array_declare'] = {
         init: function (this: Blockly.Block) {
+          const getArrayTypeOptions = (): Array<[string, string]> => [
+            [Blockly.Msg['U_ARRAY_DECLARE_TYPE_INT'] || 'int', 'int'],
+            [Blockly.Msg['U_ARRAY_DECLARE_TYPE_FLOAT'] || 'float', 'float'],
+            [Blockly.Msg['U_ARRAY_DECLARE_TYPE_DOUBLE'] || 'double', 'double'],
+            [Blockly.Msg['U_ARRAY_DECLARE_TYPE_CHAR'] || 'char', 'char'],
+            [Blockly.Msg['U_ARRAY_DECLARE_TYPE_BOOL'] || 'bool', 'bool'],
+            [Blockly.Msg['U_ARRAY_DECLARE_TYPE_LONG_LONG'] || 'long long', 'long long'],
+          ]
           this.appendDummyInput()
-            .appendField(Blockly.Msg['U_ARRAY_DECLARE_MSG'] || '陣列')
-            .appendField(new Blockly.FieldDropdown([
-              ['int', 'int'], ['float', 'float'], ['double', 'double'],
-              ['char', 'char'], ['bool', 'bool'], ['long long', 'long long'],
-            ]) as Blockly.Field, 'TYPE')
+            .appendField(Blockly.Msg['U_ARRAY_DECLARE_CREATE_LABEL'] || '建立')
+            .appendField(new Blockly.FieldDropdown(getArrayTypeOptions) as Blockly.Field, 'TYPE')
+            .appendField(Blockly.Msg['U_ARRAY_DECLARE_ARRAY_LABEL'] || '陣列')
             .appendField(new Blockly.FieldTextInput('arr') as Blockly.Field, 'NAME')
           this.appendValueInput('SIZE')
-            .appendField('[')
+            .appendField(Blockly.Msg['U_ARRAY_DECLARE_SIZE_LABEL'] || '大小')
             .setCheck('Expression')
-          this.appendDummyInput()
-            .appendField(']')
           this.setInputsInline(true)
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
@@ -1022,7 +1134,8 @@ export class App {
       Blockly.Blocks['c_raw_code'] = {
         init: function (this: Blockly.Block) {
           this.appendDummyInput()
-            .appendField(new Blockly.FieldTextInput('// raw code') as Blockly.Field, 'CODE')
+            .appendField(Blockly.Msg['C_RAW_CODE_LABEL'] || '直接寫程式碼：')
+            .appendField(new Blockly.FieldTextInput('') as Blockly.Field, 'CODE')
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')
           this.setColour(CATEGORY_COLORS.cpp_special)
@@ -1041,7 +1154,8 @@ export class App {
             this.unresolved_ = true
             this.nodeType_ = (state.nodeType as string) ?? ''
             this.setColour(CATEGORY_COLORS.cpp_special)
-            this.setTooltip(`Unresolved: ${this.nodeType_}`)
+            const unresolvedTip = (Blockly.Msg['U_UNRESOLVED_TOOLTIP'] || 'Unresolved: %1').replace('%1', this.nodeType_)
+            this.setTooltip(unresolvedTip)
           }
           // 套用降級視覺
           const cause = state.degradationCause as string | undefined
@@ -1060,10 +1174,11 @@ export class App {
       Blockly.Blocks['u_array_access'] = {
         init: function (this: Blockly.Block) {
           this.appendValueInput('INDEX')
+            .appendField(Blockly.Msg['U_ARRAY_ACCESS_ARRAY_LABEL'] || '陣列')
             .appendField(new Blockly.FieldTextInput('arr') as Blockly.Field, 'NAME')
-            .appendField('[')
+            .appendField(Blockly.Msg['U_ARRAY_ACCESS_AT_LABEL'] || '的第 [')
           this.appendDummyInput()
-            .appendField(']')
+            .appendField(Blockly.Msg['U_ARRAY_ACCESS_END_LABEL'] || '] 格')
           this.setInputsInline(true)
           this.setOutput(true, 'Expression')
           this.setColour(CATEGORY_COLORS.arrays)
@@ -1077,7 +1192,7 @@ export class App {
       Blockly.Blocks['c_comment_line'] = {
         init: function (this: Blockly.Block) {
           this.appendDummyInput()
-            .appendField('//')
+            .appendField(Blockly.Msg['C_COMMENT_LINE_LABEL'] || '備註：')
             .appendField(new Blockly.FieldTextInput('comment') as Blockly.Field, 'TEXT')
           this.setPreviousStatement(true, 'Statement')
           this.setNextStatement(true, 'Statement')

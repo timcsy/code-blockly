@@ -122,8 +122,12 @@ export function registerStatementGenerators(g: Map<string, NodeGenerator>, style
   })
 
   g.set('cpp_increment', (node, ctx) => {
-    const name = node.properties.name ?? 'i'
-    const op = node.properties.operator ?? '++'
+    const name = (node.properties.name ?? node.properties.NAME ?? 'i') as string
+    const op = (node.properties.operator ?? node.properties.OP ?? '++') as string
+    const pos = (node.properties.position ?? node.properties.POSITION ?? 'postfix') as string
+    if (pos === 'prefix') {
+      return `${indent(ctx)}${op}${name};\n`
+    }
     return `${indent(ctx)}${name}${op};\n`
   })
 }

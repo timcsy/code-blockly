@@ -11,7 +11,9 @@ import { PatternRenderer } from '../../src/core/projection/pattern-renderer'
 import { PatternExtractor } from '../../src/core/projection/pattern-extractor'
 import { BlockSpecRegistry } from '../../src/core/block-spec-registry'
 import { createNode } from '../../src/core/semantic-tree'
-import type { BlockSpec, LiftPattern, UniversalTemplate } from '../../src/core/types'
+import { generateNode, type GeneratorContext, type NodeGenerator } from '../../src/core/projection/code-generator'
+import { registerStatementGenerators } from '../../src/languages/cpp/generators/statements'
+import type { BlockSpec, LiftPattern, UniversalTemplate, StylePreset } from '../../src/core/types'
 import type { AstNode, LiftContext } from '../../src/core/lift/types'
 import { LiftContextData } from '../../src/core/lift/lift-context'
 
@@ -105,10 +107,14 @@ describe('L1 Block Roundtrip', () => {
       expect(sem2!.properties.name).toBe('i')
     })
 
-    it('should generate code for cpp_increment', () => {
+    it('should generate code for cpp_increment (hand-written generator for prefix/postfix)', () => {
       const node = createNode('cpp_increment', { NAME: 'j', OP: '--' })
-      const code = generator.generate(node, { indent: 0, style: { indent_size: 4 } as any })
-      expect(code).toBe('j--')
+      const generators = new Map<string, NodeGenerator>()
+      const style = { indent_size: 4, brace_style: 'K&R' } as StylePreset
+      registerStatementGenerators(generators, style)
+      const ctx: GeneratorContext = { indent: 0, style, language: 'cpp', generators, templateGenerator: generator }
+      const code = generateNode(node, ctx)
+      expect(code).toBe('j--;\n')
     })
   })
 

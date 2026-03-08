@@ -12,7 +12,9 @@ import { PatternRenderer } from '../../src/core/projection/pattern-renderer'
 import { PatternExtractor } from '../../src/core/projection/pattern-extractor'
 import { BlockSpecRegistry } from '../../src/core/block-spec-registry'
 import { createNode } from '../../src/core/semantic-tree'
-import type { BlockSpec, LiftPattern } from '../../src/core/types'
+import { generateNode, type GeneratorContext, type NodeGenerator } from '../../src/core/projection/code-generator'
+import { registerStatementGenerators } from '../../src/languages/cpp/generators/statements'
+import type { BlockSpec, LiftPattern, StylePreset } from '../../src/core/types'
 import type { AstNode, LiftContext } from '../../src/core/lift/types'
 import { LiftContextData } from '../../src/core/lift/lift-context'
 
@@ -94,10 +96,14 @@ describe('P3 Verification: Pure JSON Block Roundtrip', () => {
       expect(result!.properties.name).toBe('i')
     })
 
-    it('should generate code from semantic node', () => {
+    it('should generate code from semantic node (hand-written generator for prefix/postfix)', () => {
       const node = createNode('cpp_increment', { NAME: 'i', OP: '++' })
-      const code = generator.generate(node, { indent: 0, style: { indent_size: 4, io_style: 'cout' } as any })
-      expect(code).toBe('i++')
+      const generators = new Map<string, NodeGenerator>()
+      const style = { indent_size: 4, io_style: 'cout', brace_style: 'K&R' } as StylePreset
+      registerStatementGenerators(generators, style)
+      const ctx: GeneratorContext = { indent: 0, style, language: 'cpp', generators, templateGenerator: generator }
+      const code = generateNode(node, ctx)
+      expect(code).toBe('i++;\n')
     })
 
     it('should render semantic to block state', () => {

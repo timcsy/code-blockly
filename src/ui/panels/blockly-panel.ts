@@ -103,7 +103,12 @@ export class BlocklyPanel {
       case 'u_compare': return this.extractBinaryExpr(block, 'compare', 'OP', 'A', 'B')
       case 'u_logic': return this.extractBinaryExpr(block, 'logic', 'OP', 'A', 'B')
       case 'u_logic_not': return this.extractUnaryExpr(block, 'logic_not', 'A', 'operand')
-      case 'u_negate': return this.extractUnaryExpr(block, 'negate', 'VALUE', 'value')
+      case 'u_negate': {
+          const negOp = block.getFieldValue('OP') ?? '-'
+          const negInner = block.getInputTargetBlock('VALUE')
+          const negChild = negInner ? this.extractBlock(negInner) : createNode('number_literal', { value: '0' })
+          return createNode('negate', { operator: negOp }, { value: negChild ? [negChild] : [] })
+        }
       case 'u_if':
       case 'u_if_else': return this.extractIf(block)
       case 'u_while_loop': return this.extractWhileLoop(block)
@@ -122,6 +127,7 @@ export class BlocklyPanel {
       case 'c_increment': return createNode('cpp_increment', {
           name: block.getFieldValue('NAME') ?? 'i',
           operator: block.getFieldValue('OP') ?? '++',
+          position: block.getFieldValue('POSITION') ?? 'postfix',
         })
       case 'c_compound_assign': {
           const valueBlock = block.getInputTargetBlock('VALUE')
@@ -219,8 +225,9 @@ export class BlocklyPanel {
         return `!${inner ? this.simpleExpressionToCode(inner) : '0'}`
       }
       case 'negate': {
+        const negOp = (node.properties.operator as string) ?? '-'
         const inner = (node.children.value ?? [])[0]
-        return `-${inner ? this.simpleExpressionToCode(inner) : '0'}`
+        return `${negOp}${inner ? this.simpleExpressionToCode(inner) : '0'}`
       }
       case 'raw_code': return node.metadata?.rawCode ?? ''
       case 'func_call': {

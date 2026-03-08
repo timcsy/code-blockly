@@ -317,8 +317,16 @@
     },
     "blockDef": {
       "type": "u_negate",
-      "message0": "- %1",
+      "message0": "%1 %2",
       "args0": [
+        {
+          "type": "field_dropdown",
+          "name": "OP",
+          "options": [
+            ["%{BKY_U_NEGATE_OP_MINUS}", "-"],
+            ["%{BKY_U_NEGATE_OP_PLUS}", "+"]
+          ]
+        },
         {
           "type": "input_value",
           "name": "VALUE",

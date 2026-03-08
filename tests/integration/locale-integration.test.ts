@@ -33,7 +33,7 @@ describe('T031: Locale Integration', () => {
 
       expect(msg['U_PRINT_LABEL']).toBe('輸出')
       expect(msg['U_FUNC_DEF_LABEL']).toBe('定義函式')
-      expect(msg['U_FUNC_DEF_RETURN_LABEL']).toBe('回傳')
+      expect(msg['U_FUNC_DEF_RETURN_LABEL']).toBe('回傳型別')
       expect(msg['U_FUNC_DEF_PARAMS_LABEL']).toBe('參數')
       expect(msg['U_FUNC_CALL_LABEL']).toBe('呼叫函式')
       expect(msg['U_INPUT_LABEL']).toBe('讀取輸入 → 變數')
