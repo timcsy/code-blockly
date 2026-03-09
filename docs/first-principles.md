@@ -5,6 +5,7 @@
 **適用範圍**: 所有投影（程式碼、積木、流程圖、執行、分析、教育、分發等）、多語言支援、套件擴充——所有子系統共用
 
 **版本歷程**:
+- 2026-03-09: P2 新增概念角色語境依賴、屬性結構化邊界；P3 歧義偵測改為偏序仲裁（最特化匹配 + 交叉歧義報錯）；P4 新增概念表面形態、層級轉換穩定性；§4.3 區分 soundness vs correctness；巨集硬邊界新增多 parser 融合路線；積木文字準則新增語法隔離與 Mutator 一致性
 - 2026-03-08: lift() 定位精確化（慣用語辨識器）、降級單調性、語義 Diff 推論、Pattern 歧義偵測、Toolbox 多維度說明、User Context（慣性快取 + 角色意圖）、命名語義約束（namingSemantics）、TaintInfo 結構化、群體設定覆蓋權限（mandatory/recommended）
 - 2026-03-07: 投影全景分類（R0-R4）、硬問題修正、編號重構、開放序數化、一致性修正
 - 2026-03-06: 四層重構、可插拔執行後端、時空旅行除錯
@@ -587,7 +588,23 @@ lift() context = {
   使降級更精細——不是「不認識就全降」，而是「知道為什麼不認識」。
 ```
 
-**誠實的邊界**：對於重度使用框架巨集的 C++ 專案（Qt、MFC、gtest），巨集密集區域會整片降級。緩解方向（工程代價大）：在 tree-sitter 之前跑 C preprocessor，或為特定框架預定義巨集展開規則。
+**誠實的邊界**：對於重度使用框架巨集的 C++ 專案（Qt、MFC、gtest），巨集密集區域會整片降級。如果 80% 的程式碼降級為 `raw_code`，語義結構的優勢將消失殆盡。
+
+**緩解路線——多 parser 融合（Multi-Parser Fusion）**：
+
+```
+tree-sitter（快速、增量、不展開巨集）→ 結構骨架 + 非巨集區域的完整語義
+clang AST（較慢、完整、展開巨集）    → 巨集區域的語義補充
+
+融合策略：
+  非巨集區域 → tree-sitter lift 結果（快速路徑）
+  巨集區域   → clang AST 的語義補充（精確路徑）
+  兩者在語義樹層面合流——同一棵樹，不同區域由不同來源填充
+```
+
+這比「模擬預處理器」更可行：不需要重新實現 C preprocessor，只需要在語義層整合兩個已有 parser 的結果。代價是：需要 clang 作為可選依賴（非教學場景），且融合邏輯需要處理兩個 parser 對同一區域的不同解讀。
+
+**對 Scope 的意涵**：S0-S2（教學場景）不需要多 parser 融合——學生程式碼不會用框架巨集。S3-S5（大型專案分析）需要，但這些 Scope 的視圖本身就是唯讀的（R3-R4），融合的精確度要求較低。
 
 ---
 
@@ -735,6 +752,42 @@ interface LanguageConstraints {
 
 **判定法**：如果一個積木拿掉某個欄位後仍然有意義，那它應該拆成兩個積木。
 
+### 概念角色的語境依賴（Context-Dependent Role）
+
+概念的角色（statement / expression）不是固有屬性，而是**語法語境**決定的：
+
+```
+cin >> a >> n >> m;         ← statement（獨立語句）
+if (cin >> a >> n >> m)     ← expression（條件）
+x = y = 5;                 ← 右側 y = 5 是 expression，整行是 statement
+```
+
+**原則**：概念定義一個**主要角色**（ConceptDef.role），投影層負責語境切換。語境切換的規則：
+
+```
+Statement → Expression 語境時：
+  ① 移除 indent 和語句結尾（分號、換行）
+  ② 視覺投影切換為 expression 版積木（output 連接器取代 prev/next）
+  ③ 語義不變——同一棵子樹，不同投影
+```
+
+**實作約束**：同一概念的 statement / expression 兩個版本的序列化格式（`saveExtraState` / `loadExtraState`）必須完全相容，因為投影層在語境切換時直接搬移 extraState。
+
+### 屬性的結構化邊界（Property Structure Boundary）
+
+SemanticNode 的 properties 是 `Record<string, PropertyValue>`，但何時用字串、何時用結構化物件，需要明確的判定準則：
+
+```
+判定準則：如果一個屬性值在管線中需要被拆分或解析，它就不該是字串。
+
+字串適用：值只被完整傳遞或顯示（name: "main"、operator: "++"）
+結構適用：值包含多個語義子部分（type+name、format+args）
+```
+
+**反例**：`params: ["long long x", "int y"]` 把型別和名稱壓扁成字串，renderer 必須反向解析。正確做法是結構化為 `params: [{ type: "long long", name: "x" }]`。
+
+**推論**：C/C++ 型別系統本身有結構（修飾符 + 基礎型別 + 指標/引用），應視為語義子結構而非原子字串。這在支援 `auto`、模板參數（`vector<int>`）、多維陣列等進階特性時會成為必要條件。
+
 ---
 
 ## 2.3 開放擴充 P3（Open Extension）
@@ -782,26 +835,39 @@ interface RenderStrategyRegistry {
 
 **核心引擎只有一條管線**：PatternLifter / PatternRenderer 是唯一路徑。遇到 `transform` 欄位就查 TransformRegistry，遇到 `liftStrategy` / `renderStrategy` 就查 StrategyRegistry。不存在雙管線競爭或黑名單切換。
 
-### Pattern 歧義偵測（Ambiguity Detection）
+### Pattern 歧義偵測與仲裁（Ambiguity Resolution）
 
-開放擴充的前提是：**新增的 pattern 不能改變既有 pattern 的匹配結果。** 如果兩個 pattern 可能匹配同一個 AST 節點，系統必須在**註冊時**就偵測到歧義並報錯，而非在 runtime 靠隱式的優先順序仲裁。
+開放擴充的前提是：**新增的 pattern 不能改變既有 pattern 的匹配結果。** 當兩個 pattern 可能匹配同一個 AST 節點時，系統必須在**註冊時**就判定如何處理。
+
+Pattern 的 constraints 集合形成偏序關係（⊆）。歧義的處理取決於偏序是否可比較：
 
 ```
-歧義偵測規則（Registration-time enforcement）：
+歧義仲裁規則（Registration-time enforcement）：
 
-∀ pattern A, B ∈ Registry:
-  如果 A.nodeType = B.nodeType 且 A.constraints ⊆ B.constraints（A 的約束是 B 的子集）
-    → A 的匹配範圍包含 B 的匹配範圍
-    → 如果 A ≠ B，報註冊錯誤：
-       "Pattern {A.conceptId} 和 {B.conceptId} 對 nodeType '{nodeType}' 存在歧義。
-        請為 {A.conceptId} 添加更多 constraints 或改用 hand-written lifter。"
+∀ pattern A, B ∈ Registry, A.nodeType = B.nodeType:
+
+  情況一：偏序可比較（A.constraints ⊂ B.constraints）
+    → A 更寬泛，B 更特化
+    → 安全仲裁：最特化匹配（B 優先）
+    → 這是 DSL 擴充的正常模式——特化已有 pattern，不需要改寫為 Layer 3
+
+  情況二：偏序不可比較（A ∩ B ≠ ∅ 但 A ⊄ B 且 B ⊄ A）
+    → 交叉歧義，無法安全仲裁
+    → 報註冊錯誤：
+       "Pattern {A.conceptId} 和 {B.conceptId} 對 nodeType '{nodeType}' 存在交叉歧義。
+        請合併為 hand-written lifter 處理。"
+
+  情況三：不相交（A ∩ B = ∅）
+    → 無歧義，各自匹配
 ```
 
-**為什麼不用 specificity 排序**：CSS 式的 specificity 排序（constraints 多的優先）看似能自動解決衝突，但會引入隱式的匹配優先序——新增一個 pattern 可能悄悄改變既有 pattern 的匹配範圍，違反 P3 的「不修改既有行為」原則。**禁止歧義**比**仲裁歧義**更安全。
+**同套件 vs 跨套件**：同一套件（同一 JSON 檔）的 pattern 開發者有義務自洽——偏序可比較的情況應儘量避免，改為在一個 pattern 中用 constraints 區分。跨套件的 pattern 允許偏序特化，這是「擴充已有語言模組」的正當用途。
 
-**空 constraints 是最常見的歧義來源**：`constraints: []` 意味著匹配該 nodeType 的所有 AST 節點，幾乎必然與其他同 nodeType 的 pattern 衝突。註冊時應警告空 constraints，除非該 nodeType 在整個 registry 中只有一個 pattern。
+**空 constraints 的處理**：`constraints: []` 意味著匹配該 nodeType 的所有 AST 節點。如果該 nodeType 只有一個 pattern，這是安全的。如果有多個 pattern，空 constraints 的 pattern 自動成為最寬泛的兜底（被任何有 constraints 的 pattern 特化），這是可預測的。
 
-**逃生口**：如果同一個 nodeType 確實需要根據內容映射到不同概念（如 `unary_expression` 可能是 `-x`、`&x`、`*p`、`!flag`），正確做法是使用 Layer 3 的 hand-written liftStrategy，在一個 strategy 函式中處理所有分支，而非用多個互相衝突的 JSON pattern。
+**逃生口**：如果同一個 nodeType 需要根據內容映射到不同概念（如 `unary_expression` 可能是 `-x`、`&x`、`*p`、`!flag`），且 constraints 之間的關係是交叉的，正確做法是使用 Layer 3 的 hand-written liftStrategy，在一個 strategy 函式中處理所有分支。
+
+**設計原則**：偏序可比較→自動仲裁（低門檻），偏序不可比較→強制手寫（高門檻但安全）。這在開放擴充性和匹配可預測性之間取得了平衡。
 
 ### Language Layer 子模組結構
 
@@ -864,6 +930,23 @@ S0 語句 → S1 函式 → S2 檔案 → S3 模組 → S4 專案 → S5 系統 
 
 **重要**：這不是簡化，是**過濾**。語義結構始終完整，只是投影時隱藏超出層級的節點。
 
+### 概念表面形態（Surface Form）
+
+概念層級控制**哪些概念可見**，表面形態控制**同一概念展示多少結構**。兩者正交：
+
+```
+概念: if
+  F0 基礎形態：if (condition) { body }
+  F1 擴展形態：if (condition) { body } else { body }
+  F2 完整形態：if / else if / else if / ... / else
+
+同一個概念、同一個層級，只是 mutator 暴露不同結構深度。
+```
+
+表面形態用 toolbox 的 `extraState` 預配置實現——同一積木類型配置不同的初始結構。每個形態可獨立設定認知層級（例如 F0/F1 在 L0，F2 在 L1），由 `buildToolbox()` 過濾。
+
+**與概念層級的區別**：概念層級在概念之間篩選（if 和 switch 是不同概念），表面形態在概念內部篩選（if 和 if-else 是同一概念的不同深度）。
+
 ### P4 與投影種類的關係
 
 | Scope | 可編輯視圖（R0-R1） | 唯讀視圖（R2-R4） |
@@ -882,6 +965,24 @@ S0 語句 → S1 函式 → S2 檔案 → S3 模組 → S4 專案 → S5 系統 
 - **L2**：鷹架最弱——接近文字程式碼，準備過渡
 
 層級切換是**控制在 ZPD 內可見的概念數量**。
+
+### 層級轉換穩定性（Level Transition Stability）
+
+鷹架的撤去必須是漸進的——Vygotsky 的原意是逐步減少支撐，不是瞬間抽走。P4 的層級切換是離散跳躍，必須遵守穩定性約束以避免認知斷崖：
+
+```
+層級轉換不變式：
+  ∀ concept C, level L₁ < L₂:
+    如果 C 在 L₁ 可見，則 C 在 L₂ 的呈現（message、顏色、形狀）不變。
+    L₁ → L₂ 的變化只來自新概念的加入，不來自舊概念的改變。
+```
+
+**推論**：
+- **Message 穩定**：`if` 在 L0 叫「如果」，在 L1 仍然叫「如果」——不會因為進入進階層級就變成 `if statement`
+- **差異可見**：L1 新增的概念應有視覺標記（如「新」徽章或漸入動畫），讓學習者知道哪些是新的、哪些是已熟悉的
+- **單調遞增**：toolbox 只增不減——高層級包含低層級的所有概念
+
+這是 Sc4（最小驚訝）在層級維度上的直接推論：**學習者已經建立的心智模型不應被層級切換破壞。**
 
 | 層級 | Message 策略 | Tooltip 策略 |
 |------|-------------|-------------|
@@ -1129,6 +1230,8 @@ CLT           → 每個積木最小化外在認知負荷
 - **Message**：動詞 + 身份 + 名稱，回答「對誰做什麼」。串起來讀起來像一段中文敘述。
 - **Tooltip**：一句定義 + 一句場景 + 注意事項。Universal 用生活比喻，Advanced 重點放在「什麼時候用」。
 - **Dropdown**：型別 `英文術語（中文）`，運算子 `中文（符號）`。型別清單由語言模組提供。
+- **語法隔離**：積木上不出現目標語言的語法符號（`@`、`*/`、`<<`、`;`）。例如 doc comment 的 mutator 用「參數」和「回傳」而非 `@param` 和 `@return`。語法符號是程式碼投影的細節，不是積木投影的一部分。
+- **Mutator 一致性**：mutator 彈窗中的 container / item label 遵守與主積木相同的文字設計準則。使用者看得到的所有文字都是介面。
 
 ### 最終檢驗表
 
@@ -1370,6 +1473,27 @@ LLM 建議 → 使用者確認 → 強制 roundtrip test
        → UI 顯示「此概念未通過自動驗證」警告
 ```
 
+### Soundness vs Correctness
+
+Guardrails 保證的是**結構健全性（soundness）**，不是**語義正確性（correctness）**。這兩者有本質區別：
+
+```
+Soundness（系統保證）：
+  LLM 輸出的結構 S' 是合法的語義結構
+  → 可無損投影到所有視圖
+  → Roundtrip test 通過：lift(project(S')) ≡ S'
+  → ConceptRegistry 路徑完備
+
+Correctness（使用者判斷）：
+  S' 是否符合使用者意圖
+  → 只有使用者能判斷
+  → 系統的責任是讓 S' 可審查，不是保證 S' 正確
+```
+
+**可審查性是 correctness 的前提**。系統保證 soundness，使得 LLM 的輸出可以被無損投影到使用者理解的視圖中（積木、程式碼、流程圖），從而讓使用者有能力判斷 correctness。如果投影本身有資訊丟失（如 `raw_code` 降級），使用者的審查也是不完整的——這是 `raw_code` 降級的另一層代價。
+
+**對 confidence 的意涵**：`user_confirmed` 不代表「系統驗證為正確」，而是「使用者在充分可審查的條件下接受了這個結構」。系統承擔 soundness 的責任，使用者承擔 correctness 的責任。
+
 使用者確認不等於語義正確——roundtrip test 是不可跳過的客觀閘口。L0 使用者可能不懂 LLM 建議的正確性，但 roundtrip test 不依賴使用者的認知能力。
 
 **LLM 不能自動寫入語義結構**——即使「很有信心」。類比：AI reviewer 可以留言建議，但不能自己 merge PR。
@@ -1399,7 +1523,7 @@ LLM 建議 → 使用者確認 → 強制 roundtrip test
 
 1. **語用分析的精確度邊界**：lift() 基於 pattern 推斷，存在誤判風險（如 body 內修改迴圈變數的 for）。對策：composite pattern 必須包含副作用檢查，可疑匹配強制 `confidence: 'warning'`。
 
-2. **C/C++ 巨集的不可解析硬邊界**：詳見 §2.1「lift() 的完備性邊界」。對重度框架巨集的專案，巨集密集區域會整片降級。
+2. **C/C++ 巨集的不可解析硬邊界**：詳見 §2.1「lift() 的完備性邊界」。對重度框架巨集的專案，巨集密集區域會整片降級。緩解路線是多 parser 融合（tree-sitter + clang AST），在語義樹層面整合兩個 parser 的結果，而非模擬預處理器。
 
 3. **語義阻抗的三層問題**：詳見 §2.2「語義阻抗（Semantic Impedance）」。節點級可標記，拓撲級需生成差異報告，語言模型級超出形式化範圍走降級路徑。
 
