@@ -114,18 +114,6 @@ export class App {
     this.blocklyPanel = elements.blocklyPanel
     this.monacoPanel = elements.monacoPanel
 
-    elements.quickAccessBar.onBlockCreate((blockType) => {
-      const workspace = this.blocklyPanel?.getWorkspace()
-      if (!workspace) return
-      const block = workspace.newBlock(blockType)
-      block.initSvg()
-      block.render()
-      const metrics = workspace.getMetrics()
-      if (metrics) {
-        block.moveBy(metrics.viewWidth / 2 - 50, metrics.viewHeight / 2 - 30)
-      }
-    })
-
     // 6. Create sync controller
     this.syncController = new SyncController(this.bus, 'cpp', DEFAULT_STYLE)
 
@@ -203,7 +191,6 @@ export class App {
       onLevelChange: (level) => {
         this.currentLevel = level
         this.updateToolboxForLevel(level)
-        elements.quickAccessBar.setLevel(level)
         this.refreshStatusBar()
       },
       onStyleChange: (style) => {

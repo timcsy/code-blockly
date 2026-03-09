@@ -37,7 +37,6 @@ export interface AppShellCallbacks {
   onUndo: () => void
   onRedo: () => void
   onClear: () => void
-  onBlockCreate: (blockType: string) => void
   getExportState: () => SavedState
   importState: (state: SavedState) => void
   onUploadCustomBlocks: (blocks: object[]) => void
@@ -56,23 +55,8 @@ export function createAppLayout(
       <span class="toolbar-title">Code Blockly</span>
     </div>
     <div class="toolbar-actions">
-      <button id="auto-sync-btn" class="auto-sync-on" title="自動同步：開啟">⇄ 自動</button>
-      <button id="sync-blocks-btn" title="積木 → 程式碼">積木→程式碼</button>
-      <button id="sync-code-btn" title="程式碼 → 積木">程式碼→積木</button>
-      <span class="toolbar-separator"></span>
-      <span id="level-selector-mount"></span>
-      <span class="toolbar-separator"></span>
       <span id="style-selector-mount"></span>
-      <span id="block-style-selector-mount"></span>
       <span id="locale-selector-mount"></span>
-      <span class="toolbar-separator"></span>
-      <button id="undo-btn" title="復原">↩</button>
-      <button id="redo-btn" title="重做">↪</button>
-      <button id="clear-btn" title="清空">清空</button>
-      <span class="toolbar-separator"></span>
-      <button id="export-btn" title="匯出">匯出</button>
-      <button id="import-btn" title="匯入">匯入</button>
-      <button id="upload-blocks-btn" title="上傳自訂積木">上傳積木</button>
       <span class="toolbar-separator"></span>
       <div class="run-group">
         <button id="run-btn" class="exec-btn run" title="執行">▶ 執行</button>
@@ -215,24 +199,32 @@ export function setupFileButtons(
   storageService: StorageService,
   callbacks: Pick<AppShellCallbacks, 'getExportState' | 'importState' | 'onUploadCustomBlocks'>,
 ): void {
-  const replaceBtn = (id: string) => {
-    const el = document.getElementById(id)
-    if (el) {
-      const clone = el.cloneNode(true) as HTMLElement
-      el.parentNode?.replaceChild(clone, el)
-      return clone
-    }
-    return null
+  // File dropdown menu toggle
+  const fileMenuBtn = document.getElementById('file-menu-btn')
+  const fileMenu = document.getElementById('file-menu')
+  if (fileMenuBtn && fileMenu) {
+    fileMenuBtn.addEventListener('click', () => {
+      fileMenu.style.display = fileMenu.style.display === 'none' ? 'block' : 'none'
+    })
+    document.addEventListener('click', (e) => {
+      if (!fileMenuBtn.contains(e.target as Node) && !fileMenu.contains(e.target as Node)) {
+        fileMenu.style.display = 'none'
+      }
+    })
   }
 
-  replaceBtn('export-btn')?.addEventListener('click', () => {
+  const closeMenu = () => { if (fileMenu) fileMenu.style.display = 'none' }
+
+  document.getElementById('export-btn')?.addEventListener('click', () => {
+    closeMenu()
     const state = callbacks.getExportState()
     const blob = storageService.exportToBlob(state)
     storageService.downloadBlob(blob, `code-blockly-${Date.now()}.json`)
     showToast(Blockly.Msg['TOAST_EXPORT_SUCCESS'] || '已匯出', 'success')
   })
 
-  replaceBtn('import-btn')?.addEventListener('click', () => {
+  document.getElementById('import-btn')?.addEventListener('click', () => {
+    closeMenu()
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json'
@@ -254,7 +246,8 @@ export function setupFileButtons(
     input.click()
   })
 
-  replaceBtn('upload-blocks-btn')?.addEventListener('click', () => {
+  document.getElementById('upload-blocks-btn')?.addEventListener('click', () => {
+    closeMenu()
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json'
