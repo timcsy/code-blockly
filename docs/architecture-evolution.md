@@ -748,20 +748,20 @@ arduino-neopixel（depends: arduino-core）
 
 前置條件：Phase 3 完成
 
-- [ ] **4.1 Extension 骨架**
-  - [ ] VSCode Extension 專案結構（`vscode-ext/`）
-  - [ ] Extension Main 載入 SemanticCore
-  - [ ] SemanticBus 的 `postMessage` 實作
-- [ ] **4.2 Blocks WebView**
-  - [ ] Blockly 在 WebviewPanel 中運行
-  - [ ] BlockRegistrar 在 WebView context 中初始化
-  - [ ] 透過 postMessage 與 Core 通訊
-- [ ] **4.3 Code 視圖**
-  - [ ] VSCode 原生 TextEditor
-  - [ ] TextDocument API ↔ SemanticBus 同步
-- [ ] **Phase 4 驗證**
-  - [ ] VSCode 中 code → blocks → code roundtrip 成功
-  - [ ] 瀏覽器版同時維持正常
+- [x] **4.1 Extension 骨架** *(2026-03-10, 018-vscode-extension-prototype)*
+  - [x] VSCode Extension 專案結構（`vscode-ext/`）
+  - [x] Extension Main 載入 SemanticCore
+  - [x] SemanticBus 的 `postMessage` 實作
+- [x] **4.2 Blocks WebView** *(2026-03-10, 018-vscode-extension-prototype)*
+  - [x] Blockly 在 WebviewPanel 中運行
+  - [x] BlockRegistrar 在 WebView context 中初始化
+  - [x] 透過 postMessage 與 Core 通訊
+- [x] **4.3 Code 視圖** *(2026-03-10, 018-vscode-extension-prototype)*
+  - [x] VSCode 原生 TextEditor
+  - [x] TextDocument API ↔ SemanticBus 同步
+- [x] **Phase 4 驗證** *(2026-03-10)*
+  - [x] VSCode 中 code → blocks → code roundtrip 成功
+  - [x] 瀏覽器版同時維持正常（1507 tests 全通過）
 
 ### Phase 5+：擴充
 
