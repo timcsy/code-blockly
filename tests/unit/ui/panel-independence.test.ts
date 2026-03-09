@@ -41,4 +41,21 @@ describe('Panel independence', () => {
       expect(imp).not.toContain('panels/')
     }
   })
+
+  it('toolbox-builder should not import blockly', () => {
+    const filePath = path.resolve(__dirname, '../../../src/ui/toolbox-builder.ts')
+    const imports = getImports(filePath)
+    for (const imp of imports) {
+      expect(imp).not.toContain('blockly')
+    }
+  })
+
+  it('app-shell should not import sync-controller or execution-controller', () => {
+    const filePath = path.resolve(__dirname, '../../../src/ui/app-shell.ts')
+    const imports = getImports(filePath)
+    for (const imp of imports) {
+      expect(imp).not.toContain('sync-controller')
+      expect(imp).not.toContain('execution-controller')
+    }
+  })
 })

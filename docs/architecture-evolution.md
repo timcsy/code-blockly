@@ -709,23 +709,24 @@ arduino-neopixel（depends: arduino-core）
 
 前置條件：Phase 1 完成
 
-- [ ] **2.1 ToolboxBuilder**
-  - [ ] 抽出純資料模組（`src/ui/toolbox-builder.ts`）
-  - [ ] 輸入：BlockSpecRegistry + CognitiveLevel → 輸出：toolbox JSON 定義
-  - [ ] 零 Blockly DOM 依賴
-  - [ ] 單元測試：給定 specs + level，產出正確的 toolbox 結構
-- [ ] **2.2 BlockRegistrar**
-  - [ ] 抽出 Blockly 專屬模組（`src/ui/block-registrar.ts`）
-  - [ ] 搬出所有 `Blockly.Blocks[...] = {...}` 定義
-  - [ ] 搬出所有 `saveExtraState` / `loadExtraState` 邏輯
-  - [ ] 整合測試：積木註冊 + 序列化 roundtrip
-- [ ] **2.3 AppShell**
-  - [ ] 抽出宿主 layout（`src/ui/app-shell.ts`）
-  - [ ] app.ts 只剩初始化膠水碼
-  - [ ] app.ts < 500 行
-- [ ] **Phase 2 驗證**
-  - [ ] 每個新模組可獨立測試
-  - [ ] 瀏覽器端功能不退化
+- [x] **2.1 ToolboxBuilder**
+  - [x] 抽出純資料模組（`src/ui/toolbox-builder.ts`）
+  - [x] 輸入：BlockSpecRegistry + CognitiveLevel → 輸出：toolbox JSON 定義
+  - [x] 零 Blockly DOM 依賴
+  - [x] 單元測試：給定 specs + level，產出正確的 toolbox 結構
+- [x] **2.2 BlockRegistrar**
+  - [x] 抽出 Blockly 專屬模組（`src/ui/block-registrar.ts`）
+  - [x] 搬出所有 `Blockly.Blocks[...] = {...}` 定義
+  - [x] 搬出所有 `saveExtraState` / `loadExtraState` 邏輯
+  - [x] 整合測試：積木註冊 + 序列化 roundtrip
+- [x] **2.3 AppShell**
+  - [x] 抽出宿主 layout（`src/ui/app-shell.ts`）
+  - [x] 額外抽出執行控制器（`src/ui/execution-controller.ts`）
+  - [x] app.ts 只剩初始化膠水碼
+  - [x] app.ts < 500 行（488 行）
+- [x] **Phase 2 驗證**
+  - [x] 每個新模組可獨立測試
+  - [x] 瀏覽器端功能不退化（需手動 smoke test）
 
 ### Phase 3：concept 與 blockDef 分離
 
