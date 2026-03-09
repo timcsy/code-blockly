@@ -15,10 +15,10 @@ describe('SemanticBus', () => {
       bus.on('semantic:update', handler)
 
       const tree = { id: '1', concept: 'program', properties: {}, children: {} }
-      bus.emit('semantic:update', { tree })
+      bus.emit('semantic:update', { tree, source: 'blocks' })
 
       expect(handler).toHaveBeenCalledOnce()
-      expect(handler).toHaveBeenCalledWith({ tree })
+      expect(handler).toHaveBeenCalledWith({ tree, source: 'blocks' })
     })
 
     it('should deliver ViewRequests events', () => {
@@ -59,11 +59,11 @@ describe('SemanticBus', () => {
       bus.on('semantic:update', handler)
 
       const tree = { id: '1', concept: 'program', properties: {}, children: {} }
-      bus.emit('semantic:update', { tree })
+      bus.emit('semantic:update', { tree, source: 'blocks' })
       expect(handler).toHaveBeenCalledOnce()
 
       bus.off('semantic:update', handler)
-      bus.emit('semantic:update', { tree })
+      bus.emit('semantic:update', { tree, source: 'blocks' })
       expect(handler).toHaveBeenCalledOnce() // still 1, not 2
     })
 
@@ -91,7 +91,7 @@ describe('SemanticBus', () => {
       bus.on('semantic:update', good)
 
       const tree = { id: '1', concept: 'program', properties: {}, children: {} }
-      bus.emit('semantic:update', { tree })
+      bus.emit('semantic:update', { tree, source: 'blocks' })
 
       expect(bad).toHaveBeenCalledOnce()
       expect(good).toHaveBeenCalledOnce()
@@ -104,7 +104,7 @@ describe('SemanticBus', () => {
   describe('no subscribers', () => {
     it('should not throw when emitting with no subscribers', () => {
       expect(() => {
-        bus.emit('semantic:update', { tree: { id: '1', concept: 'program', properties: {}, children: {} } })
+        bus.emit('semantic:update', { tree: { id: '1', concept: 'program', properties: {}, children: {} }, source: 'blocks' })
       }).not.toThrow()
     })
   })

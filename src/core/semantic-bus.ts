@@ -1,12 +1,19 @@
 import type { SemanticNode } from './types'
 import type { ExecutionStatus, StepInfo } from '../interpreter/types'
 import type { Diagnostic } from './diagnostics'
+import type { SourceMapping } from './projection/code-generator'
 
 // ─── Event Type Maps ───
 
 /** Core → View: push events */
 export interface SemanticEvents {
-  'semantic:update': { tree: SemanticNode }
+  'semantic:update': {
+    tree: SemanticNode
+    code?: string
+    blockState?: unknown
+    source: 'blocks' | 'code'
+    mappings?: SourceMapping[]
+  }
   'semantic:full-sync': { tree: SemanticNode; language: string; style: Record<string, unknown> }
   'execution:state': { status: ExecutionStatus; step?: StepInfo }
   'execution:output': { text: string; stream: 'stdout' | 'stderr' }

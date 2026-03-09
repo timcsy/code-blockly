@@ -691,19 +691,19 @@ arduino-neopixel（depends: arduino-core）
 
 前置條件：Phase 0 完成
 
-- [ ] **1.1 SyncController → SemanticBus**
-  - [ ] 移除 `sync-controller.ts` 對 `BlocklyPanel` / `MonacoPanel` 的 type import
-  - [ ] SyncController 改為只依賴 SemanticBus（發送 `semantic:update`，接收 `edit:*`）
-  - [ ] 整合測試：SyncController + mock bus，無真實面板
-- [ ] **1.2 面板實作 ViewHost**
-  - [ ] `BlocklyPanel` implements `ViewHost`
-  - [ ] `MonacoPanel` implements `ViewHost`
-  - [ ] `ConsolePanel` implements `ViewHost`
-  - [ ] `VariablePanel` implements `ViewHost`
-  - [ ] 面板之間零 import（grep 驗證）
-- [ ] **Phase 1 驗證**
-  - [ ] 面板獨立性測試：拔掉任一面板 import，其他面板編譯通過
-  - [ ] 瀏覽器端功能不退化（手動 smoke test）
+- [x] **1.1 SyncController → SemanticBus**
+  - [x] 移除 `sync-controller.ts` 對 `BlocklyPanel` / `MonacoPanel` 的 type import
+  - [x] SyncController 改為只依賴 SemanticBus（發送 `semantic:update`，接收 `edit:*`）
+  - [x] 整合測試：SyncController + mock bus，無真實面板
+- [x] **1.2 面板實作 ViewHost**
+  - [x] `BlocklyPanel` implements `ViewHost`
+  - [x] `MonacoPanel` implements `ViewHost`
+  - [x] `ConsolePanel` implements `ViewHost`
+  - [x] `VariablePanel` implements `ViewHost`
+  - [x] 面板之間零 import（grep 驗證）
+- [x] **Phase 1 驗證**
+  - [x] 面板獨立性測試：拔掉任一面板 import，其他面板編譯通過
+  - [x] 瀏覽器端功能不退化（手動 smoke test）
 
 ### Phase 2：app.ts 拆分
 
