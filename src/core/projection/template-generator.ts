@@ -56,7 +56,7 @@ export class TemplateGenerator {
 
     // 2. Try universal template with style variants
     if (!template) {
-      template = this.resolveUniversalTemplate(node.concept, ctx.style)
+      template = this.resolveUniversalTemplate(node.concept, ctx.style) ?? undefined
     }
 
     if (!template) return null
@@ -76,7 +76,7 @@ export class TemplateGenerator {
 
       // Try style variants
       if (ut.styleVariants && ut.styleKey) {
-        const styleValue = (style as Record<string, unknown>)[ut.styleKey] as string
+        const styleValue = (style as unknown as Record<string, unknown>)[ut.styleKey] as string
         const variant = ut.styleVariants[styleValue]
         if (variant) return variant
       }

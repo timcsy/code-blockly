@@ -102,11 +102,11 @@ export function generateNode(node: SemanticNode, ctx: GeneratorContext): string 
     if (generator) {
       result = generator(node, ctx)
     } else if (node.concept === 'raw_code') {
-      const raw = node.metadata?.rawCode ?? node.properties.code ?? ''
+      const raw = String(node.metadata?.rawCode ?? node.properties.code ?? '')
       const indented = raw.startsWith('#') ? raw : indent(ctx) + raw  // Don't indent preprocessor directives
       result = indented.endsWith('\n') ? indented : indented + '\n'
     } else if (node.concept === 'unresolved') {
-      const raw = node.metadata?.rawCode ?? ''
+      const raw = String(node.metadata?.rawCode ?? '')
       result = raw.endsWith('\n') ? raw : raw + '\n'
     } else if (node.concept === 'comment') {
       result = `${indent(ctx)}// ${node.properties.text}\n`
@@ -114,7 +114,7 @@ export function generateNode(node: SemanticNode, ctx: GeneratorContext): string 
       const ind = indent(ctx)
       result = `${ind}/**\n`
       if (node.properties.brief) {
-        const briefText = node.properties.brief
+        const briefText = String(node.properties.brief)
         const hasTags = node.properties.param_0_name !== undefined || node.properties.return_desc !== undefined
         if (briefText.includes('\n') && !hasTags) {
           // Multi-line description without tags: output as plain lines
@@ -145,7 +145,7 @@ export function generateNode(node: SemanticNode, ctx: GeneratorContext): string 
       }
       result += `${ind} */\n`
     } else if (node.concept === 'block_comment') {
-      const text = node.properties.text ?? ''
+      const text = String(node.properties.text ?? '')
       if (text.includes('\n')) {
         const lines = text.split('\n')
         result = `${indent(ctx)}/*\n`

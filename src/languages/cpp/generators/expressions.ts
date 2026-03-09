@@ -39,8 +39,8 @@ function precedence(node: SemanticNode | undefined): number {
 
 /** Wrap child expression in parentheses if its precedence is lower than parent's */
 function genChild(child: SemanticNode | undefined, parentPrec: number, ctx: Parameters<NodeGenerator>[1]): string {
+  if (!child) return ''
   const expr = generateExpression(child, ctx)
-  if (!child) return expr
   const childPrec = precedence(child)
   return childPrec < parentPrec ? `(${expr})` : expr
 }

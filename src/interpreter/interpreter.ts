@@ -279,7 +279,9 @@ export class SemanticInterpreter {
     const step: StepInfo = {
       node,
       blockId: node.metadata?.blockId ?? null,
-      sourceRange: node.metadata?.sourceRange ?? null,
+      sourceRange: node.metadata?.sourceRange
+        ? { start: node.metadata.sourceRange.startLine, end: node.metadata.sourceRange.endLine }
+        : null,
       outputLength: this.io.getOutput().length,
       scopeSnapshot,
     }

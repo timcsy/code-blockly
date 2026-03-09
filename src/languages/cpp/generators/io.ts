@@ -39,7 +39,8 @@ export function registerIOGenerators(g: Map<string, NodeGenerator>, style: Style
     if (valueNodes.length > 0) {
       vars = valueNodes.map(v => generateExpression(v, ctx))
     } else {
-      vars = (node.properties.variables as string[] | undefined) ?? [node.properties.variable ?? 'x']
+      const propVars = node.properties.variables
+      vars = (Array.isArray(propVars) ? propVars : undefined) ?? [String(node.properties.variable ?? 'x')]
     }
     if (style.io_style === 'cout') {
       const expr = `cin >> ${vars.join(' >> ')}`

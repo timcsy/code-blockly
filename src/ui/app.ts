@@ -354,7 +354,7 @@ export class App {
         init: function (this: any) {
           const field = new Blockly.FieldTextInput('hello')
           // Override display to use NBSP so SVG doesn't collapse spaces
-          field.getDisplayText_ = function (this: any) {
+          ;(field as any).getDisplayText_ = function (this: any) {
             const val = this.getValue() ?? ''
             // Replace regular spaces with non-breaking spaces for SVG rendering
             return val.replace(/ /g, '\u00A0') || '\u00A0'
@@ -1319,7 +1319,6 @@ export class App {
       Blockly.Blocks['u_func_call'] = {
         argCount_: 0,
         init: function (this: any) {
-          const block = this
           this.argCount_ = 0
           this.appendDummyInput('LABEL')
             .appendField(Blockly.Msg['U_FUNC_CALL_LABEL'] || '呼叫函式')

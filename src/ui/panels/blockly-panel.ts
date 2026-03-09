@@ -739,7 +739,7 @@ export class BlocklyPanel {
       // Mode 3: custom text in TEXT_i
       const textVal = block.getFieldValue(`TEXT_${i}`)
       if (textVal !== null && textVal !== undefined) {
-        values.push(createNode('raw_code', { code: textVal }, {}, { rawCode: textVal }))
+        values.push(createNode('raw_code', { code: textVal }, {}))
         continue
       }
       // Check if there's an ARG_i input at all (compose mode, empty socket)
