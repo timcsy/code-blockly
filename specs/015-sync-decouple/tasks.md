@@ -136,7 +136,7 @@
 - [x] T018 零面板 import 驗證：grep `import.*panels/` in `src/ui/sync-controller.ts`（應為空）
 - [x] T019 面板零互相 import 驗證：grep 各面板檔案確認不 import 其他面板
 - [x] T020 更新 `docs/architecture-evolution.md` §9 checklist 勾選 Phase 1 已完成項目
-- [ ] T021 Git commit all changes
+- [x] T021 Git commit all changes
 
 ---
 
