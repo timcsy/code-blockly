@@ -697,37 +697,165 @@ html, body {
 }
 .exec-btn.run:hover { background: rgba(39, 174, 96, 0.55) !important; }
 
-.exec-btn.stop {
-  color: #fff !important;
-  background: rgba(231, 76, 60, 0.35) !important;
-  border: 1px solid #e74c3c !important;
+/* Run button group: main button + dropdown arrow */
+.run-group {
+  display: flex;
+  align-items: center;
+  position: relative;
 }
-.exec-btn.stop:hover { background: rgba(231, 76, 60, 0.55) !important; }
-
-.exec-btn.pause {
-  color: #fff !important;
-  background: rgba(243, 156, 18, 0.35) !important;
-  border: 1px solid #f39c12 !important;
+.run-group #run-btn {
+  border-radius: 4px 0 0 4px !important;
+  border-right: none !important;
 }
-.exec-btn.pause:hover { background: rgba(243, 156, 18, 0.55) !important; }
-
-.exec-btn:not(.run):not(.stop):not(.pause) {
-  color: #4fc1ff !important;
-  background: rgba(52, 152, 219, 0.25) !important;
-  border: 1px solid #3498db !important;
-}
-.exec-btn:not(.run):not(.stop):not(.pause):hover {
-  background: rgba(52, 152, 219, 0.45) !important;
+.run-group .run-mode-arrow {
+  border-radius: 0 4px 4px 0 !important;
+  padding: 4px 4px !important;
+  min-width: 20px;
+  font-size: 10px;
 }
 
-.speed-select {
+/* Run mode dropdown menu */
+.run-mode-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 2px;
+  background: #2d2d2d;
+  border: 1px solid #555;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  min-width: 160px;
+  z-index: 10000;
+  overflow: hidden;
+  padding: 4px 0;
+}
+.run-mode-option {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #ccc;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.run-mode-option:hover {
+  background: #094771;
+  color: #fff;
+}
+.run-mode-option.active {
+  background: rgba(39, 174, 96, 0.2);
+}
+.run-mode-option.active::after {
+  content: ' ✓';
+  color: #27ae60;
+}
+.run-mode-separator {
+  height: 1px;
+  background: #555;
+  margin: 4px 0;
+}
+
+/* ─── Floating Debug Toolbar (VSCode-style) ─── */
+
+.debug-toolbar {
+  position: fixed;
+  top: 38px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  background: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 6px;
   padding: 2px 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  user-select: none;
+}
+
+.debug-toolbar-handle {
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  padding: 0 4px;
+  color: #888;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.debug-toolbar-handle:active { cursor: grabbing; }
+.debug-toolbar-handle::before {
+  content: '⠿';
+  font-size: 14px;
+}
+
+.debug-toolbar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #ccc;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.debug-toolbar button:hover { background: #505050; }
+.debug-toolbar button:active { background: #404040; }
+
+.debug-toolbar button.debug-continue {
+  color: #27ae60;
+}
+.debug-toolbar button.debug-pause {
+  color: #f39c12;
+}
+.debug-toolbar button.debug-step {
+  color: #4fc1ff;
+}
+.debug-toolbar button.debug-step-out {
+  color: #4fc1ff;
+}
+.debug-toolbar button.debug-accelerate {
+  color: #dcdcaa;
+}
+.debug-toolbar button.debug-auto-scroll {
+  opacity: 0.5;
+  border-bottom: 2px solid transparent;
+}
+.debug-toolbar button.debug-auto-scroll.active {
+  opacity: 1;
+  border-bottom: 2px solid #4fc1ff;
+}
+.debug-toolbar .debug-accelerate-level {
+  width: 36px;
+  height: 22px;
+  background: #3c3c3c;
+  color: #dcdcaa;
   border: 1px solid #555;
   border-radius: 3px;
-  background: #3c3c3c;
-  color: #ccc;
+  text-align: center;
+  font-size: 12px;
+  padding: 0 2px;
+  margin-left: 2px;
+}
+.debug-toolbar button.debug-stop {
+  color: #e74c3c;
+}
+
+.debug-toolbar .debug-separator {
+  width: 1px;
+  height: 16px;
+  background: #555;
+  margin: 0 2px;
+}
+
+.debug-toolbar .debug-status {
   font-size: 11px;
-  cursor: pointer;
+  color: #aaa;
+  padding: 0 6px;
+  white-space: nowrap;
 }
 
 /* ─── Sync hint: thick border when dirty ─── */
@@ -777,6 +905,15 @@ html, body {
   stroke: #2ecc71 !important;
   stroke-width: 4px !important;
   filter: drop-shadow(0 0 6px rgba(46, 204, 113, 0.8)) !important;
+}
+
+/* ─── Block highlight: execution (orange, must override .blocklySelected) ─── */
+
+.blocklyPath.blockly-highlight-execution,
+.blocklySelected > .blocklyPath.blockly-highlight-execution {
+  stroke: #ffdd57 !important;
+  stroke-width: 6px !important;
+  filter: drop-shadow(0 0 14px rgba(255, 221, 87, 1)) drop-shadow(0 0 6px rgba(255, 255, 150, 0.8)) !important;
 }
 
 /* ─── Monaco line highlight: block→code direction (yellow) ─── */

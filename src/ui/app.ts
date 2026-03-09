@@ -9,6 +9,7 @@ import { SyncController } from './sync-controller'
 import type { SyncError } from './sync-controller'
 import { SemanticInterpreter } from '../interpreter/interpreter'
 import { StepController } from './step-controller'
+import { DebugToolbar } from './debug-toolbar'
 import type { StepInfo, ExecutionSpeed } from '../interpreter/types'
 import type { SemanticNode as InterpreterNode } from '../core/types'
 import { RuntimeError } from '../interpreter/errors'
@@ -71,6 +72,8 @@ export class App {
   private bottomPanel: BottomPanel | null = null
   private interpreter: SemanticInterpreter | null = null
   private stepController: StepController | null = null
+  private debugToolbar: DebugToolbar | null = null
+  private runMode: 'run' | 'debug' | 'animate-slow' | 'animate-medium' | 'animate-fast' | 'step' = 'run'
   private stepRecords: StepInfo[] = []
   private currentStepIndex = -1
   private blocksDirty = false
@@ -138,15 +141,20 @@ export class App {
         <button id="import-btn" title="匯入">匯入</button>
         <button id="upload-blocks-btn" title="上傳自訂積木">上傳積木</button>
         <span class="toolbar-separator"></span>
-        <button id="run-btn" class="exec-btn run" title="執行">▶ 執行</button>
-        <button id="step-btn" class="exec-btn" title="逐步">⏭ 逐步</button>
-        <button id="pause-btn" class="exec-btn pause" title="暫停" style="display:none">⏸ 暫停</button>
-        <button id="stop-btn" class="exec-btn stop" title="停止" style="display:none">⏹ 停止</button>
-        <select id="speed-select" class="speed-select">
-          <option value="slow">慢</option>
-          <option value="medium" selected>中</option>
-          <option value="fast">快</option>
-        </select>
+        <div class="run-group">
+          <button id="run-btn" class="exec-btn run" title="執行">▶ 執行</button>
+          <button id="run-mode-btn" class="exec-btn run run-mode-arrow" title="執行模式">▾</button>
+          <div id="run-mode-menu" class="run-mode-menu" style="display:none">
+            <div class="run-mode-option" data-mode="run">▶ 執行</div>
+            <div class="run-mode-option" data-mode="debug">🔍 除錯</div>
+            <div class="run-mode-separator"></div>
+            <div class="run-mode-option" data-mode="animate-slow">▷ 動畫（慢）</div>
+            <div class="run-mode-option" data-mode="animate-medium">▷ 動畫（中）</div>
+            <div class="run-mode-option" data-mode="animate-fast">▷ 動畫（快）</div>
+            <div class="run-mode-separator"></div>
+            <div class="run-mode-option" data-mode="step">⏭ 逐步</div>
+          </div>
+        </div>
       </div>
     `
     appEl.appendChild(toolbar)
@@ -2387,14 +2395,38 @@ export class App {
       return null
     }
 
-    replaceBtn('run-btn')?.addEventListener('click', () => this.handleRun())
-    replaceBtn('step-btn')?.addEventListener('click', () => this.handleStep())
-    replaceBtn('pause-btn')?.addEventListener('click', () => this.handlePause())
-    replaceBtn('stop-btn')?.addEventListener('click', () => this.handleStop())
+    // Main run button — executes using current runMode
+    replaceBtn('run-btn')?.addEventListener('click', () => this.executeWithCurrentMode())
 
-    const speedSelect = document.getElementById('speed-select') as HTMLSelectElement | null
-    speedSelect?.addEventListener('change', () => {
-      this.stepController?.setSpeed(speedSelect.value as ExecutionSpeed)
+    // Dropdown arrow — toggle menu
+    const modeBtn = replaceBtn('run-mode-btn')
+    const modeMenu = document.getElementById('run-mode-menu')
+    modeBtn?.addEventListener('click', (e) => {
+      e.stopPropagation()
+      if (modeMenu) {
+        const visible = modeMenu.style.display !== 'none'
+        modeMenu.style.display = visible ? 'none' : ''
+        if (!visible) this.updateRunModeMenu()
+      }
+    })
+
+    // Menu option click
+    modeMenu?.addEventListener('click', (e) => {
+      const target = (e.target as HTMLElement).closest('.run-mode-option') as HTMLElement | null
+      if (!target) return
+      const mode = target.dataset.mode as typeof this.runMode
+      if (mode) {
+        this.runMode = mode
+        this.updateRunButtonLabel()
+        modeMenu.style.display = 'none'
+        // Execute immediately after selecting mode
+        this.executeWithCurrentMode()
+      }
+    })
+
+    // Close menu on outside click
+    document.addEventListener('click', () => {
+      if (modeMenu) modeMenu.style.display = 'none'
     })
 
     // Console Ctrl signals
@@ -2406,6 +2438,60 @@ export class App {
         if (this.stepController?.getStatus() === 'stepping' || this.stepController?.getStatus() === 'paused') {
           this.handleStop()
         }
+      }
+    })
+
+    // Floating debug toolbar (VSCode-style)
+    this.debugToolbar = new DebugToolbar()
+    this.debugToolbar.onAction((action) => {
+      switch (action) {
+        case 'continue':
+          if (this.animatePaused && this.animateResolve) {
+            // Resume real-time animation
+            this.animatePaused = false
+            this.debugToolbar?.setMode('running')
+            this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_RUNNING'] || 'Running', 'running')
+            this.animateResolve()
+          } else {
+            this.stepController?.resume()
+            this.debugToolbar?.setMode('running')
+            this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_RUNNING'] || 'Running', 'running')
+          }
+          break
+        case 'pause':
+          if (this.animateResolve === null && this.interpreter) {
+            // Real-time animation running — set flag, will pause at next step
+            this.animatePaused = true
+          } else {
+            this.handlePause()
+          }
+          this.debugToolbar?.setMode('paused')
+          break
+        case 'step':
+          if (this.animatePaused && this.animateResolve) {
+            // Single step in animation: resume then immediately pause again
+            this.animatePaused = true
+            this.animateResolve()
+          } else {
+            this.handleStep()
+          }
+          break
+        case 'step-out':
+          this.handleStepOut()
+          break
+        case 'accelerate':
+          this.handleAccelerate()
+          break
+        case 'stop':
+          // If animation is paused, unblock the promise first
+          if (this.animateResolve) {
+            const resolve = this.animateResolve
+            this.animateResolve = null
+            resolve()
+          }
+          this.interpreter?.abort()
+          this.handleStop()
+          break
       }
     })
   }
@@ -2428,6 +2514,20 @@ export class App {
     // Real-time output: stream to console as interpreter writes
     this.interpreter.setOutputCallback((text: string) => {
       this.consolePanel?.write(text)
+    })
+    // Highlight block/line when waiting for input
+    this.interpreter.setWaitingCallback((blockId) => {
+      this.blocklyPanel?.clearHighlight()
+      if (blockId && this.blocklyPanel?.getWorkspace()) {
+        this.blocklyPanel.highlightBlock(blockId, 'execution')
+        // Always scroll to input block so user knows where to type
+        this.blocklyPanel.getWorkspace()!.centerOnBlock(blockId)
+        const mapping = this.syncController?.getMappingForBlock(blockId)
+        if (mapping && this.monacoPanel) {
+          this.highlightMonacoLines(mapping.startLine + 1, mapping.endLine + 1)
+          this.monacoPanel.revealLine(mapping.startLine + 1)
+        }
+      }
     })
 
     this.showExecButtons(true)
@@ -2478,13 +2578,25 @@ export class App {
 
     this.resetExecution()
     this.interpreter = new SemanticInterpreter({ maxSteps: 10_000_000 })
-    // Real-time output: stream to console as interpreter writes during step collection
+    this.interpreter.setInputProvider(() => this.consolePanel!.promptInput())
     this.interpreter.setOutputCallback((text: string) => {
       this.consolePanel?.write(text)
     })
+    this.interpreter.setWaitingCallback((blockId) => {
+      this.blocklyPanel?.clearHighlight()
+      if (blockId && this.blocklyPanel?.getWorkspace()) {
+        this.blocklyPanel.highlightBlock(blockId, 'execution')
+        this.blocklyPanel.getWorkspace()!.centerOnBlock(blockId)
+        const mapping = this.syncController?.getMappingForBlock(blockId)
+        if (mapping && this.monacoPanel) {
+          this.highlightMonacoLines(mapping.startLine + 1, mapping.endLine + 1)
+          this.monacoPanel.revealLine(mapping.startLine + 1)
+        }
+      }
+    })
     this.consolePanel?.clear()
     this.bottomPanel?.showTab('variables')
-    this.showExecButtons(true)
+    this.showExecButtons(true, 'stepping')
 
     try {
       this.stepRecords = await this.interpreter.executeWithSteps(tree as unknown as InterpreterNode)
@@ -2524,6 +2636,7 @@ export class App {
           if (hitBreakpoint && this.stepController?.getStatus() === 'running') {
             this.stepController.pause()
             this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_PAUSED'] || 'Paused (breakpoint)', 'running')
+            this.debugToolbar?.setMode('paused')
           }
         }
       }
@@ -2545,6 +2658,119 @@ export class App {
     if (this.stepController?.getStatus() === 'running') {
       this.stepController.pause()
       this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_PAUSED'] || 'Paused', 'running')
+      this.debugToolbar?.setMode('paused')
+    }
+  }
+
+  private handleStepOut(): void {
+    if (!this.stepController || !this.stepRecords.length) return
+    const status = this.stepController.getStatus()
+    if (status !== 'stepping' && status !== 'paused') return
+
+    // Get current blockId, advance until it changes
+    const currentBlockId = this.stepRecords[this.currentStepIndex]?.blockId
+    if (!currentBlockId) {
+      // No block context — just do a single step
+      this.stepController.step()
+      return
+    }
+
+    // Advance through steps with same blockId
+    while (this.currentStepIndex < this.stepRecords.length - 1) {
+      const nextStep = this.stepRecords[this.currentStepIndex + 1]
+      if (nextStep?.blockId !== currentBlockId) break
+      this.currentStepIndex++
+    }
+
+    // Do one more step to land on the next block
+    this.stepController.step()
+  }
+
+  private handleAccelerate(): void {
+    const currentBlockId = this.stepRecords[this.currentStepIndex]?.blockId
+    if (!currentBlockId) return
+
+    // Real-time animation mode: collect skipIds, interpreter will skip delay
+    if (this.interpreter && !this.stepController) {
+      const level = this.debugToolbar?.getAccelerateLevel() ?? 1
+      const workspace = this.blocklyPanel?.getWorkspace()
+      let targetBlock = workspace?.getBlockById(currentBlockId) ?? null
+
+      if (level > 1 && targetBlock) {
+        for (let i = 1; i < level && targetBlock; i++) {
+          const parent = targetBlock.getSurroundParent()
+          if (!parent) break
+          targetBlock = parent
+        }
+      }
+
+      // Collect all descendant blockIds of the target block
+      const skipIds = new Set<string>()
+      if (targetBlock) {
+        const collectIds = (block: Blockly.Block) => {
+          skipIds.add(block.id)
+          for (const child of block.getChildren(false)) {
+            collectIds(child)
+          }
+        }
+        collectIds(targetBlock)
+      } else {
+        skipIds.add(currentBlockId)
+      }
+      this.animateAccelerateSkipIds = skipIds
+
+      // If paused, resume to let it fast-forward
+      if (this.animatePaused && this.animateResolve) {
+        this.animatePaused = false
+        this.debugToolbar?.setMode('running')
+        this.animateResolve()
+      }
+      return
+    }
+
+    // Pre-recorded step mode (StepController)
+    if (!this.stepController || !this.stepRecords.length) return
+    const status = this.stepController.getStatus()
+    if (status === 'completed' || status === 'idle') return
+
+    const wasRunning = status === 'running'
+    if (wasRunning) this.stepController.pause()
+
+    const level = this.debugToolbar?.getAccelerateLevel() ?? 1
+    const workspace = this.blocklyPanel?.getWorkspace()
+
+    if (level <= 1) {
+      while (this.currentStepIndex < this.stepRecords.length - 1) {
+        const nextStep = this.stepRecords[this.currentStepIndex + 1]
+        if (nextStep?.blockId !== currentBlockId) break
+        this.currentStepIndex++
+      }
+    } else {
+      let targetBlock = workspace?.getBlockById(currentBlockId) ?? null
+      for (let i = 1; i < level && targetBlock; i++) {
+        const parent = targetBlock.getSurroundParent()
+        if (!parent) break
+        targetBlock = parent
+      }
+      const skipIds = new Set<string>()
+      const collectIds = (block: Blockly.Block) => {
+        skipIds.add(block.id)
+        for (const child of block.getChildren(false)) {
+          collectIds(child)
+        }
+      }
+      if (targetBlock) collectIds(targetBlock)
+      while (this.currentStepIndex < this.stepRecords.length - 1) {
+        const nextStep = this.stepRecords[this.currentStepIndex + 1]
+        if (!nextStep?.blockId || !skipIds.has(nextStep.blockId)) break
+        this.currentStepIndex++
+      }
+    }
+    this.displayStep(this.currentStepIndex)
+    if (wasRunning) {
+      this.stepController.resume()
+    } else {
+      this.stepController.step()
     }
   }
 
@@ -2564,12 +2790,13 @@ export class App {
     this.variablePanel?.updateFromSnapshot(step.scopeSnapshot)
     this.bottomPanel?.showTab('variables')
 
-    // Highlight block
-    this.clearHighlights()
+    // Highlight block with execution color
+    this.blocklyPanel?.clearHighlight()
+    const autoScroll = this.debugToolbar?.isAutoScrollEnabled() ?? false
     if (step.blockId && this.blocklyPanel?.getWorkspace()) {
-      const block = this.blocklyPanel.getWorkspace()!.getBlockById(step.blockId)
-      if (block) {
-        block.addSelect()
+      this.blocklyPanel.highlightBlock(step.blockId, 'execution')
+      if (autoScroll) {
+        this.blocklyPanel.getWorkspace()!.centerOnBlock(step.blockId)
       }
     }
 
@@ -2577,8 +2804,10 @@ export class App {
     if (step.blockId) {
       const mapping = this.syncController?.getMappingForBlock(step.blockId)
       if (mapping && this.monacoPanel) {
-        // Monaco uses 1-based lines
         this.highlightMonacoLines(mapping.startLine + 1, mapping.endLine + 1)
+        if (autoScroll) {
+          this.monacoPanel.revealLine(mapping.startLine + 1)
+        }
       }
     }
 
@@ -2641,14 +2870,7 @@ export class App {
   }
 
   private clearHighlights(): void {
-    // Clear blockly selection
-    const workspace = this.blocklyPanel?.getWorkspace()
-    if (workspace) {
-      const blocks = workspace.getAllBlocks(false)
-      for (const block of blocks) {
-        block.removeSelect()
-      }
-    }
+    this.blocklyPanel?.clearHighlight()
   }
 
   private getWorkspaceVarOptions(): Array<[string, string]> {
@@ -2925,19 +3147,194 @@ export class App {
     }
   }
 
-  private showExecButtons(running: boolean): void {
-    const pause = document.getElementById('pause-btn')
-    const stop = document.getElementById('stop-btn')
-    const run = document.getElementById('run-btn')
-    const step = document.getElementById('step-btn')
-    if (pause) pause.style.display = running ? '' : 'none'
-    if (stop) stop.style.display = running ? '' : 'none'
-    if (run) run.style.display = running ? 'none' : ''
-    if (step) step.style.display = running ? 'none' : ''
+  private showExecButtons(running: boolean, mode: 'running' | 'stepping' = 'running'): void {
+    const runGroup = document.querySelector('.run-group') as HTMLElement | null
+    if (runGroup) runGroup.style.display = running ? 'none' : ''
+
+    // Floating debug toolbar
+    if (running) {
+      this.debugToolbar?.show(mode)
+    } else {
+      this.debugToolbar?.hide()
+    }
+  }
+
+  /** Execute using the current runMode setting */
+  private executeWithCurrentMode(): void {
+    switch (this.runMode) {
+      case 'run':
+        this.handleRun()
+        break
+      case 'debug':
+      case 'step':
+        this.handleStep()
+        break
+      case 'animate-slow':
+      case 'animate-medium':
+      case 'animate-fast': {
+        const speedMap = { 'animate-slow': 'slow', 'animate-medium': 'medium', 'animate-fast': 'fast' } as const
+        this.handleAnimate(speedMap[this.runMode])
+        break
+      }
+    }
+  }
+
+  // Animation state for pause/accelerate support
+  private animatePaused = false
+  private animateResolve: (() => void) | null = null
+  private animateSpeed: ExecutionSpeed = 'medium'
+  private animateAccelerateSkipIds: Set<string> | null = null
+
+  private static readonly ANIMATE_DELAY: Record<string, number> = {
+    slow: 800,
+    medium: 300,
+    fast: 50,
+  }
+
+  /** Animate mode: real-time execution with step-by-step display */
+  private async handleAnimate(speed: ExecutionSpeed): Promise<void> {
+    // If already animating and paused, resume
+    if (this.animatePaused && this.animateResolve) {
+      this.animatePaused = false
+      this.animateSpeed = speed
+      this.debugToolbar?.setMode('running')
+      this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_RUNNING'] || 'Running', 'running')
+      this.animateResolve()
+      return
+    }
+
+    if (this.blocksDirty) {
+      const sync = confirm(Blockly.Msg['EXEC_UNSYNC_PROMPT'] || 'Blocks have changed. Sync before running?')
+      if (sync) {
+        this.syncController?.syncBlocksToCode()
+      }
+    }
+
+    const tree = this.blocklyPanel?.extractSemanticTree()
+    if (!tree) return
+
+    this.resetExecution()
+    this.animatePaused = false
+    this.animateResolve = null
+    this.animateSpeed = speed
+    this.animateAccelerateSkipIds = null
+
+    this.interpreter = new SemanticInterpreter({ maxSteps: 10_000_000 })
+    this.interpreter.setInputProvider(() => this.consolePanel!.promptInput())
+    this.interpreter.setOutputCallback((text: string) => {
+      this.consolePanel?.write(text)
+    })
+    this.interpreter.setWaitingCallback((blockId) => {
+      this.blocklyPanel?.clearHighlight()
+      if (blockId && this.blocklyPanel?.getWorkspace()) {
+        this.blocklyPanel.highlightBlock(blockId, 'execution')
+        this.blocklyPanel.getWorkspace()!.centerOnBlock(blockId)
+        const mapping = this.syncController?.getMappingForBlock(blockId)
+        if (mapping && this.monacoPanel) {
+          this.highlightMonacoLines(mapping.startLine + 1, mapping.endLine + 1)
+          this.monacoPanel.revealLine(mapping.startLine + 1)
+        }
+      }
+    })
+
+    // Real-time step display with delay
+    this.stepRecords = []
+    this.currentStepIndex = -1
+    this.interpreter.setRecordSteps(true)
+    this.interpreter.setStepRecordCallback(async (step: StepInfo) => {
+      this.stepRecords.push(step)
+      this.currentStepIndex = this.stepRecords.length - 1
+
+      // If accelerating past a block, skip display and delay
+      if (this.animateAccelerateSkipIds && step.blockId && this.animateAccelerateSkipIds.has(step.blockId)) {
+        return
+      }
+      this.animateAccelerateSkipIds = null
+
+      this.displayStep(this.currentStepIndex)
+
+      // Check breakpoints
+      let shouldPause = this.animatePaused
+      if (!shouldPause && step.blockId) {
+        const mapping = this.syncController?.getMappingForBlock(step.blockId)
+        if (mapping) {
+          const breakpoints = this.monacoPanel?.getBreakpoints() ?? []
+          const hitBreakpoint = breakpoints.some(bp => bp >= mapping.startLine + 1 && bp <= mapping.endLine + 1)
+          if (hitBreakpoint) {
+            shouldPause = true
+            this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_PAUSED'] || 'Paused (breakpoint)', 'running')
+          }
+        }
+      }
+
+      // Pause (user-initiated or breakpoint)
+      if (shouldPause) {
+        this.animatePaused = true
+        this.debugToolbar?.setMode('paused')
+        await new Promise<void>(resolve => { this.animateResolve = resolve })
+        this.animateResolve = null
+        return
+      }
+
+      // Animation delay
+      const delay = App.ANIMATE_DELAY[this.animateSpeed]
+      if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    })
+
+    this.consolePanel?.clear()
+    this.bottomPanel?.showTab('variables')
+    this.showExecButtons(true, 'running')
+    this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_RUNNING'] || 'Running', 'running')
+
+    try {
+      await this.interpreter.execute(tree as unknown as InterpreterNode)
+      this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_COMPLETED'] || 'Completed', 'completed')
+    } catch (e) {
+      if (e instanceof RuntimeError) {
+        if (e.i18nKey === 'RUNTIME_ERR_ABORTED') {
+          this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_ABORTED'] || 'Interrupted', '')
+        } else {
+          this.consolePanel?.error(e.message)
+          this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_ERROR'] || 'Error', 'error')
+        }
+      } else {
+        this.consolePanel?.error(String(e))
+        this.consolePanel?.setStatus(Blockly.Msg['EXEC_STATUS_ERROR'] || 'Error', 'error')
+      }
+    } finally {
+      this.clearHighlights()
+      this.showExecButtons(false)
+    }
+  }
+
+  private updateRunButtonLabel(): void {
+    const btn = document.getElementById('run-btn')
+    if (!btn) return
+    const labels: Record<string, string> = {
+      'run': '▶ 執行',
+      'debug': '🔍 除錯',
+      'animate-slow': '▷ 動畫（慢）',
+      'animate-medium': '▷ 動畫（中）',
+      'animate-fast': '▷ 動畫（快）',
+      'step': '⏭ 逐步',
+    }
+    btn.textContent = labels[this.runMode] ?? '▶ 執行'
+  }
+
+  private updateRunModeMenu(): void {
+    const menu = document.getElementById('run-mode-menu')
+    if (!menu) return
+    menu.querySelectorAll('.run-mode-option').forEach(el => {
+      const opt = el as HTMLElement
+      opt.classList.toggle('active', opt.dataset.mode === this.runMode)
+    })
   }
 
   dispose(): void {
     this.blocklyPanel?.dispose()
     this.monacoPanel?.dispose()
+    this.debugToolbar?.dispose()
   }
 }

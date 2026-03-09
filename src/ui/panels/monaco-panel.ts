@@ -101,6 +101,10 @@ export class MonacoPanel {
     return this.editor
   }
 
+  revealLine(line: number): void {
+    this.editor?.revealLineInCenter(line)
+  }
+
   onBreakpointChange(callback: (breakpoints: number[]) => void): void {
     this.onBreakpointChangeCallback = callback
   }

@@ -34,6 +34,9 @@ export class SemanticInterpreter {
   private scanfTokenBuffer: string[] = []  // buffered tokens for scanf whitespace splitting
   private aborted = false
   private abortReject: ((reason: RuntimeError) => void) | null = null
+  private waitingCallback: ((blockId: string | null) => void) | null = null
+  private stepRecordCallback: ((step: StepInfo) => Promise<void>) | null = null
+  private currentNode: SemanticNode | null = null
 
   constructor(options: InterpreterOptions = {}) {
     this.maxSteps = options.maxSteps ?? 100000
@@ -52,6 +55,8 @@ export class SemanticInterpreter {
   /** Await input provider with abort support. Returns null on EOF (\x04). */
   private awaitInput(): Promise<string | null> {
     if (this.aborted) return Promise.reject(new RuntimeError(RUNTIME_ERRORS.ABORTED))
+    // Notify that interpreter is waiting for input
+    this.waitingCallback?.(this.currentNode?.metadata?.blockId ?? null)
     return new Promise<string | null>((resolve, reject) => {
       this.abortReject = reject
       this.inputProvider!().then(val => {
@@ -61,6 +66,16 @@ export class SemanticInterpreter {
         else resolve(val)
       }, reject)
     })
+  }
+
+  /** Register a callback fired when interpreter is waiting (e.g., for input) */
+  setWaitingCallback(callback: ((blockId: string | null) => void) | null): void {
+    this.waitingCallback = callback
+  }
+
+  /** Register an async callback fired after each step is recorded (for real-time animation) */
+  setStepRecordCallback(callback: ((step: StepInfo) => Promise<void>) | null): void {
+    this.stepRecordCallback = callback
   }
 
   setInputProvider(provider: (() => Promise<string>) | null): void {
@@ -115,6 +130,11 @@ export class SemanticInterpreter {
     return this.scope
   }
 
+  /** Enable or disable step recording */
+  setRecordSteps(enabled: boolean): void {
+    this.recordSteps = enabled
+  }
+
   /** Execute with step recording for replay-based stepping */
   async executeWithSteps(program: SemanticNode, stdin: string[] = []): Promise<StepInfo[]> {
     this.stepRecords = []
@@ -142,6 +162,7 @@ export class SemanticInterpreter {
 
   private async executeNode(node: SemanticNode): Promise<RuntimeValue | void> {
     await this.countStep()
+    this.currentNode = node
     const concept = node.concept
 
     // 語言特有概念：靜默略過
@@ -227,34 +248,46 @@ export class SemanticInterpreter {
   private async executeBody(nodes: SemanticNode[]): Promise<void> {
     for (const child of nodes) {
       await this.executeNode(child)
-      this.recordStepInfo(child)
+      await this.recordStepInfo(child)
     }
   }
 
-  private recordStepInfo(node: SemanticNode): void {
+  private async recordStepInfo(node: SemanticNode): Promise<void> {
     if (!this.recordSteps) return
     // Only record for statement-level concepts
     const concept = node.concept
     if (concept.includes(':')) return
     const statementConcepts = new Set([
-      'var_declare', 'var_assign', 'print', 'if', 'count_loop', 'cpp_for_loop',
-      'while_loop', 'func_def', 'func_call', 'return', 'break', 'continue',
+      'var_declare', 'var_declare_expr', 'var_assign', 'print', 'input',
+      'cpp_printf', 'cpp_scanf', 'cpp_scanf_expr',
+      'if', 'count_loop', 'cpp_for_loop', 'while_loop', 'cpp_do_while', 'cpp_switch',
+      'func_def', 'func_call', 'func_call_expr', 'return', 'break', 'continue',
+      'cpp_increment', 'cpp_increment_expr', 'cpp_compound_assign_expr',
+      'array_declare', 'array_assign',
+      'cpp_pointer_assign', 'forward_decl',
     ])
     if (!statementConcepts.has(concept)) return
 
-    // Snapshot scope variables
+    // Snapshot scope variables (exclude built-in constants)
+    const BUILTIN_NAMES = new Set(['EOF', 'true', 'false', 'NULL', 'nullptr', 'INT_MAX', 'INT_MIN', 'LLONG_MAX', 'LLONG_MIN', 'SIZE_MAX'])
     const scopeSnapshot: { name: string; type: string; value: string }[] = []
     for (const [name, val] of this.scope.getAll()) {
+      if (BUILTIN_NAMES.has(name)) continue
       scopeSnapshot.push({ name, type: val.type, value: valueToString(val) })
     }
 
-    this.stepRecords.push({
+    const step: StepInfo = {
       node,
       blockId: node.metadata?.blockId ?? null,
       sourceRange: node.metadata?.sourceRange ?? null,
       outputLength: this.io.getOutput().length,
       scopeSnapshot,
-    })
+    }
+    this.stepRecords.push(step)
+
+    if (this.stepRecordCallback) {
+      await this.stepRecordCallback(step)
+    }
   }
 
   private execNumberLiteral(node: SemanticNode): RuntimeValue {

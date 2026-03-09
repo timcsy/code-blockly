@@ -797,7 +797,7 @@ export class BlocklyPanel {
     this.onBlockSelectCallback = callback
   }
 
-  highlightBlock(blockId: string | null, variant: 'block-to-code' | 'code-to-block' = 'block-to-code'): void {
+  highlightBlock(blockId: string | null, variant: 'block-to-code' | 'code-to-block' | 'execution' = 'block-to-code'): void {
     this.clearHighlight()
     if (!blockId || !this.workspace) return
     const block = this.workspace.getBlockById(blockId)
@@ -805,10 +805,14 @@ export class BlocklyPanel {
       const svgPath = (block as unknown as { pathObject?: { svgPath?: SVGElement } }).pathObject?.svgPath
         ?? block.getSvgRoot()?.querySelector('.blocklyPath')
       if (svgPath) {
-        // Always remove both classes first, then add the desired one
-        svgPath.classList.remove('blockly-highlight-forward', 'blockly-highlight-reverse')
-        const cls = variant === 'code-to-block' ? 'blockly-highlight-reverse' : 'blockly-highlight-forward'
-        svgPath.classList.add(cls)
+        // Always remove all highlight classes first, then add the desired one
+        svgPath.classList.remove('blockly-highlight-forward', 'blockly-highlight-reverse', 'blockly-highlight-execution')
+        const clsMap = {
+          'block-to-code': 'blockly-highlight-forward',
+          'code-to-block': 'blockly-highlight-reverse',
+          'execution': 'blockly-highlight-execution',
+        }
+        svgPath.classList.add(clsMap[variant])
       }
     }
   }
@@ -817,11 +821,32 @@ export class BlocklyPanel {
     // Remove highlight classes from ALL blocks (not just tracked one)
     if (this.workspace) {
       const svgPaths = this.workspace.getParentSvg()
-        ?.querySelectorAll('.blockly-highlight-forward, .blockly-highlight-reverse')
+        ?.querySelectorAll('.blockly-highlight-forward, .blockly-highlight-reverse, .blockly-highlight-execution')
       svgPaths?.forEach(el => {
-        el.classList.remove('blockly-highlight-forward', 'blockly-highlight-reverse')
+        el.classList.remove('blockly-highlight-forward', 'blockly-highlight-reverse', 'blockly-highlight-execution')
       })
     }
+  }
+
+  /** Check if a block is visible in the current viewport */
+  isBlockVisible(blockId: string): boolean {
+    if (!this.workspace) return false
+    const block = this.workspace.getBlockById(blockId)
+    if (!block) return false
+    const blockRect = block.getBoundingRectangle()
+    const metrics = this.workspace.getMetrics()
+    if (!metrics) return false
+    // Convert block coords to viewport coords
+    const scale = this.workspace.scale
+    const viewLeft = metrics.viewLeft
+    const viewTop = metrics.viewTop
+    const viewRight = viewLeft + metrics.viewWidth
+    const viewBottom = viewTop + metrics.viewHeight
+    // Block rectangle is in workspace coordinates
+    return blockRect.left * scale >= viewLeft &&
+           blockRect.right * scale <= viewRight &&
+           blockRect.top * scale >= viewTop &&
+           blockRect.bottom * scale <= viewBottom
   }
 
   undo(): void { this.workspace?.undo(false) }
