@@ -696,5 +696,41 @@
       "initializer": "expression"
     },
     "role": "expression"
+  },
+  {
+    "conceptId": "cpp:vector_push_back",
+    "layer": "lang-library",
+    "level": 2,
+    "abstractConcept": "container_add",
+    "properties": [],
+    "children": {},
+    "role": "statement"
+  },
+  {
+    "conceptId": "cpp:vector_size",
+    "layer": "lang-library",
+    "level": 2,
+    "abstractConcept": "container_size",
+    "properties": [],
+    "children": {},
+    "role": "expression"
+  },
+  {
+    "conceptId": "cpp:sort",
+    "layer": "lang-library",
+    "level": 2,
+    "abstractConcept": "container_sort",
+    "properties": [],
+    "children": {},
+    "role": "statement"
+  },
+  {
+    "conceptId": "cpp:find",
+    "layer": "lang-library",
+    "level": 2,
+    "abstractConcept": "container_find",
+    "properties": [],
+    "children": {},
+    "role": "expression"
   }
 ]

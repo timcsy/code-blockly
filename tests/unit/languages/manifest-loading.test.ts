@@ -61,8 +61,9 @@ describe('Language manifest loading', () => {
     }
 
     // Direct loading counts (from known files)
-    const directCppBlocks = 57 // basic(14) + advanced(26) + special(17)
-    const directCppConcepts = 57
+    // basic(14) + advanced(26) + special(17) + stdlib-containers(2) + stdlib-algorithms(2) = 61
+    const directCppBlocks = 61
+    const directCppConcepts = 61
 
     expect(manifestBlockCount).toBe(directCppBlocks)
     expect(manifestConceptCount).toBe(directCppConcepts)

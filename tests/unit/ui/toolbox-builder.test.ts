@@ -4,18 +4,24 @@ import * as path from 'path'
 import { BlockSpecRegistry } from '../../../src/core/block-spec-registry'
 import { buildToolbox } from '../../../src/ui/toolbox-builder'
 import { CATEGORY_COLORS } from '../../../src/ui/theme/category-colors'
-import type { CognitiveLevel, BlockSpec } from '../../../src/core/types'
-import universalBlocks from '../../../src/blocks/universal.json'
-import cppBasicBlocks from '../../../src/languages/cpp/blocks/basic.json'
-import cppSpecialBlocks from '../../../src/languages/cpp/blocks/special.json'
-import cppAdvancedBlocks from '../../../src/languages/cpp/blocks/advanced.json'
+import type { CognitiveLevel, ConceptDefJSON, BlockProjectionJSON } from '../../../src/core/types'
+import universalConcepts from '../../../src/blocks/semantics/universal-concepts.json'
+import cppConcepts from '../../../src/languages/cpp/semantics/concepts.json'
+import universalBlocks from '../../../src/blocks/projections/blocks/universal-blocks.json'
+import cppBasicBlocks from '../../../src/languages/cpp/projections/blocks/basic.json'
+import cppSpecialBlocks from '../../../src/languages/cpp/projections/blocks/special.json'
+import cppAdvancedBlocks from '../../../src/languages/cpp/projections/blocks/advanced.json'
 
 function createRegistry(): BlockSpecRegistry {
   const reg = new BlockSpecRegistry()
-  reg.loadFromJSON(universalBlocks as unknown as BlockSpec[])
-  reg.loadFromJSON(cppBasicBlocks as unknown as BlockSpec[])
-  reg.loadFromJSON(cppSpecialBlocks as unknown as BlockSpec[])
-  reg.loadFromJSON(cppAdvancedBlocks as unknown as BlockSpec[])
+  const allConcepts = [...universalConcepts as unknown as ConceptDefJSON[], ...cppConcepts as unknown as ConceptDefJSON[]]
+  const allProjections = [
+    ...universalBlocks as unknown as BlockProjectionJSON[],
+    ...cppBasicBlocks as unknown as BlockProjectionJSON[],
+    ...cppSpecialBlocks as unknown as BlockProjectionJSON[],
+    ...cppAdvancedBlocks as unknown as BlockProjectionJSON[],
+  ]
+  reg.loadFromSplit(allConcepts, allProjections)
   return reg
 }
 

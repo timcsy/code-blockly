@@ -2,8 +2,8 @@
  * C++ Language Module
  *
  * Central initialization for the JSON-driven conversion pipeline.
- * Loads concept definitions (semantic layer) and block projections (projection layer),
- * merges them via adapter, then wires into the four generic engines.
+ * Loads concept definitions (semantic layer) and block projections (projection layer)
+ * directly into registries, then wires into the four generic engines.
  */
 import type { LiftPattern, UniversalTemplate, ConceptDefJSON, BlockProjectionJSON } from '../../core/types'
 import { BlockSpecRegistry } from '../../core/block-spec-registry'
@@ -12,7 +12,6 @@ import { PatternLifter } from '../../core/lift/pattern-lifter'
 import { TemplateGenerator } from '../../core/projection/template-generator'
 import { PatternRenderer } from '../../core/projection/pattern-renderer'
 import { PatternExtractor } from '../../core/projection/pattern-extractor'
-import { mergeToBlockSpecs } from '../../core/block-spec-adapter'
 
 // Semantic layer: concept definitions
 import universalConcepts from '../../blocks/semantics/universal-concepts.json'
@@ -23,6 +22,8 @@ import universalBlocks from '../../blocks/projections/blocks/universal-blocks.js
 import basicBlocks from './projections/blocks/basic.json'
 import advancedBlocks from './projections/blocks/advanced.json'
 import specialBlocks from './projections/blocks/special.json'
+import stdlibContainers from './projections/blocks/stdlib-containers.json'
+import stdlibAlgorithms from './projections/blocks/stdlib-algorithms.json'
 
 // Other resources
 import liftPatternsJson from './lift-patterns.json'
@@ -56,15 +57,17 @@ export function initCppModule(): CppModuleEngines {
   ]
   conceptRegistry.loadFromJSON(allConcepts)
 
-  // 2. Merge concepts + projections into BlockSpec[] via adapter
+  // 2. Load split JSON directly into registry
   const allProjections = [
     ...universalBlocks as unknown as BlockProjectionJSON[],
     ...basicBlocks as unknown as BlockProjectionJSON[],
     ...advancedBlocks as unknown as BlockProjectionJSON[],
     ...specialBlocks as unknown as BlockProjectionJSON[],
+    ...stdlibContainers as unknown as BlockProjectionJSON[],
+    ...stdlibAlgorithms as unknown as BlockProjectionJSON[],
   ]
-  const allSpecs = mergeToBlockSpecs(allConcepts, allProjections)
-  registry.loadFromJSON(allSpecs)
+  registry.loadFromSplit(allConcepts, allProjections)
+  const allSpecs = registry.getAll()
 
   // 3. Load block specs into engines
   const liftSkipNodeTypes = new Set(['call_expression', 'using_declaration', 'for_statement', 'assignment_expression', 'update_expression', 'switch_statement', 'case_statement', 'do_statement', 'conditional_expression', 'cast_expression'])
@@ -73,12 +76,10 @@ export function initCppModule(): CppModuleEngines {
   patternExtractor.loadBlockSpecs(allSpecs)
 
   // 4. Load lift patterns
-  const liftPatterns = liftPatternsJson as unknown as LiftPattern[]
-  patternLifter.loadLiftPatterns(liftPatterns)
+  patternLifter.loadLiftPatterns(liftPatternsJson as unknown as LiftPattern[])
 
   // 5. Load universal templates
-  const universalTemplates = universalTemplatesJson as unknown as UniversalTemplate[]
-  templateGenerator.loadUniversalTemplates(universalTemplates)
+  templateGenerator.loadUniversalTemplates(universalTemplatesJson as unknown as UniversalTemplate[])
 
   // 6. Register code templates from block specs
   for (const spec of allSpecs) {
@@ -87,12 +88,5 @@ export function initCppModule(): CppModuleEngines {
     }
   }
 
-  return {
-    registry,
-    conceptRegistry,
-    patternLifter,
-    templateGenerator,
-    patternRenderer,
-    patternExtractor,
-  }
+  return { registry, conceptRegistry, patternLifter, templateGenerator, patternRenderer, patternExtractor }
 }

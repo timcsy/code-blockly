@@ -13,7 +13,9 @@
     "blocks": [
       "./projections/blocks/basic.json",
       "./projections/blocks/advanced.json",
-      "./projections/blocks/special.json"
+      "./projections/blocks/special.json",
+      "./projections/blocks/stdlib-containers.json",
+      "./projections/blocks/stdlib-algorithms.json"
     ],
     "templates": [
       "./templates/universal-templates.json"

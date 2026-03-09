@@ -24,25 +24,23 @@ import type { SavedState } from '../core/storage'
 import { LocaleLoader } from '../i18n/loader'
 import type { LevelSelector } from './toolbar/level-selector'
 import type { StyleSelector } from './toolbar/style-selector'
-import type { StylePreset, BlockSpec, CognitiveLevel, ConceptDefJSON, BlockProjectionJSON } from '../core/types'
+import type { StylePreset, CognitiveLevel, ConceptDefJSON, BlockProjectionJSON } from '../core/types'
 import { CATEGORY_COLORS } from './theme/category-colors'
 import { buildToolbox } from './toolbox-builder'
 import { BlockRegistrar } from './block-registrar'
 import { createAppLayout, setupSelectors, setupToolbarButtons, setupFileButtons, updateStatusBar } from './app-shell'
 import type { AppShellElements } from './app-shell'
 import { ExecutionController } from './execution-controller'
-import { mergeToBlockSpecs } from '../core/block-spec-adapter'
-// Semantic layer: concept definitions
+// Semantic layer
 import universalConcepts from '../blocks/semantics/universal-concepts.json'
 import cppConcepts from '../languages/cpp/semantics/concepts.json'
-// Projection layer: block definitions
+// Projection layer
 import universalBlockProjections from '../blocks/projections/blocks/universal-blocks.json'
 import cppBasicProjections from '../languages/cpp/projections/blocks/basic.json'
 import cppSpecialProjections from '../languages/cpp/projections/blocks/special.json'
 import cppAdvancedProjections from '../languages/cpp/projections/blocks/advanced.json'
-// Stdlib (still in old format for now)
-import cppStdlibContainers from '../languages/cpp/blocks/stdlib/containers.json'
-import cppStdlibAlgorithms from '../languages/cpp/blocks/stdlib/algorithms.json'
+import cppStdlibContainers from '../languages/cpp/projections/blocks/stdlib-containers.json'
+import cppStdlibAlgorithms from '../languages/cpp/projections/blocks/stdlib-algorithms.json'
 import apcsPreset from '../languages/cpp/styles/apcs.json'
 import competitivePreset from '../languages/cpp/styles/competitive.json'
 import googlePreset from '../languages/cpp/styles/google.json'
@@ -99,10 +97,9 @@ export class App {
     const allProjections = [
       ...universalBlockProjections as unknown as BlockProjectionJSON[], ...cppBasicProjections as unknown as BlockProjectionJSON[],
       ...cppSpecialProjections as unknown as BlockProjectionJSON[], ...cppAdvancedProjections as unknown as BlockProjectionJSON[],
+      ...cppStdlibContainers as unknown as BlockProjectionJSON[], ...cppStdlibAlgorithms as unknown as BlockProjectionJSON[],
     ]
-    this.blockSpecRegistry.loadFromJSON(mergeToBlockSpecs(allConcepts, allProjections))
-    this.blockSpecRegistry.loadFromJSON(cppStdlibContainers as unknown as BlockSpec[])
-    this.blockSpecRegistry.loadFromJSON(cppStdlibAlgorithms as unknown as BlockSpec[])
+    this.blockSpecRegistry.loadFromSplit(allConcepts, allProjections)
 
     // 4. Register all blocks with Blockly
     this.blockRegistrar.registerAll({

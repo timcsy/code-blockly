@@ -22,8 +22,10 @@ describe('Concept/BlockDef split integrity', () => {
     const basic = loadJSON(path.join(cppProjectionsDir, 'basic.json'))
     const advanced = loadJSON(path.join(cppProjectionsDir, 'advanced.json'))
     const special = loadJSON(path.join(cppProjectionsDir, 'special.json'))
-    // Original: basic=14, advanced=26, special=17 = 57
-    expect(basic.length + advanced.length + special.length).toBe(57)
+    const stdlibContainers = loadJSON(path.join(cppProjectionsDir, 'stdlib-containers.json'))
+    const stdlibAlgorithms = loadJSON(path.join(cppProjectionsDir, 'stdlib-algorithms.json'))
+    // basic=14, advanced=26, special=17, stdlib-containers=2, stdlib-algorithms=2 = 61
+    expect(basic.length + advanced.length + special.length + stdlibContainers.length + stdlibAlgorithms.length).toBe(61)
   })
 
   it('should have correct universal projection count', () => {
@@ -43,6 +45,8 @@ describe('Concept/BlockDef split integrity', () => {
       ...loadJSON(path.join(universalProjectionsDir, 'universal-blocks.json')) as Array<{ conceptId: string }>,
       ...loadJSON(path.join(cppProjectionsDir, 'basic.json')) as Array<{ conceptId: string }>,
       ...loadJSON(path.join(cppProjectionsDir, 'advanced.json')) as Array<{ conceptId: string }>,
+      ...loadJSON(path.join(cppProjectionsDir, 'stdlib-containers.json')) as Array<{ conceptId: string }>,
+      ...loadJSON(path.join(cppProjectionsDir, 'stdlib-algorithms.json')) as Array<{ conceptId: string }>,
       ...loadJSON(path.join(cppProjectionsDir, 'special.json')) as Array<{ conceptId: string }>,
     ]
 
@@ -69,6 +73,8 @@ describe('Concept/BlockDef split integrity', () => {
       ...loadJSON(path.join(cppProjectionsDir, 'basic.json')) as Array<Record<string, unknown>>,
       ...loadJSON(path.join(cppProjectionsDir, 'advanced.json')) as Array<Record<string, unknown>>,
       ...loadJSON(path.join(cppProjectionsDir, 'special.json')) as Array<Record<string, unknown>>,
+      ...loadJSON(path.join(cppProjectionsDir, 'stdlib-containers.json')) as Array<Record<string, unknown>>,
+      ...loadJSON(path.join(cppProjectionsDir, 'stdlib-algorithms.json')) as Array<Record<string, unknown>>,
     ]
 
     for (const p of allProjections) {

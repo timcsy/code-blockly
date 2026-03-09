@@ -191,6 +191,35 @@
 
 ---
 
+## Phase 7: 徹底清理 — 移除向下相容層
+
+**Purpose**: 刪除舊 JSON、adapter、讓 BlockSpecRegistry 直接吃新格式
+
+- [x] T028 拆分 stdlib JSON（containers.json + algorithms.json）為 concept + projection 格式
+  - `src/languages/cpp/semantics/concepts.json`：追加 stdlib concepts
+  - `src/languages/cpp/projections/blocks/stdlib-containers.json`
+  - `src/languages/cpp/projections/blocks/stdlib-algorithms.json`
+- [x] T029 `BlockSpecRegistry` 新增 `loadFromSplit(concepts, projections)` 方法：`src/core/block-spec-registry.ts`
+  - 內部合併 concept + projection → BlockSpec，不再需要外部 adapter
+- [x] T030 更新 `src/ui/app.ts`：使用 `loadFromSplit()`，移除 `mergeToBlockSpecs` import
+- [x] T031 更新 `src/languages/cpp/module.ts`：使用 `loadFromSplit()`，移除 `mergeToBlockSpecs` import
+- [x] T032 刪除 `src/core/block-spec-adapter.ts` 和 `tests/unit/core/block-spec-adapter.test.ts`
+- [x] T033 刪除舊 JSON 檔案：
+  - `src/blocks/universal.json`
+  - `src/languages/cpp/blocks/basic.json`
+  - `src/languages/cpp/blocks/advanced.json`
+  - `src/languages/cpp/blocks/special.json`
+  - `src/languages/cpp/blocks/stdlib/containers.json`
+  - `src/languages/cpp/blocks/stdlib/algorithms.json`
+- [x] T034 更新所有引用舊路徑的測試和腳本
+  - `tests/integration/json-extension.test.ts`（require universal.json + stdlib）
+  - `src/scripts/verify-concept-paths.ts`
+  - 其他靜態分析測試
+- [x] T035 更新 manifest.json 加入 stdlib 路徑
+- [x] T036 驗證：`npx vitest run` + `npm run build` + 確認無任何舊 JSON 殘留
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
