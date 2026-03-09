@@ -139,9 +139,22 @@ export class ConsolePanel {
       this.removeInlineInput()
       this.removeInputRow()
 
-      // Create an inline input line inside the output area (terminal-style)
-      this.inlineInputLine = document.createElement('div')
-      this.inlineInputLine.className = 'console-line console-inline-input-line'
+      // Append inline input to the current line (same line as previous output)
+      // If no current line exists, create one
+      if (!this.currentLineEl) {
+        this.currentLineEl = document.createElement('div')
+        this.currentLineEl.className = 'console-line'
+        this.outputEl.appendChild(this.currentLineEl)
+      }
+      // Convert textContent to a text node so we can append input alongside it
+      if (this.currentLineEl.childNodes.length === 0 && this.currentLineEl.textContent) {
+        const text = this.currentLineEl.textContent
+        this.currentLineEl.textContent = ''
+        this.currentLineEl.appendChild(document.createTextNode(text))
+      }
+      // Make it inline-flex so text and input sit on the same line
+      this.currentLineEl.style.display = 'flex'
+      this.inlineInputLine = this.currentLineEl
 
       const input = document.createElement('input')
       input.className = 'console-inline-input'
@@ -162,7 +175,6 @@ export class ConsolePanel {
       })
 
       this.inlineInputLine.appendChild(input)
-      this.outputEl.appendChild(this.inlineInputLine)
       this.inlineInput = input
 
       // Show a hint in the status bar
@@ -174,14 +186,16 @@ export class ConsolePanel {
   }
 
   private submitInlineInput(val: string): void {
-    // Replace the inline input with the typed text
-    if (this.inlineInputLine) {
-      this.inlineInputLine.textContent = val
-      this.inlineInputLine.classList.remove('console-inline-input-line')
-      this.inlineInputLine.classList.add('console-input-echo')
+    // Replace the inline input element with a text span showing the typed value
+    if (this.inlineInput) {
+      const echo = document.createElement('span')
+      echo.className = 'console-input-echo'
+      echo.textContent = val
+      this.inlineInput.replaceWith(echo)
     }
     this.inlineInput = null
     this.inlineInputLine = null
+    // Start a new line after input
     this.currentLineEl = null
 
     if (this.inputResolve) {
