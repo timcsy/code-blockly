@@ -1,6 +1,7 @@
 import type { StdModule } from './types'
+import type { DependencyEdge, DependencyResolver } from '../../../core/dependency-resolver'
 
-export class ModuleRegistry {
+export class ModuleRegistry implements DependencyResolver {
   private modules = new Map<string, StdModule>()
   private conceptToHeader = new Map<string, string>()
 
@@ -19,13 +20,20 @@ export class ModuleRegistry {
     return this.conceptToHeader.get(conceptId) ?? null
   }
 
-  getRequiredHeaders(conceptIds: string[]): string[] {
-    const headers = new Set<string>()
+  resolve(conceptIds: string[]): DependencyEdge[] {
+    const seen = new Map<string, DependencyEdge>()
     for (const id of conceptIds) {
       const header = this.conceptToHeader.get(id)
-      if (header) headers.add(header)
+      if (header && !seen.has(header)) {
+        seen.set(header, {
+          directive: `#include ${header}`,
+          sourceType: 'stdlib',
+          header,
+          reason: id,
+        })
+      }
     }
-    return [...headers].sort()
+    return [...seen.values()].sort((a, b) => a.header.localeCompare(b.header))
   }
 
   getModule(header: string): StdModule | undefined {

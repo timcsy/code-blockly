@@ -9,6 +9,11 @@ function makeProgram(body: ReturnType<typeof createNode>[]) {
   return createNode('program', {}, { body })
 }
 
+/** Extract header strings from DependencyEdge[] for backward-compatible assertions */
+function headers(edges: ReturnType<typeof computeAutoIncludes>): string[] {
+  return edges.map(e => e.header)
+}
+
 describe('Auto-include engine', () => {
   describe('computeAutoIncludes', () => {
     it('should return <iostream> for print concept', () => {
@@ -19,8 +24,8 @@ describe('Auto-include engine', () => {
           ],
         }),
       ])
-      const headers = computeAutoIncludes(tree, registry)
-      expect(headers).toContain('<iostream>')
+      const edges = computeAutoIncludes(tree, registry)
+      expect(headers(edges)).toContain('<iostream>')
     })
 
     it('should return <cstdio> for cpp_printf concept', () => {
@@ -31,16 +36,16 @@ describe('Auto-include engine', () => {
           ],
         }),
       ])
-      const headers = computeAutoIncludes(tree, registry)
-      expect(headers).toContain('<cstdio>')
+      const edges = computeAutoIncludes(tree, registry)
+      expect(headers(edges)).toContain('<cstdio>')
     })
 
     it('should return <vector> for cpp_vector_declare concept', () => {
       const tree = makeProgram([
         createNode('cpp_vector_declare', { type: 'int', name: 'v' }),
       ])
-      const headers = computeAutoIncludes(tree, registry)
-      expect(headers).toContain('<vector>')
+      const edges = computeAutoIncludes(tree, registry)
+      expect(headers(edges)).toContain('<vector>')
     })
 
     it('should return multiple headers for mixed concepts', () => {
@@ -52,9 +57,9 @@ describe('Auto-include engine', () => {
           ],
         }),
       ])
-      const headers = computeAutoIncludes(tree, registry)
-      expect(headers).toContain('<iostream>')
-      expect(headers).toContain('<vector>')
+      const edges = computeAutoIncludes(tree, registry)
+      expect(headers(edges)).toContain('<iostream>')
+      expect(headers(edges)).toContain('<vector>')
     })
 
     it('should deduplicate headers (multiple print nodes)', () => {
@@ -63,8 +68,8 @@ describe('Auto-include engine', () => {
         createNode('print', {}, { values: [createNode('var_ref', { name: 'y' })] }),
         createNode('input', {}, { values: [createNode('var_ref', { name: 'z' })] }),
       ])
-      const headers = computeAutoIncludes(tree, registry)
-      const iostreamCount = headers.filter(h => h === '<iostream>').length
+      const edges = computeAutoIncludes(tree, registry)
+      const iostreamCount = headers(edges).filter(h => h === '<iostream>').length
       expect(iostreamCount).toBe(1)
     })
 
@@ -77,8 +82,8 @@ describe('Auto-include engine', () => {
           ],
         }),
       ])
-      const headers = computeAutoIncludes(tree, registry)
-      expect(headers).not.toContain('<iostream>')
+      const edges = computeAutoIncludes(tree, registry)
+      expect(headers(edges)).not.toContain('<iostream>')
     })
 
     it('should return empty for core-only concepts (no #include needed)', () => {
@@ -92,8 +97,8 @@ describe('Auto-include engine', () => {
           then_body: [],
         }),
       ])
-      const headers = computeAutoIncludes(tree, registry)
-      expect(headers).toHaveLength(0)
+      const edges = computeAutoIncludes(tree, registry)
+      expect(edges).toHaveLength(0)
     })
 
     it('should return sorted headers', () => {
@@ -101,9 +106,23 @@ describe('Auto-include engine', () => {
         createNode('cpp_vector_declare', { type: 'int', name: 'v' }),
         createNode('print', {}, { values: [createNode('var_ref', { name: 'x' })] }),
       ])
-      const headers = computeAutoIncludes(tree, registry)
-      const sorted = [...headers].sort()
-      expect(headers).toEqual(sorted)
+      const edges = computeAutoIncludes(tree, registry)
+      const h = headers(edges)
+      const sorted = [...h].sort()
+      expect(h).toEqual(sorted)
+    })
+
+    it('should return DependencyEdge objects with correct fields', () => {
+      const tree = makeProgram([
+        createNode('print', {}, { values: [createNode('var_ref', { name: 'x' })] }),
+      ])
+      const edges = computeAutoIncludes(tree, registry)
+      expect(edges.length).toBeGreaterThan(0)
+      const edge = edges.find(e => e.header === '<iostream>')!
+      expect(edge).toBeDefined()
+      expect(edge.directive).toBe('#include <iostream>')
+      expect(edge.sourceType).toBe('stdlib')
+      expect(edge.reason).toBeDefined()
     })
   })
 })

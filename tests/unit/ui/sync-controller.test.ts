@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import { SyncController } from '../../../src/ui/sync-controller'
+import { SyncController, stripScaffoldNodes } from '../../../src/ui/sync-controller'
 import type { CodeParser, SyncError } from '../../../src/ui/sync-controller'
 import type { StylePreset } from '../../../src/core/types'
 import { createNode } from '../../../src/core/semantic-tree'
@@ -192,6 +192,123 @@ describe('SyncController (bus-based)', () => {
     it('should allow setting language', () => {
       controller.setLanguage('python')
       // No error thrown
+    })
+  })
+
+  describe('stripScaffoldNodes (unit)', () => {
+    it('should strip include, using_namespace, and unwrap func_def(main)', () => {
+      const fullTree = createNode('program', {}, {
+        body: [
+          createNode('cpp_include', { header: 'iostream' }),
+          createNode('cpp_using_namespace', { ns: 'std' }),
+          createNode('func_def', { name: 'main', return_type: 'int' }, {
+            body: [
+              createNode('print', {}, { values: [createNode('string', { value: 'hello' })] }),
+              createNode('return', {}, { value: [createNode('number', { value: 0 })] }),
+            ],
+          }),
+        ],
+      })
+
+      const stripped = stripScaffoldNodes(fullTree)
+      const body = stripped.children.body ?? []
+
+      // Only user's body (print) should remain — include, namespace, func_def wrapper, return stripped
+      expect(body).toHaveLength(1)
+      expect(body[0].concept).toBe('print')
+    })
+
+    it('should keep non-scaffold nodes (user-defined functions)', () => {
+      const tree = createNode('program', {}, {
+        body: [
+          createNode('cpp_include', { header: 'iostream' }),
+          createNode('func_def', { name: 'helper', return_type: 'void' }, {
+            body: [createNode('print', {}, { values: [] })],
+          }),
+          createNode('func_def', { name: 'main', return_type: 'int' }, {
+            body: [
+              createNode('var_declare', { name: 'x', type: 'int' }, { initializer: [] }),
+              createNode('return', {}, { value: [createNode('number', { value: 0 })] }),
+            ],
+          }),
+        ],
+      })
+
+      const stripped = stripScaffoldNodes(tree)
+      const body = stripped.children.body ?? []
+
+      // helper (user-defined) + var_declare (from main body) should remain
+      expect(body).toHaveLength(2)
+      expect(body[0].concept).toBe('func_def')
+      expect(body[0].properties.name).toBe('helper')
+      expect(body[1].concept).toBe('var_declare')
+    })
+
+    it('should handle body-only tree (already stripped)', () => {
+      const tree = createNode('program', {}, {
+        body: [createNode('var_declare', { name: 'x', type: 'int' }, { initializer: [] })],
+      })
+
+      const stripped = stripScaffoldNodes(tree)
+      const body = stripped.children.body ?? []
+
+      expect(body).toHaveLength(1)
+      expect(body[0].concept).toBe('var_declare')
+    })
+
+    it('should handle empty program', () => {
+      const tree = createNode('program', {}, { body: [] })
+      const stripped = stripScaffoldNodes(tree)
+      expect(stripped.children.body ?? []).toHaveLength(0)
+    })
+  })
+
+  describe('resyncForLevel (level change)', () => {
+    it('should emit resync event with both code and blockState', () => {
+      controller.setCognitiveLevel(0 as import('../../../src/core/types').CognitiveLevel)
+
+      const handler = vi.fn()
+      bus.on('semantic:update', handler)
+
+      const fullTree = createNode('program', {}, {
+        body: [
+          createNode('cpp_include', { header: 'iostream' }),
+          createNode('func_def', { name: 'main', return_type: 'int' }, {
+            body: [
+              createNode('var_declare', { name: 'x', type: 'int' }, { initializer: [] }),
+              createNode('return', {}, { value: [createNode('number', { value: 0 })] }),
+            ],
+          }),
+        ],
+      })
+
+      controller.resyncForLevel(fullTree, '')
+
+      expect(handler).toHaveBeenCalled()
+      const data = handler.mock.calls[0][0]
+      expect(data.source).toBe('resync')
+      expect(data.code).toBeDefined()
+      expect(data.blockState).toBeDefined()
+    })
+
+    it('should produce complete code even with body-only tree (L0)', () => {
+      controller.setCognitiveLevel(0 as import('../../../src/core/types').CognitiveLevel)
+
+      const handler = vi.fn()
+      bus.on('semantic:update', handler)
+
+      // Body-only tree (no scaffold nodes) — as extracted from L0 blocks
+      const bodyTree = createNode('program', {}, {
+        body: [
+          createNode('var_declare', { name: 'x', type: 'int' }, { initializer: [] }),
+        ],
+      })
+
+      controller.resyncForLevel(bodyTree, '')
+
+      const data = handler.mock.calls[0][0]
+      // Code should be complete (scaffold wraps the body)
+      expect(data.code).toContain('int x;')
     })
   })
 

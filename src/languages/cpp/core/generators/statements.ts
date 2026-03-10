@@ -2,7 +2,7 @@ import type { SemanticNode, StylePreset } from '../../../../core/types'
 import type { NodeGenerator } from '../../../../core/projection/code-generator'
 import { indent, indented, generateExpression, generateBody, trackOwnText } from '../../../../core/projection/code-generator'
 import { computeAutoIncludes } from '../../auto-include'
-import type { ModuleRegistry } from '../../std/module-registry'
+import type { DependencyResolver } from '../../../../core/dependency-resolver'
 import { createNode } from '../../../../core/semantic-tree'
 
 export function registerStatementGenerators(g: Map<string, NodeGenerator>, style: StylePreset): void {
@@ -12,17 +12,77 @@ export function registerStatementGenerators(g: Map<string, NodeGenerator>, style
   g.set('program', (node, ctx) => {
     const body = node.children.body ?? []
 
-    // Auto-include: inject headers for concepts used in the tree
+    // Scaffold-driven code generation: when ProgramScaffold is available
+    // and the tree body does NOT already contain a main function (i.e., body-only tree from L0).
+    // If the tree has func_def(main), it's a full tree — use legacy path to avoid duplication.
+    const hasMainFunc = body.some(n => n.concept === 'func_def' && n.properties.name === 'main')
+    if (ctx.programScaffold && ctx.scaffoldConfig && !hasMainFunc) {
+      // Collect manual includes from body for deduplication
+      const manualImports: string[] = []
+      for (const n of body) {
+        if (n.concept === 'cpp_include' && typeof n.properties.header === 'string') {
+          manualImports.push(`<${n.properties.header}>`)
+        }
+      }
+
+      const scaffoldResult = ctx.programScaffold.resolve(node, {
+        ...ctx.scaffoldConfig,
+        manualImports,
+      })
+      // Build output: scaffold imports → manual includes → preamble → entryPoint → body → epilogue
+      // Always output all scaffold items regardless of visibility (code must be complete)
+      let code = ''
+
+      // Scaffold imports (auto-generated)
+      for (const item of scaffoldResult.imports) {
+        code += item.code + '\n'
+      }
+
+      // Manual includes from body
+      for (const n of body) {
+        if (n.concept === 'cpp_include' || n.concept === 'cpp_include_local') {
+          code += generateBody([n], ctx)
+        }
+      }
+
+      // Preamble
+      for (const item of scaffoldResult.preamble) {
+        code += item.code + '\n'
+      }
+
+      // Entry point
+      for (const item of scaffoldResult.entryPoint) {
+        code += item.code + '\n'
+      }
+
+      // Track scaffold lines for source mapping before generating user body
+      trackOwnText(ctx, code)
+
+      // User body (excluding includes, indented inside main)
+      const userBody = body.filter(n =>
+        n.concept !== 'cpp_include' && n.concept !== 'cpp_include_local'
+      )
+      code += generateBody(userBody, indented(ctx))
+
+      // Epilogue
+      for (const item of scaffoldResult.epilogue) {
+        code += item.code + '\n'
+      }
+
+      return code
+    }
+
+    // Fallback: auto-include without scaffold (legacy path)
     let effectiveBody = body
-    if (ctx.moduleRegistry) {
-      const autoHeaders = computeAutoIncludes(node, ctx.moduleRegistry as ModuleRegistry)
-      if (autoHeaders.length > 0) {
+    if (ctx.dependencyResolver) {
+      const autoEdges = computeAutoIncludes(node, ctx.dependencyResolver as DependencyResolver)
+      if (autoEdges.length > 0) {
         // Find insertion point: after existing #include blocks
         const lastIncludeIdx = body.reduce((acc, n, i) =>
           (n.concept === 'cpp_include' || n.concept === 'cpp_include_local') ? i : acc, -1)
         const insertAt = lastIncludeIdx + 1
-        const autoNodes: SemanticNode[] = autoHeaders.map(h =>
-          createNode('cpp_include', { header: h.replace(/^<|>$/g, ''), local: false })
+        const autoNodes: SemanticNode[] = autoEdges.map(e =>
+          createNode('cpp_include', { header: e.header.replace(/^<|>$/g, ''), local: false })
         )
         effectiveBody = [
           ...body.slice(0, insertAt),

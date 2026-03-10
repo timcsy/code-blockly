@@ -670,9 +670,10 @@ arduino-neopixel（depends: arduino-core）
 
 | 缺失項目 | 對應章節 | 優先級 | 說明 |
 |----------|---------|--------|------|
-| **DependencyResolver 抽象** | §3.1 | P1 | ModuleRegistry 是 C++ 專用，需泛化為語言無關介面 |
-| **Program Scaffold 層** | §2.1 | P1 | include/namespace/main/return 的漸進揭露（L0 隱藏→L1 ghost→L2 手動） |
-| **SemanticDiff 增量更新** | §2.2 | P2 | 目前是全量替換，效能隨視圖數量線性增長 |
+| **DependencyResolver 抽象** | §3.4 | P1 | ModuleRegistry 是 C++ 專用，需泛化為語言無關介面 |
+| **Program Scaffold 層** | §3.4 | P1 | include/namespace/main/return 的漸進揭露（L0 隱藏→L1 ghost→L2 手動） |
+| **Semantic Node Identity** | §2.2 | P1 | 跨投影對應用 blockId（投影層 ID），應改用 node.id（語義層 ID） |
+| **SemanticDiff 增量更新** | §2.2 | P2 | 目前是全量替換，效能隨視圖數量線性增長（前置：Semantic Node Identity） |
 | **硬體描述層** | §5.2 | P3 | 等 Arduino 需求時再實作 |
 | **DataFlow 視圖** | §4.2 | P3 | 需要 annotations 機制先到位 |
 
@@ -728,6 +729,82 @@ arduino-neopixel（depends: arduino-core）
   → L0 程式碼不顯示 include/main（ghost 或 hidden）
   → L2 缺少 include 時顯示警告
   → DependencyResolver 介面不含任何 C++ 專用型別
+```
+
+### Phase 5b：Semantic Node Identity（語義節點身份）
+
+**目標**：將跨投影對應（source mapping）從 Blockly 投影層 ID（blockId）遷移到語義層 ID（node.id），消除投影間的直接耦合。
+
+**理論基礎**：first-principles §1.1（語義結構是唯一真實——節點身份屬於語義層，不屬於任何投影層）、§2.1（投影定理——跨投影對應應經由語義結構間接建立，不應讓兩個投影直接互相推算）
+
+**動機**：
+
+```
+現狀問題：
+  SourceMapping { blockId, startLine, endLine }
+                  ^^^^^^
+                  這是 Blockly 投影層的 ID，不是語義層的身份
+
+後果：
+  1. code→blocks 方向必須等 Blockly 渲染完才能建立 mapping（時序耦合）
+  2. lifter 產出的語義樹沒有 blockId → mapping 為空 → 需要額外的 rebuild 步驟
+  3. 未來新增投影（flowchart、dataflow）需要各自建立與 blockId 的對應（N×N 耦合）
+  4. SemanticDiff（§2.2）需要穩定的節點身份來偵測 add/remove/move/modify
+
+現有基礎：
+  SemanticNode.id 欄位 — 已存在（types.ts），createNode() 已自動分配
+  → 不需要改型別，只需要讓 mapping 系統使用 node.id 而非 metadata.blockId
+```
+
+**目標架構**：
+
+```
+                    語義層（node.id 是唯一身份）
+                         │
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+    CodeMapping     BlockMapping    未來投影 Mapping
+  { nodeId,       { nodeId,       { nodeId,
+    startLine,      blockId }       svgElementId }
+    endLine }
+
+跨投影查詢（經由 nodeId join）：
+  點擊 block → blockId → BlockMapping → nodeId → CodeMapping → 高亮行
+  點擊 code  → line    → CodeMapping  → nodeId → BlockMapping → 選取積木
+```
+
+```
+5b.1 SourceMapping 遷移：blockId → nodeId
+    → SourceMapping { nodeId, startLine, endLine }（取代 blockId）
+    → code-generator.ts generateNode() 改用 node.id 而非 metadata.blockId
+    → 所有 mapping 消費者（getMappingForBlock, getMappingForLine）更新
+
+5b.2 BlockMapping 對應表
+    → 新增 BlockMapping { nodeId, blockId } 對應表
+    → Blockly extractSemanticTree() 已產出帶 node.id 的語義節點
+    → block-renderer.ts renderToBlocklyState() 記錄 nodeId → blockId 映射
+    → SyncController 維護 blockMappings: BlockMapping[]
+
+5b.3 跨投影查詢重構
+    → getMappingForBlock(blockId): 查 BlockMapping → nodeId → 查 CodeMapping
+    → getMappingForLine(line): 查 CodeMapping → nodeId → 查 BlockMapping
+    → code→blocks 不再需要等 Blockly 渲染後才能建立 CodeMapping
+    → handleEditCode 可直接從 generateCodeWithMapping 取得正確的 CodeMapping
+
+5b.4 nodeId 穩定性保證
+    → createNode() 自動分配（已實作）
+    → Lifter lift() 產出的節點帶 id（已實作）
+    → Blockly extractSemanticTree() 保留 node.id（需驗證）
+    → round-trip（blocks→code→blocks）中同一邏輯節點的 id 應保持穩定
+    → 為 SemanticDiff（Phase 8.2）的 id-based 節點匹配鋪路
+
+驗證：
+  → 所有現有測試通過
+  → SourceMapping 不含 blockId（純語義層）
+  → code→blocks mapping 不依賴 Blockly 渲染時序
+  → 點擊積木正確高亮程式碼行（L0 / L1 / L2）
+  → 點擊程式碼行正確選取積木
+  → 新增投影只需建立自己的 { nodeId, X } 映射，不需要知道其他投影的存在
 ```
 
 ### Phase 6：Python 語言套件
@@ -797,7 +874,7 @@ arduino-neopixel（depends: arduino-core）
 
 ```
 8.1 DataFlow 視圖（消費 control_flow annotations）
-8.2 SemanticDiff 增量更新（效能優化）
+8.2 SemanticDiff 增量更新（效能優化，前置：Phase 5b nodeId 穩定性）
 8.3 接線視圖 + 模擬視圖（硬體教育）
 8.4 跨語言映射視圖（concept.abstractConcept 驅動）
 8.5 語義套件市場（§4.2 效能市場的工程實作）
@@ -847,6 +924,34 @@ arduino-neopixel（depends: arduino-core）
   - [ ] C++ auto-include 行為不變（regression）
   - [ ] `DependencyResolver` 介面不 import `languages/cpp/`
   - [ ] Ghost line 在瀏覽器和 VSCode 都正常顯示
+
+### Phase 5b：Semantic Node Identity
+
+前置條件：Phase 5 完成（或可與 Phase 5 平行，因為不依賴 DependencyResolver）
+
+- [ ] **5b.1 SourceMapping 遷移：blockId → nodeId**
+  - [ ] `SourceMapping` 介面改為 `{ nodeId, startLine, endLine }`
+  - [ ] `code-generator.ts` `generateNode()` 改用 `node.id` 而非 `metadata.blockId`
+  - [ ] 所有 mapping 消費者更新（`getMappingForBlock`、`getMappingForLine`）
+- [ ] **5b.2 BlockMapping 對應表**
+  - [ ] 新增 `BlockMapping { nodeId, blockId }` 介面
+  - [ ] `block-renderer.ts` 記錄 `nodeId → blockId` 映射
+  - [ ] `SyncController` 維護 `blockMappings`
+  - [ ] `extractSemanticTree()` 保留 `node.id`（驗證）
+- [ ] **5b.3 跨投影查詢重構**
+  - [ ] `getMappingForBlock(blockId)` → 查 BlockMapping → nodeId → 查 CodeMapping
+  - [ ] `getMappingForLine(line)` → 查 CodeMapping → nodeId → 查 BlockMapping
+  - [ ] `handleEditCode` 直接從 `generateCodeWithMapping` 取得 CodeMapping（不需等 Blockly）
+  - [ ] 移除 `rebuildSourceMappings` 的 workaround（不再需要）
+- [ ] **5b.4 nodeId 穩定性與 SemanticDiff 基礎**
+  - [ ] round-trip 中同一節點 id 保持穩定
+  - [ ] Diff 算法原型：依 id 匹配節點，偵測 add/remove/modify
+  - [ ] 為 Phase 8.2 SemanticDiff 增量更新鋪路
+- [ ] **Phase 5b 驗證**
+  - [ ] 所有現有測試通過
+  - [ ] `SourceMapping` 不含 `blockId`（純語義層）
+  - [ ] code→blocks mapping 不依賴 Blockly 渲染時序
+  - [ ] 跨投影高亮正確（L0 / L1 / L2）
 
 ### Phase 6：Python 語言套件
 

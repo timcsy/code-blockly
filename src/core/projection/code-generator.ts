@@ -1,4 +1,6 @@
 import type { SemanticNode, StylePreset } from '../types'
+import type { DependencyResolver } from '../dependency-resolver'
+import type { ProgramScaffold, ScaffoldConfig } from '../program-scaffold'
 import { TemplateGenerator } from './template-generator'
 
 export type NodeGenerator = (node: SemanticNode, ctx: GeneratorContext) => string
@@ -20,24 +22,40 @@ export interface GeneratorContext {
   isExpression?: boolean
   _mappings?: SourceMapping[]
   _lineCount?: number
-  /** Optional module registry for auto-include resolution */
-  moduleRegistry?: { getRequiredHeaders(conceptIds: string[]): string[] }
+  /** Optional dependency resolver for auto-include resolution */
+  dependencyResolver?: DependencyResolver
+  /** Optional program scaffold for boilerplate management */
+  programScaffold?: ProgramScaffold
+  /** Scaffold configuration (cognitive level, manual imports, pinned items) */
+  scaffoldConfig?: ScaffoldConfig
 }
 
 // ─── Language module registry ───
 
 const languageFactories = new Map<string, LanguageGeneratorFactory>()
 let globalTemplateGenerator: TemplateGenerator | null = null
-let globalModuleRegistry: GeneratorContext['moduleRegistry'] | null = null
+let globalDependencyResolver: DependencyResolver | null = null
+let globalProgramScaffold: ProgramScaffold | null = null
+let globalScaffoldConfig: ScaffoldConfig | null = null
 
 /** Set the JSON-driven template generator engine */
 export function setTemplateGenerator(tg: TemplateGenerator): void {
   globalTemplateGenerator = tg
 }
 
-/** Set the module registry for auto-include resolution */
-export function setModuleRegistry(registry: GeneratorContext['moduleRegistry']): void {
-  globalModuleRegistry = registry
+/** Set the dependency resolver for auto-include resolution */
+export function setDependencyResolver(resolver: DependencyResolver): void {
+  globalDependencyResolver = resolver
+}
+
+/** Set the program scaffold for boilerplate management */
+export function setProgramScaffold(scaffold: ProgramScaffold): void {
+  globalProgramScaffold = scaffold
+}
+
+/** Set the scaffold configuration (cognitive level, etc.) */
+export function setScaffoldConfig(config: ScaffoldConfig): void {
+  globalScaffoldConfig = config
 }
 
 export function registerLanguage(language: string, factory: LanguageGeneratorFactory): void {
@@ -50,7 +68,9 @@ export function generateCode(tree: SemanticNode, language: string, style: StyleP
   const factory = languageFactories.get(language)
   const generators = factory ? factory(style) : new Map<string, NodeGenerator>()
   const ctx: GeneratorContext = { indent: 0, style, language, generators }
-  if (globalModuleRegistry) ctx.moduleRegistry = globalModuleRegistry
+  if (globalDependencyResolver) ctx.dependencyResolver = globalDependencyResolver
+  if (globalProgramScaffold) ctx.programScaffold = globalProgramScaffold
+  if (globalScaffoldConfig) ctx.scaffoldConfig = globalScaffoldConfig
   wireTemplateFallbacks(ctx)
   return generateNode(tree, ctx).trim()
 }
@@ -64,7 +84,9 @@ export function generateCodeWithMapping(
   const generators = factory ? factory(style) : new Map<string, NodeGenerator>()
   const mappings: SourceMapping[] = []
   const ctx: GeneratorContext = { indent: 0, style, language, generators, _mappings: mappings, _lineCount: 0 }
-  if (globalModuleRegistry) ctx.moduleRegistry = globalModuleRegistry
+  if (globalDependencyResolver) ctx.dependencyResolver = globalDependencyResolver
+  if (globalProgramScaffold) ctx.programScaffold = globalProgramScaffold
+  if (globalScaffoldConfig) ctx.scaffoldConfig = globalScaffoldConfig
   wireTemplateFallbacks(ctx)
   const code = generateNode(tree, ctx).trim()
   return { code, mappings }

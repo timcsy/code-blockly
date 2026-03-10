@@ -47,7 +47,7 @@ function makeCtx(style: StylePreset, withRegistry = false): GeneratorContext {
     style,
     language: 'cpp',
     generators: makeGenerators(style),
-    moduleRegistry: withRegistry ? createPopulatedRegistry() : undefined,
+    dependencyResolver: withRegistry ? createPopulatedRegistry() : undefined,
   }
 }
 
@@ -100,7 +100,7 @@ describe('Auto-include integration', () => {
     expect(matches).toHaveLength(1)
   })
 
-  it('should NOT inject includes when no moduleRegistry provided', () => {
+  it('should NOT inject includes when no dependencyResolver provided', () => {
     const tree = createNode('program', {}, {
       body: [
         createNode('func_def', { name: 'main', return_type: 'int', params: [] }, {

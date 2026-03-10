@@ -1,4 +1,5 @@
-import type { SemanticNode, StylePreset } from '../core/types'
+import type { SemanticNode, StylePreset, CognitiveLevel } from '../core/types'
+import type { ProgramScaffold, ScaffoldResult } from '../core/program-scaffold'
 import type { CodingStyle } from '../languages/style'
 import {
   detectStyleExceptions, applyStyleConversions,
@@ -22,8 +23,39 @@ function toCodingStyle(preset: StylePreset): CodingStyle {
 }
 import type { SourceMapping } from '../core/projection/code-generator'
 import { renderToBlocklyState } from '../core/projection/block-renderer'
+import { createNode } from '../core/semantic-tree'
 import { Lifter } from '../core/lift/lifter'
 import { SemanticBus } from '../core/semantic-bus'
+
+/**
+ * Strip scaffold nodes (include, using_namespace, func_def main wrapper, return)
+ * from a semantic tree, leaving only the user's body statements.
+ * Used for L0 block rendering — blocks only show the user's logic.
+ */
+export function stripScaffoldNodes(tree: SemanticNode): SemanticNode {
+  const body = tree.children.body ?? []
+  const userBody: SemanticNode[] = []
+
+  for (const node of body) {
+    // Skip include directives
+    if (node.concept === 'cpp_include' || node.concept === 'cpp_include_local') continue
+    // Skip using namespace
+    if (node.concept === 'cpp_using_namespace') continue
+    // Unwrap func_def(main) — extract its body, skip trailing return
+    if (node.concept === 'func_def' && node.properties.name === 'main') {
+      const funcBody = node.children.body ?? []
+      for (const stmt of funcBody) {
+        if (stmt.concept === 'return') continue
+        userBody.push(stmt)
+      }
+      continue
+    }
+    // Keep everything else (user-defined functions, etc.)
+    userBody.push(node)
+  }
+
+  return createNode('program', {}, { body: userBody })
+}
 
 export interface CodeParser {
   parse(code: string): { rootNode: unknown }
@@ -42,6 +74,9 @@ export class SyncController {
   private onStyleExceptionsCallback: ((exceptions: StyleException[], apply: () => void) => void) | null = null
   private onIoConformanceCallback: ((result: IoConformanceResult) => void) | null = null
   private codingStyle: CodingStyle | null = null
+  private programScaffold: ProgramScaffold | null = null
+  private cognitiveLevel: CognitiveLevel = 1
+  private codePatcherFn: ((code: string, tree: SemanticNode) => string | null) | null = null
 
   constructor(
     bus: SemanticBus,
@@ -80,6 +115,25 @@ export class SyncController {
     this.codingStyle = toCodingStyle(preset)
   }
 
+  setProgramScaffold(scaffold: ProgramScaffold): void {
+    this.programScaffold = scaffold
+  }
+
+  setCognitiveLevel(level: CognitiveLevel): void {
+    this.cognitiveLevel = level
+  }
+
+  /** Set a language-specific code patcher for auto-fixing missing dependencies after code→blocks */
+  setCodePatcher(fn: (code: string, tree: SemanticNode) => string | null): void {
+    this.codePatcherFn = fn
+  }
+
+  /** Patch code with missing dependencies (e.g. #include). Returns patched code or null if unchanged. */
+  patchMissingDependencies(code: string): string | null {
+    if (!this.codePatcherFn || !this.currentTree) return null
+    return this.codePatcherFn(code, this.currentTree)
+  }
+
   /** Handle edit:blocks event — sync blocks → semantic tree → code */
   private handleEditBlocks(data: { blocklyState: unknown }): void {
     if (this.syncing) return
@@ -90,7 +144,16 @@ export class SyncController {
       this.currentTree = tree
       const { code, mappings } = generateCodeWithMapping(tree, this.language, this.style)
       this.sourceMappings = mappings
-      this.bus.emit('semantic:update', { tree, code, source: 'blocks', mappings })
+
+      // Compute scaffold result for ghost line decorations
+      let scaffoldResult: ScaffoldResult | undefined
+      if (this.programScaffold) {
+        scaffoldResult = this.programScaffold.resolve(tree, {
+          cognitiveLevel: this.cognitiveLevel,
+        })
+      }
+
+      this.bus.emit('semantic:update', { tree, code, source: 'blocks', mappings, scaffoldResult })
     } finally {
       this.syncing = false
     }
@@ -134,9 +197,10 @@ export class SyncController {
           applySemanticConversions = () => {
             const converted = applyStyleConversions(currentTree, exceptions)
             this.currentTree = converted
-            const blockState = renderToBlocklyState(converted)
+            const convDisplay = this.cognitiveLevel === 0 ? stripScaffoldNodes(converted) : converted
+            const blockState = renderToBlocklyState(convDisplay)
             this.bus.emit('semantic:update', { tree: converted, blockState, source: 'code' })
-            this.sourceMappings = this.buildMappingsFromTree(converted, blockState)
+            // Mappings will be rebuilt by caller after Blockly renders
           }
         }
       }
@@ -151,11 +215,15 @@ export class SyncController {
       }
 
       this.currentTree = tree
-      const blockState = renderToBlocklyState(tree)
-      this.bus.emit('semantic:update', { tree, blockState, source: 'code' })
+      // For L0: strip scaffold nodes so blocks only show user's logic
+      const displayTree = this.cognitiveLevel === 0 ? stripScaffoldNodes(tree) : tree
+      const blockState = renderToBlocklyState(displayTree)
 
-      // Build source mappings from semantic tree sourceRange + rendered block IDs
-      this.sourceMappings = this.buildMappingsFromTree(tree, blockState)
+      // Emit update — Blockly will render blocks synchronously (assigning blockIds).
+      // Source mappings are NOT built here because the lifted tree has no blockIds.
+      // The caller (app.ts) must call rebuildSourceMappings() with the Blockly tree
+      // after this returns, since only Blockly-extracted trees have blockIds.
+      this.bus.emit('semantic:update', { tree, blockState, source: 'code' })
     } finally {
       this.syncing = false
     }
@@ -166,6 +234,59 @@ export class SyncController {
     const t = tree ?? this.currentTree
     if (!t) return
     this.handleEditBlocks({ blocklyState: { tree: t } })
+  }
+
+  /**
+   * Resync both panels after a cognitive level change.
+   * - L0: blocks show body-only (scaffold stripped), code shows full (scaffold-wrapped)
+   * - L1/L2: blocks show full tree, code shows full
+   * When switching FROM L0 TO L1/L2, re-lifts from code to recover full tree.
+   */
+  resyncForLevel(extractedTree: SemanticNode, currentCode: string): void {
+    if (this.syncing) return
+    this.syncing = true
+    try {
+      let fullTree = extractedTree
+
+      // If switching TO L1/L2 and tree has no main func (body-only from L0),
+      // re-lift from the current code to get the full tree
+      const hasMainFunc = (extractedTree.children.body ?? []).some(
+        n => n.concept === 'func_def' && n.properties.name === 'main'
+      )
+      if (this.cognitiveLevel > 0 && !hasMainFunc && this.lifter && this.parser) {
+        const parseResult = this.parser.parse(currentCode)
+        const rootNode = parseResult.rootNode as import('../core/lift/types').AstNode
+        if (rootNode) {
+          const lifted = this.lifter.lift(rootNode)
+          if (lifted) fullTree = lifted
+        }
+      }
+
+      this.currentTree = fullTree
+
+      // Generate code (scaffold wraps body-only trees; full trees use legacy path)
+      const { code, mappings } = generateCodeWithMapping(fullTree, this.language, this.style)
+      this.sourceMappings = mappings
+
+      // Compute scaffold result for Monaco ghost decorations
+      let scaffoldResult: ScaffoldResult | undefined
+      if (this.programScaffold) {
+        scaffoldResult = this.programScaffold.resolve(fullTree, {
+          cognitiveLevel: this.cognitiveLevel,
+        })
+      }
+
+      // For blocks: strip scaffold if L0
+      const displayTree = this.cognitiveLevel === 0 ? stripScaffoldNodes(fullTree) : fullTree
+      const blockState = renderToBlocklyState(displayTree)
+
+      // Emit resync event — updates both code and block panels
+      this.bus.emit('semantic:update', {
+        tree: fullTree, code, blockState, source: 'resync', mappings, scaffoldResult,
+      })
+    } finally {
+      this.syncing = false
+    }
   }
 
   /** Convenience: trigger code→blocks sync from external code (e.g., app.ts) */
@@ -228,73 +349,6 @@ export class SyncController {
       }
     }
     return best
-  }
-
-  /** Walk semantic tree and block state in parallel to build blockId→sourceRange mappings */
-  private buildMappingsFromTree(
-    tree: SemanticNode,
-    blockState: { blocks: { blocks: unknown[] } },
-  ): SourceMapping[] {
-    const mappings: SourceMapping[] = []
-    const body = tree.children.body ?? []
-    if (body.length === 0 || blockState.blocks.blocks.length === 0) return mappings
-
-    interface BlockNode { id: string; inputs?: Record<string, { block?: BlockNode }>; next?: { block?: BlockNode } }
-
-    // Semantic child key → possible block input names
-    const childToInput: Record<string, string[]> = {
-      body: ['BODY', 'DO'],
-      then_body: ['THEN', 'BODY'],
-      else_body: ['ELSE'],
-      condition: ['COND', 'CONDITION'],
-      from: ['FROM'],
-      to: ['TO'],
-      value: ['VALUE', 'EXPR'],
-      args: ['ARG0', 'ARG1', 'ARG2'],
-      left: ['A'],
-      right: ['B'],
-    }
-
-    const findBlockInput = (block: BlockNode, semKey: string): BlockNode | undefined => {
-      if (!block.inputs) return undefined
-      const candidates = childToInput[semKey] ?? [semKey.toUpperCase()]
-      for (const name of candidates) {
-        if (block.inputs[name]?.block) return block.inputs[name].block
-      }
-      return undefined
-    }
-
-    const walkChain = (nodes: SemanticNode[], firstBlock: BlockNode | undefined): void => {
-      let currentBlock = firstBlock
-      for (const node of nodes) {
-        if (!currentBlock) break
-        walkPair(node, currentBlock)
-        currentBlock = currentBlock.next?.block
-      }
-    }
-
-    const walkPair = (node: SemanticNode, block: BlockNode): void => {
-      const sr = node.metadata?.sourceRange as { startLine: number; endLine: number } | undefined
-      if (sr) {
-        mappings.push({ blockId: block.id, startLine: sr.startLine, endLine: sr.endLine })
-      }
-      // Recurse into all children
-      for (const [key, children] of Object.entries(node.children)) {
-        if (!children || children.length === 0) continue
-        const inputBlock = findBlockInput(block, key)
-        if (!inputBlock) continue
-        // Statement chains: children with multiple nodes linked by .next
-        if (children.length > 1 || key.includes('body')) {
-          walkChain(children, inputBlock)
-        } else {
-          // Single expression child
-          walkPair(children[0], inputBlock)
-        }
-      }
-    }
-
-    walkChain(body, blockState.blocks.blocks[0] as BlockNode | undefined)
-    return mappings
   }
 
   private findErrors(node: import('../core/lift/types').AstNode): SyncError[] {

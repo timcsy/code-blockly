@@ -1,5 +1,6 @@
 export type { StdModule } from './types'
 export { ModuleRegistry } from './module-registry'
+export type { DependencyEdge, DependencyResolver } from '../../../core/dependency-resolver'
 
 import type { StdModule } from './types'
 import { ModuleRegistry } from './module-registry'

@@ -93,11 +93,6 @@ export class BlocklyPanel implements ViewHost {
       }
       if (!this.busUpdateInProgress) {
         this.onChangeCallback?.()
-        // Emit to bus if connected
-        if (this.bus) {
-          const tree = this.extractSemanticTree()
-          this.bus.emit('edit:blocks', { blocklyState: { tree } })
-        }
       }
     })
   }

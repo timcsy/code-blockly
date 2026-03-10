@@ -9,8 +9,10 @@ import { showStyleActionBar } from './toolbar/style-action-bar'
 import { runDiagnostics } from '../core/diagnostics'
 import type { DiagnosticBlock } from '../core/diagnostics'
 import { registerCppLanguage } from '../languages/cpp/generators'
-import { setModuleRegistry } from '../core/projection/code-generator'
+import { setDependencyResolver, setProgramScaffold, setScaffoldConfig } from '../core/projection/code-generator'
 import { createPopulatedRegistry } from '../languages/cpp/std'
+import { CppScaffold } from '../languages/cpp/cpp-scaffold'
+import { createCppCodePatcher } from '../languages/cpp/auto-include'
 import { registerCppLifters } from '../languages/cpp/lifters'
 import { Lifter } from '../core/lift/lifter'
 import { PatternLifter } from '../core/lift/pattern-lifter'
@@ -84,15 +86,16 @@ export class App {
   }
 
   async init(): Promise<void> {
-    // 1. Register C++ code generators + module registry for auto-include
+    // 1. Register C++ generators + dependency resolver + scaffold
     registerCppLanguage()
-    setModuleRegistry(createPopulatedRegistry())
-
-    // 2. Load locale
+    const registry = createPopulatedRegistry()
+    setDependencyResolver(registry)
+    setProgramScaffold(new CppScaffold(registry))
+    setScaffoldConfig({ cognitiveLevel: this.currentLevel })
     this.localeLoader.setBlocklyMsg(Blockly.Msg as Record<string, string>)
     await this.localeLoader.load('zh-TW')
 
-    // 3. Load block specs (split concept/projection architecture)
+    // 2. Load block specs (split concept/projection architecture)
     const allConcepts = [
       ...universalConcepts as unknown as ConceptDefJSON[],
       ...coreConcepts,
@@ -118,15 +121,22 @@ export class App {
     this.blocklyPanel = elements.blocklyPanel
     this.monacoPanel = elements.monacoPanel
 
-    // 6. Create sync controller
+    // 6. Create sync controller + wire scaffold + connect panels to bus
     this.syncController = new SyncController(this.bus, 'cpp', DEFAULT_STYLE)
-
-    // 7. Connect panels to bus
+    this.syncController.setProgramScaffold(new CppScaffold(registry))
+    const cppPatcher = createCppCodePatcher(registry)
+    this.syncController.setCodePatcher((code, tree) => cppPatcher(code, tree, this.currentStylePreset.namespace_style, this.currentLevel))
+    this.syncController.setCognitiveLevel(this.currentLevel)
     this.bus.on('semantic:update', (data) => {
-      if (data.source === 'blocks' && data.code !== undefined) {
+      // Update Monaco: blocks→code and resync both produce code
+      if ((data.source === 'blocks' || data.source === 'resync') && data.code !== undefined) {
         this.monacoPanel?.setCode(data.code)
+        if (data.scaffoldResult) {
+          this.monacoPanel?.applyScaffoldDecorations(data.code, data.scaffoldResult)
+        }
       }
-      if (data.source === 'code' && data.blockState) {
+      // Update Blockly: code→blocks and resync both produce blockState
+      if ((data.source === 'code' || data.source === 'resync') && data.blockState) {
         this.blocklyPanel?.setState(data.blockState as object)
       }
     })
@@ -194,7 +204,11 @@ export class App {
     const selectors = setupSelectors(STYLE_PRESETS, this.currentLevel, {
       onLevelChange: (level) => {
         this.currentLevel = level
+        setScaffoldConfig({ cognitiveLevel: level })
+        this.syncController?.setCognitiveLevel(level)
         this.updateToolboxForLevel(level)
+        const tree = this.blocklyPanel?.extractSemanticTree()
+        if (tree) this.syncController?.resyncForLevel(tree, this.monacoPanel?.getCode() ?? '')
         this.refreshStatusBar()
       },
       onStyleChange: (style) => {
@@ -268,6 +282,13 @@ export class App {
       parser.parse(code).then(tree => {
         codeParser._lastTree = tree.rootNode
         originalSync(code)
+        const patched = this.syncController?.patchMissingDependencies(code)
+        if (patched) {
+          const linesDelta = patched.split('\n').length - code.split('\n').length
+          this.monacoPanel?.setCodePreserveCursor(patched, linesDelta)
+        }
+        // Always rebuild mappings with Blockly tree (has blockIds) — lifted tree has none
+        this.syncController?.rebuildSourceMappings(this.blocklyPanel?.extractSemanticTree() ?? undefined)
         this.codeDirty = false
         this.blocksDirty = false
         this.updateSyncHints()
@@ -285,22 +306,19 @@ export class App {
     })
     this.syncController!.setCodingStyle(this.currentStylePreset)
     this.syncController!.onIoConformance((result) => {
-      const currentIo = this.currentStylePreset.io_style === 'printf' ? 'printf/scanf' : 'cout/cin'
-      const otherIo = this.currentStylePreset.io_style === 'printf' ? 'cout/cin' : 'printf/scanf'
-
+      const curIo = this.currentStylePreset.io_style === 'printf' ? 'printf/scanf' : 'cout/cin'
+      const altIo = this.currentStylePreset.io_style === 'printf' ? 'cout/cin' : 'printf/scanf'
       if (result.verdict === 'bulk_deviation') {
         const other = STYLE_PRESETS.find(p => p.io_style !== this.currentStylePreset.io_style)
         if (!other) return
-        showStyleActionBar(`程式碼大量使用 ${otherIo}，但目前風格為 ${currentIo}`, [
-          { label: `切換到「${other.name['zh-TW'] || other.id}」`, primary: true, action: () => {
-            this.applyStylePreset(other)
-          }},
+        showStyleActionBar(`程式碼大量使用 ${altIo}，但目前風格為 ${curIo}`, [
+          { label: `切換到「${other.name['zh-TW'] || other.id}」`, primary: true, action: () => this.applyStylePreset(other) },
           { label: '保持目前風格', action: () => {} },
         ])
       } else if (result.verdict === 'minor_exception') {
-        showStyleActionBar(`偵測到少數 ${otherIo} 用法（目前風格為 ${currentIo}）`, [
+        showStyleActionBar(`偵測到少數 ${altIo} 用法（目前風格為 ${curIo}）`, [
           { label: '保留（刻意使用）', action: () => {} },
-          { label: `統一為 ${currentIo}`, primary: true, action: () => {
+          { label: `統一為 ${curIo}`, primary: true, action: () => {
             this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
           }},
         ])
@@ -336,25 +354,20 @@ export class App {
   }
 
   private updateToolboxForLevel(level: CognitiveLevel): void {
-    if (!this.blocklyPanel) return
-    const workspace = this.blocklyPanel.getWorkspace()
-    if (!workspace) return
-    const toolbox = this.callBuildToolbox(level, this.currentIoPreference)
-    workspace.updateToolbox(toolbox as Blockly.utils.toolbox.ToolboxDefinition)
+    const ws = this.blocklyPanel?.getWorkspace()
+    if (!ws) return
+    ws.updateToolbox(this.callBuildToolbox(level, this.currentIoPreference) as Blockly.utils.toolbox.ToolboxDefinition)
   }
 
   private wireBlocklyChangeHandler(): void {
     this.blocklyPanel?.onChange(() => {
       if (this._codeToBlocksInProgress) return
-      this.blocksDirty = true
-      this.updateSyncHints()
+      this.blocksDirty = true; this.updateSyncHints()
       if (this.autoSync) {
         this.syncController!.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree())
-        this.blocksDirty = false
-        this.updateSyncHints()
+        this.blocksDirty = false; this.updateSyncHints()
       }
-      this.runBlockDiagnostics()
-      this.autoSave()
+      this.runBlockDiagnostics(); this.autoSave()
     })
   }
 
@@ -364,38 +377,27 @@ export class App {
 
   private setupBidirectionalHighlight(): void {
     this.blocklyPanel?.onBlockSelect((blockId) => {
-      this.monacoPanel?.clearHighlight()
-      this.blocklyPanel?.clearHighlight()
+      this.monacoPanel?.clearHighlight(); this.blocklyPanel?.clearHighlight()
       if (!blockId) return
       this.blocklyPanel?.highlightBlock(blockId, 'block-to-code')
       const m = this.syncController?.getMappingForBlock(blockId)
       if (m) this.monacoPanel?.addHighlight(m.startLine + 1, m.endLine + 1, 'block-to-code')
     })
     this.monacoPanel?.onCursorChange((line) => {
-      this.blocklyPanel?.clearHighlight()
-      this.monacoPanel?.clearHighlight()
+      this.blocklyPanel?.clearHighlight(); this.monacoPanel?.clearHighlight()
       try { if (Blockly.getSelected()) Blockly.common.setSelected(null as unknown as Blockly.ISelectable) } catch { /* ignore */ }
       const m = this.syncController?.getMappingForLine(line - 1)
-      if (m) {
-        this.blocklyPanel?.highlightBlock(m.blockId, 'code-to-block')
-        this.monacoPanel?.addHighlight(m.startLine + 1, m.endLine + 1, 'code-to-block')
-      }
+      if (!m) return
+      this.blocklyPanel?.highlightBlock(m.blockId, 'code-to-block')
+      this.monacoPanel?.addHighlight(m.startLine + 1, m.endLine + 1, 'code-to-block')
     })
   }
 
   private buildSaveState(): SavedState {
-    return {
-      version: 1,
-      tree: this.syncController?.getCurrentTree() ?? null,
-      blocklyState: this.blocklyPanel?.getState() ?? {},
-      code: this.monacoPanel?.getCode() ?? '',
-      language: 'cpp',
-      styleId: this.currentStylePreset.id,
-      level: this.currentLevel,
-      lastModified: new Date().toISOString(),
-      blockStyleId: this.currentBlockStyleId,
-      locale: this.currentLocale,
-    }
+    return { version: 1, tree: this.syncController?.getCurrentTree() ?? null,
+      blocklyState: this.blocklyPanel?.getState() ?? {}, code: this.monacoPanel?.getCode() ?? '',
+      language: 'cpp', styleId: this.currentStylePreset.id, level: this.currentLevel,
+      lastModified: new Date().toISOString(), blockStyleId: this.currentBlockStyleId, locale: this.currentLocale }
   }
 
   private autoSave(): void {
@@ -405,28 +407,23 @@ export class App {
   private restoreState(): void {
     const state = this.storageService.load()
     if (!state) return
-    if (state.blocklyState && Object.keys(state.blocklyState).length > 0) {
-      this.blocklyPanel?.setState(state.blocklyState)
-    }
-    if (state.code) {
-      this.monacoPanel?.setCode(state.code)
-    }
     if (state.level !== undefined) {
       this.currentLevel = state.level as CognitiveLevel
+      setScaffoldConfig({ cognitiveLevel: this.currentLevel })
+      this.syncController?.setCognitiveLevel(this.currentLevel)
       this.levelSelector?.setLevel(this.currentLevel)
       this.updateToolboxForLevel(this.currentLevel)
     }
+    if (state.blocklyState && Object.keys(state.blocklyState).length > 0) {
+      this.blocklyPanel?.setState(state.blocklyState)
+    }
+    // Re-generate code from restored blocks (saved code may be stale)
+    this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
   }
 
   private updateSyncHints(): void {
-    const syncBlocksBtn = document.getElementById('sync-blocks-btn')
-    const syncCodeBtn = document.getElementById('sync-code-btn')
-    if (syncBlocksBtn) {
-      syncBlocksBtn.classList.toggle('sync-hint', this.blocksDirty)
-    }
-    if (syncCodeBtn) {
-      syncCodeBtn.classList.toggle('sync-hint', this.codeDirty)
-    }
+    document.getElementById('sync-blocks-btn')?.classList.toggle('sync-hint', this.blocksDirty)
+    document.getElementById('sync-code-btn')?.classList.toggle('sync-hint', this.codeDirty)
   }
 
   private scheduleCodeToBlocksSync(): void {
@@ -445,16 +442,12 @@ export class App {
       btn.classList.toggle('auto-sync-off', !this.autoSync)
       btn.title = this.autoSync ? '自動同步：開啟' : '自動同步：關閉'
     }
-    if (this.autoSync) {
-      if (this.blocksDirty) {
-        this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
-        this.blocksDirty = false
-        this.updateSyncHints()
-      }
-      if (this.codeDirty) {
-        this.syncController?.syncCodeToBlocks(this.monacoPanel?.getCode())
-      }
+    if (!this.autoSync) return
+    if (this.blocksDirty) {
+      this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
+      this.blocksDirty = false; this.updateSyncHints()
     }
+    if (this.codeDirty) this.syncController?.syncCodeToBlocks(this.monacoPanel?.getCode())
   }
 
   private runBlockDiagnostics(): void {
