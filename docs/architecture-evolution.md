@@ -900,58 +900,58 @@ arduino-neopixel（depends: arduino-core）
 
 前置條件：Phase 4 完成
 
-- [ ] **5.1 DependencyResolver 核心介面**
-  - [ ] 定義 `DependencyResolver` + `DependencyEdge` 介面（`src/core/dependency-resolver.ts`）
-  - [ ] 介面零語言依賴（不含 `#include`、`import` 等語言專用概念）
-  - [ ] 單元測試：mock resolver 可編譯、型別正確
-- [ ] **5.2 C++ DependencyResolver 實作**
-  - [ ] `ModuleRegistry` implements `DependencyResolver`
-  - [ ] 移除 `code-generator.ts` 的全域 `setModuleRegistry()`
-  - [ ] auto-include 邏輯從 program generator 遷移到 ProgramScaffold
-  - [ ] 所有現有 1555 tests 通過（行為不變）
-- [ ] **5.3 ProgramScaffold 層**
-  - [ ] 定義 `ProgramScaffold` + `ScaffoldConfig` + `ScaffoldResult` 介面（`src/core/program-scaffold.ts`）
-  - [ ] C++ 實作：imports（auto-include）+ preamble（using namespace）+ entryPoint（main）+ epilogue（return 0）
-  - [ ] 接收 `cognitiveLevel` → 決定 `hidden` / `ghost` / `editable`
-  - [ ] 從 program generator 抽離所有 boilerplate 邏輯
-  - [ ] 整合測試：scaffold 結果與現有 code generation 一致
-- [ ] **5.4 Ghost Line 視覺呈現**
-  - [ ] Monaco decorations API 實作淡灰色 ghost line
-  - [ ] Hover provider 顯示依賴原因
-  - [ ] 「固定」操作（ghost → editable）
-  - [ ] L0 / L1 / L2 三種模式的端到端測試
-- [ ] **Phase 5 驗證**
-  - [ ] C++ auto-include 行為不變（regression）
-  - [ ] `DependencyResolver` 介面不 import `languages/cpp/`
-  - [ ] Ghost line 在瀏覽器和 VSCode 都正常顯示
+- [x] **5.1 DependencyResolver 核心介面**
+  - [x] 定義 `DependencyResolver` + `DependencyEdge` 介面（`src/core/dependency-resolver.ts`）
+  - [x] 介面零語言依賴（不含 `#include`、`import` 等語言專用概念）
+  - [x] 單元測試：mock resolver 可編譯、型別正確
+- [x] **5.2 C++ DependencyResolver 實作**
+  - [x] `ModuleRegistry` implements `DependencyResolver`
+  - [x] 移除 `code-generator.ts` 的全域 `setModuleRegistry()`
+  - [x] auto-include 邏輯從 program generator 遷移到 ProgramScaffold
+  - [x] 所有現有 1555 tests 通過（行為不變）
+- [x] **5.3 ProgramScaffold 層**
+  - [x] 定義 `ProgramScaffold` + `ScaffoldConfig` + `ScaffoldResult` 介面（`src/core/program-scaffold.ts`）
+  - [x] C++ 實作：imports（auto-include）+ preamble（using namespace）+ entryPoint（main）+ epilogue（return 0）
+  - [x] 接收 `cognitiveLevel` → 決定 `hidden` / `ghost` / `editable`
+  - [x] 從 program generator 抽離所有 boilerplate 邏輯
+  - [x] 整合測試：scaffold 結果與現有 code generation 一致
+- [x] **5.4 Ghost Line 視覺呈現**
+  - [x] Monaco decorations API 實作淡灰色 ghost line
+  - [x] Hover provider 顯示依賴原因
+  - [x] 「固定」操作（ghost → editable）
+  - [x] L0 / L1 / L2 三種模式的端到端測試
+- [x] **Phase 5 驗證**
+  - [x] C++ auto-include 行為不變（regression）
+  - [x] `DependencyResolver` 介面不 import `languages/cpp/`
+  - [x] Ghost line 在瀏覽器和 VSCode 都正常顯示
 
 ### Phase 5b：Semantic Node Identity
 
 前置條件：Phase 5 完成（或可與 Phase 5 平行，因為不依賴 DependencyResolver）
 
-- [ ] **5b.1 SourceMapping 遷移：blockId → nodeId**
-  - [ ] `SourceMapping` 介面改為 `{ nodeId, startLine, endLine }`
-  - [ ] `code-generator.ts` `generateNode()` 改用 `node.id` 而非 `metadata.blockId`
-  - [ ] 所有 mapping 消費者更新（`getMappingForBlock`、`getMappingForLine`）
-- [ ] **5b.2 BlockMapping 對應表**
-  - [ ] 新增 `BlockMapping { nodeId, blockId }` 介面
-  - [ ] `block-renderer.ts` 記錄 `nodeId → blockId` 映射
-  - [ ] `SyncController` 維護 `blockMappings`
-  - [ ] `extractSemanticTree()` 保留 `node.id`（驗證）
-- [ ] **5b.3 跨投影查詢重構**
-  - [ ] `getMappingForBlock(blockId)` → 查 BlockMapping → nodeId → 查 CodeMapping
-  - [ ] `getMappingForLine(line)` → 查 CodeMapping → nodeId → 查 BlockMapping
-  - [ ] `handleEditCode` 直接從 `generateCodeWithMapping` 取得 CodeMapping（不需等 Blockly）
-  - [ ] 移除 `rebuildSourceMappings` 的 workaround（不再需要）
-- [ ] **5b.4 nodeId 穩定性與 SemanticDiff 基礎**
-  - [ ] round-trip 中同一節點 id 保持穩定
+- [x] **5b.1 SourceMapping 遷移：blockId → nodeId**（2026-03-10 完成）
+  - [x] `SourceMapping` 介面改為 `CodeMapping { nodeId, startLine, endLine }`（已移除 SourceMapping，無向後相容）
+  - [x] `code-generator.ts` `generateNode()` 改用 `node.id` 而非 `metadata.blockId`
+  - [x] 所有 mapping 消費者更新（`getMappingForBlock`、`getMappingForLine`）
+- [x] **5b.2 BlockMapping 對應表**（2026-03-10 完成）
+  - [x] 新增 `BlockMapping { nodeId, blockId }` 介面
+  - [x] `block-renderer.ts` 記錄 `nodeId → blockId` 映射
+  - [x] `SyncController` 維護 `blockMappings`（blocks→code 用 `extractBlockMappingsFromTree`；code→blocks 用 `renderToBlocklyState().blockMappings`）
+  - [x] `extractSemanticTree()` 保留 `node.id`（驗證）
+- [x] **5b.3 跨投影查詢重構**（2026-03-10 完成）
+  - [x] `getMappingForBlock(blockId)` → 查 BlockMapping → nodeId → 查 CodeMapping
+  - [x] `getMappingForLine(line)` → 查 CodeMapping → nodeId → 查 BlockMapping
+  - [x] `handleEditCode` 直接從 `generateCodeWithMapping` 取得 CodeMapping（不需等 Blockly）
+  - [x] 移除 `rebuildSourceMappings` 的 workaround（不再需要）
+- [ ] **5b.4 nodeId 穩定性與 SemanticDiff 基礎**（部分完成）
+  - [x] round-trip 中同一節點 id 保持穩定（2026-03-10 驗證）
   - [ ] Diff 算法原型：依 id 匹配節點，偵測 add/remove/modify
   - [ ] 為 Phase 8.2 SemanticDiff 增量更新鋪路
-- [ ] **Phase 5b 驗證**
-  - [ ] 所有現有測試通過
-  - [ ] `SourceMapping` 不含 `blockId`（純語義層）
-  - [ ] code→blocks mapping 不依賴 Blockly 渲染時序
-  - [ ] 跨投影高亮正確（L0 / L1 / L2）
+- [x] **Phase 5b 驗證**（2026-03-10 完成，1608 測試全通過）
+  - [x] 所有現有測試通過
+  - [x] `CodeMapping` 不含 `blockId`（純語義層）
+  - [x] code→blocks mapping 不依賴 Blockly 渲染時序
+  - [x] 跨投影高亮正確（L0 / L1 / L2）
 
 ### Phase 6：Python 語言套件
 

@@ -76,6 +76,8 @@ export class App {
   private styleSelector: StyleSelector | null = null
   private currentBlockStyleId: string = 'scratch'
   private currentLocale: string = 'zh-TW'
+  private cppParser: CppParser | null = null
+  private codeParserCache: { _lastTree: unknown } | null = null
 
   constructor() {
     this.bus = new SemanticBus()
@@ -207,8 +209,7 @@ export class App {
         setScaffoldConfig({ cognitiveLevel: level })
         this.syncController?.setCognitiveLevel(level)
         this.updateToolboxForLevel(level)
-        const tree = this.blocklyPanel?.extractSemanticTree()
-        if (tree) this.syncController?.resyncForLevel(tree, this.monacoPanel?.getCode() ?? '')
+        this.resyncAfterLevelChange()
         this.refreshStatusBar()
       },
       onStyleChange: (style) => {
@@ -271,7 +272,9 @@ export class App {
     registerCppLifters(lifter, { transformRegistry, liftStrategyRegistry, renderStrategyRegistry })
     const parser = new CppParser()
     await parser.init()
+    this.cppParser = parser
     const codeParser = { _lastTree: null as unknown, parse(_code: string) { return { rootNode: this._lastTree } } }
+    this.codeParserCache = codeParser
     this.syncController!.setCodeToBlocksPipeline(lifter, codeParser)
     const originalSync = this.syncController!.syncCodeToBlocks.bind(this.syncController!)
     const monacoPanel = this.monacoPanel!
@@ -349,6 +352,25 @@ export class App {
       msgs: Blockly.Msg as Record<string, string>,
       categoryColors: CATEGORY_COLORS,
     })
+  }
+
+  /** Resync blocks/code after cognitive level change; async-parses if needed for L0→L1/L2 */
+  private resyncAfterLevelChange(): void {
+    const tree = this.blocklyPanel?.extractSemanticTree()
+    if (!tree) return
+    const code = this.monacoPanel?.getCode() ?? ''
+    const needsRelift = this.currentLevel > 0 && !(tree.children.body ?? []).some(
+      (n: { concept: string; properties: Record<string, unknown> }) =>
+        n.concept === 'func_def' && n.properties.name === 'main'
+    )
+    if (needsRelift && this.cppParser && code.trim()) {
+      this.cppParser.parse(code).then(parsed => {
+        if (this.codeParserCache) this.codeParserCache._lastTree = parsed.rootNode
+        this.syncController?.resyncForLevel(tree, code)
+      }).catch(() => this.syncController?.resyncForLevel(tree, code))
+    } else {
+      this.syncController?.resyncForLevel(tree, code)
+    }
   }
 
   private updateToolboxForLevel(level: CognitiveLevel): void {
