@@ -9,6 +9,8 @@ import { showStyleActionBar } from './toolbar/style-action-bar'
 import { runDiagnostics } from '../core/diagnostics'
 import type { DiagnosticBlock } from '../core/diagnostics'
 import { registerCppLanguage } from '../languages/cpp/generators'
+import { setModuleRegistry } from '../core/projection/code-generator'
+import { createPopulatedRegistry } from '../languages/cpp/std'
 import { registerCppLifters } from '../languages/cpp/lifters'
 import { Lifter } from '../core/lift/lifter'
 import { PatternLifter } from '../core/lift/pattern-lifter'
@@ -82,8 +84,9 @@ export class App {
   }
 
   async init(): Promise<void> {
-    // 1. Register C++ code generators
+    // 1. Register C++ code generators + module registry for auto-include
     registerCppLanguage()
+    setModuleRegistry(createPopulatedRegistry())
 
     // 2. Load locale
     this.localeLoader.setBlocklyMsg(Blockly.Msg as Record<string, string>)

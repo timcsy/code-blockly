@@ -28,10 +28,16 @@ export interface GeneratorContext {
 
 const languageFactories = new Map<string, LanguageGeneratorFactory>()
 let globalTemplateGenerator: TemplateGenerator | null = null
+let globalModuleRegistry: GeneratorContext['moduleRegistry'] | null = null
 
 /** Set the JSON-driven template generator engine */
 export function setTemplateGenerator(tg: TemplateGenerator): void {
   globalTemplateGenerator = tg
+}
+
+/** Set the module registry for auto-include resolution */
+export function setModuleRegistry(registry: GeneratorContext['moduleRegistry']): void {
+  globalModuleRegistry = registry
 }
 
 export function registerLanguage(language: string, factory: LanguageGeneratorFactory): void {
@@ -44,6 +50,7 @@ export function generateCode(tree: SemanticNode, language: string, style: StyleP
   const factory = languageFactories.get(language)
   const generators = factory ? factory(style) : new Map<string, NodeGenerator>()
   const ctx: GeneratorContext = { indent: 0, style, language, generators }
+  if (globalModuleRegistry) ctx.moduleRegistry = globalModuleRegistry
   wireTemplateFallbacks(ctx)
   return generateNode(tree, ctx).trim()
 }
@@ -57,6 +64,7 @@ export function generateCodeWithMapping(
   const generators = factory ? factory(style) : new Map<string, NodeGenerator>()
   const mappings: SourceMapping[] = []
   const ctx: GeneratorContext = { indent: 0, style, language, generators, _mappings: mappings, _lineCount: 0 }
+  if (globalModuleRegistry) ctx.moduleRegistry = globalModuleRegistry
   wireTemplateFallbacks(ctx)
   const code = generateNode(tree, ctx).trim()
   return { code, mappings }
