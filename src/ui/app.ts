@@ -75,6 +75,7 @@ export class App {
   private currentLevel: CognitiveLevel = 1
   private currentIoPreference: 'iostream' | 'cstdio' = 'iostream'
   private _codeToBlocksInProgress = false
+  private _restoringState = false
   private currentStylePreset: StylePreset = DEFAULT_STYLE
   private styleSelector: StyleSelector | null = null
   private currentBlockStyleId: string = 'scratch'
@@ -216,7 +217,9 @@ export class App {
         setScaffoldConfig({ cognitiveLevel: level })
         this.syncController?.setCognitiveLevel(level)
         this.updateToolboxForLevel(level)
-        this.resyncAfterLevelChange()
+        if (!this._restoringState) {
+          this.resyncAfterLevelChange()
+        }
         this.refreshStatusBar()
       },
       onStyleChange: (style) => {
@@ -444,18 +447,27 @@ export class App {
   private restoreState(): void {
     const state = this.storageService.load()
     if (!state) return
+
+    // 1. Restore blocks FIRST (before level change triggers resync)
+    if (state.blocklyState && Object.keys(state.blocklyState).length > 0) {
+      this.blocklyPanel?.setState(state.blocklyState)
+    }
+
+    // 2. Set level WITHOUT triggering resyncAfterLevelChange
+    //    (use _restoringState flag to skip the resync in onLevelChange)
     if (state.level !== undefined) {
+      this._restoringState = true
       this.currentLevel = state.level as CognitiveLevel
       setScaffoldConfig({ cognitiveLevel: this.currentLevel })
       this.syncController?.setCognitiveLevel(this.currentLevel)
       this.levelSelector?.setLevel(this.currentLevel)
       this.updateToolboxForLevel(this.currentLevel)
+      this._restoringState = false
     }
-    if (state.blocklyState && Object.keys(state.blocklyState).length > 0) {
-      this.blocklyPanel?.setState(state.blocklyState)
-    }
-    // Re-generate code from restored blocks (saved code may be stale)
+
+    // 3. Generate code from restored blocks, then resync for the restored level
     this.syncBlocksToCodeWithMappings()
+    this.resyncAfterLevelChange()
   }
 
   private updateSyncHints(): void {

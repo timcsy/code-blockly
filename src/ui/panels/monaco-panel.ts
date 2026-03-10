@@ -17,13 +17,13 @@ export class MonacoPanel implements ViewHost {
   private onChangeCallback: ((code: string) => void) | null = null
   private onCursorChangeCallback: ((line: number) => void) | null = null
   private suppressChange = false
-  private highlightDecorations: string[] = []
+  private highlightCollection: monaco.editor.IEditorDecorationsCollection | null = null
   private breakpoints: Set<number> = new Set()
-  private breakpointDecorations: string[] = []
+  private breakpointCollection: monaco.editor.IEditorDecorationsCollection | null = null
   private onBreakpointChangeCallback: ((breakpoints: number[]) => void) | null = null
 
   // Ghost line state
-  private ghostDecorations: string[] = []
+  private ghostCollection: monaco.editor.IEditorDecorationsCollection | null = null
   private ghostLineMap: Map<number, ScaffoldItem> = new Map()
   private hoverProvider: monaco.IDisposable | null = null
   private onPinCallback: ((code: string) => void) | null = null
@@ -149,7 +149,7 @@ export class MonacoPanel implements ViewHost {
     if (!this.editor) return
     this.clearHighlight()
     const suffix = variant === 'code-to-block' ? '-reverse' : ''
-    this.highlightDecorations = this.editor.deltaDecorations([], [{
+    this.highlightCollection = this.editor.createDecorationsCollection([{
       range: new monaco.Range(startLine, 1, endLine, 1),
       options: {
         isWholeLine: true,
@@ -160,8 +160,8 @@ export class MonacoPanel implements ViewHost {
   }
 
   clearHighlight(): void {
-    if (!this.editor) return
-    this.highlightDecorations = this.editor.deltaDecorations(this.highlightDecorations, [])
+    this.highlightCollection?.clear()
+    this.highlightCollection = null
   }
 
   getEditor(): monaco.editor.IStandaloneCodeEditor | null {
@@ -240,15 +240,14 @@ export class MonacoPanel implements ViewHost {
     }
 
     // Apply ghost decorations (L1 mode shows scaffold lines faded)
-    this.ghostDecorations = (this.editor as any).deltaDecorations(this.ghostDecorations, ghostDecorationData)
-    // Never hide lines — code panel always shows complete compilable code
-    (this.editor as any).setHiddenAreas?.([])
+    this.ghostCollection?.clear()
+    this.ghostCollection = this.editor.createDecorationsCollection(ghostDecorationData)
   }
 
   clearScaffoldDecorations(): void {
     if (!this.editor) return
-    this.ghostDecorations = (this.editor as any).deltaDecorations(this.ghostDecorations, [])
-    (this.editor as any).setHiddenAreas?.([])
+    this.ghostCollection?.clear()
+    this.ghostCollection = null
     this.ghostLineMap.clear()
   }
 
@@ -277,10 +276,14 @@ export class MonacoPanel implements ViewHost {
         glyphMarginClassName: 'breakpoint-glyph',
       },
     }))
-    this.breakpointDecorations = this.editor.deltaDecorations(this.breakpointDecorations, decorations)
+    this.breakpointCollection?.clear()
+    this.breakpointCollection = this.editor.createDecorationsCollection(decorations)
   }
 
   dispose(): void {
+    this.highlightCollection?.clear()
+    this.ghostCollection?.clear()
+    this.breakpointCollection?.clear()
     this.hoverProvider?.dispose()
     this.editor?.dispose()
     this.editor = null

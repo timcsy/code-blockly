@@ -291,7 +291,6 @@ export class SyncController {
       const renderResult = renderToBlocklyState(displayTree)
       this.blockMappings = renderResult.blockMappings
 
-
       // Emit resync event — updates both code and block panels
       this.bus.emit('semantic:update', {
         tree: fullTree, code, blockState: renderResult, source: 'resync', mappings, scaffoldResult,

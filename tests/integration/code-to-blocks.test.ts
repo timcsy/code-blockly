@@ -383,5 +383,23 @@ int main() {
       expect(generated).toContain('cout')
       expect(generated).toContain('return')
     })
+
+    it('should render full program to block state with scaffold blocks at L2', () => {
+      const code = `#include <iostream>
+using namespace std;
+int main() {
+    int x;
+    cin >> x;
+    return 0;
+}`
+      const sem = liftCode(code)
+      expect(sem).not.toBeNull()
+      const state = renderToBlocklyState(sem!)
+      const types = findBlockTypes(state)
+      // At L2 the full tree should produce blocks for scaffold + body
+      expect(types).toContain('c_include')
+      expect(types).toContain('u_var_declare')
+      expect(types).toContain('u_input')
+    })
   })
 })
