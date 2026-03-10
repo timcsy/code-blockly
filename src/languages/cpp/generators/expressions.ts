@@ -160,20 +160,7 @@ export function registerExpressionGenerators(g: Map<string, NodeGenerator>): voi
     return `${name} ${op} 0`
   })
 
-  g.set('cpp_scanf_expr', (node, ctx) => {
-    const format = (node.properties.format as string) ?? '%d'
-    const argNodes = node.children.args ?? []
-    if (argNodes.length > 0) {
-      const args = argNodes.map(a => {
-        const expr = generateExpression(a, ctx)
-        if (a.concept === 'var_ref' && !a.properties.noAddr) return `&${expr}`
-        return expr
-      })
-      return `scanf("${format}", ${args.join(', ')})`
-    }
-    const argsText = (node.properties.args as string) ?? ''
-    return `scanf("${format}"${argsText})`
-  })
+  // cpp_scanf_expr moved to std/cstdio/generators.ts
 
   g.set('var_declare_expr', (node, ctx) => {
     const type = node.properties.type ?? 'int'

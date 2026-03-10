@@ -33,14 +33,11 @@ import type { AppShellElements } from './app-shell'
 import { ExecutionController } from './execution-controller'
 // Semantic layer
 import universalConcepts from '../blocks/semantics/universal-concepts.json'
-import cppConcepts from '../languages/cpp/semantics/concepts.json'
+import { coreConcepts } from '../languages/cpp/core'
+import { allStdModules } from '../languages/cpp/std'
 // Projection layer
 import universalBlockProjections from '../blocks/projections/blocks/universal-blocks.json'
-import cppBasicProjections from '../languages/cpp/projections/blocks/basic.json'
-import cppSpecialProjections from '../languages/cpp/projections/blocks/special.json'
-import cppAdvancedProjections from '../languages/cpp/projections/blocks/advanced.json'
-import cppStdlibContainers from '../languages/cpp/projections/blocks/stdlib-containers.json'
-import cppStdlibAlgorithms from '../languages/cpp/projections/blocks/stdlib-algorithms.json'
+import { coreBlocks } from '../languages/cpp/core'
 import apcsPreset from '../languages/cpp/styles/apcs.json'
 import competitivePreset from '../languages/cpp/styles/competitive.json'
 import googlePreset from '../languages/cpp/styles/google.json'
@@ -93,11 +90,15 @@ export class App {
     await this.localeLoader.load('zh-TW')
 
     // 3. Load block specs (split concept/projection architecture)
-    const allConcepts = [...universalConcepts as unknown as ConceptDefJSON[], ...cppConcepts as unknown as ConceptDefJSON[]]
+    const allConcepts = [
+      ...universalConcepts as unknown as ConceptDefJSON[],
+      ...coreConcepts,
+      ...allStdModules.flatMap(m => m.concepts),
+    ]
     const allProjections = [
-      ...universalBlockProjections as unknown as BlockProjectionJSON[], ...cppBasicProjections as unknown as BlockProjectionJSON[],
-      ...cppSpecialProjections as unknown as BlockProjectionJSON[], ...cppAdvancedProjections as unknown as BlockProjectionJSON[],
-      ...cppStdlibContainers as unknown as BlockProjectionJSON[], ...cppStdlibAlgorithms as unknown as BlockProjectionJSON[],
+      ...universalBlockProjections as unknown as BlockProjectionJSON[],
+      ...coreBlocks,
+      ...allStdModules.flatMap(m => m.blocks),
     ]
     this.blockSpecRegistry.loadFromSplit(allConcepts, allProjections)
 
