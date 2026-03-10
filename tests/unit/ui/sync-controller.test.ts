@@ -453,13 +453,13 @@ describe('SyncController (bus-based)', () => {
 
   describe('nodeId-based cross-projection queries (US2)', () => {
     it('getMappingForBlock should resolve via blockId→nodeId→codeMappings join', () => {
-      // Simulate a tree from extractSemanticTree (has metadata.blockId)
+      // Simulate a tree with externally-provided blockMappings (no metadata.blockId)
       const decl = createNode('var_declare', { name: 'x', type: 'int' }, { initializer: [] })
-      ;(decl as Record<string, unknown>).metadata = { blockId: 'blk_1' }
       const tree = createNode('program', {}, { body: [decl] })
+      const blockMappings: BlockMapping[] = [{ nodeId: decl.id, blockId: 'blk_1' }]
 
-      // Trigger blocks→code sync (populates codeMappings and blockMappings)
-      bus.emit('edit:blocks', { blocklyState: { tree } })
+      // Trigger blocks→code sync with blockMappings
+      bus.emit('edit:blocks', { blocklyState: { tree, blockMappings } })
 
       // codeMappings should use nodeId
       const codeMappings = controller.getCodeMappings()
@@ -467,10 +467,10 @@ describe('SyncController (bus-based)', () => {
       const declCodeMapping = codeMappings.find(m => m.nodeId === decl.id)
       expect(declCodeMapping).toBeDefined()
 
-      // blockMappings should have nodeId→blockId from metadata
-      const blockMappings = controller.getBlockMappings()
-      expect(blockMappings.length).toBeGreaterThanOrEqual(1)
-      expect(blockMappings.find(m => m.blockId === 'blk_1')).toBeDefined()
+      // blockMappings should have nodeId→blockId from external source
+      const retrievedMappings = controller.getBlockMappings()
+      expect(retrievedMappings.length).toBeGreaterThanOrEqual(1)
+      expect(retrievedMappings.find(m => m.blockId === 'blk_1')).toBeDefined()
 
       // getMappingForBlock resolves via nodeId join
       const result = controller.getMappingForBlock('blk_1')
@@ -481,10 +481,10 @@ describe('SyncController (bus-based)', () => {
 
     it('getMappingForLine should resolve via line→codeMappings→nodeId→blockMappings join', () => {
       const decl = createNode('var_declare', { name: 'x', type: 'int' }, { initializer: [] })
-      ;(decl as Record<string, unknown>).metadata = { blockId: 'blk_1' }
       const tree = createNode('program', {}, { body: [decl] })
+      const blockMappings: BlockMapping[] = [{ nodeId: decl.id, blockId: 'blk_1' }]
 
-      bus.emit('edit:blocks', { blocklyState: { tree } })
+      bus.emit('edit:blocks', { blocklyState: { tree, blockMappings } })
 
       // getMappingForLine should find a mapping for line 0 via nodeId join
       const mapping = controller.getMappingForLine(0)

@@ -63,7 +63,6 @@ export interface NodeMetadata {
   degradationCause?: DegradationCause
   rawCode?: string
   sourceRange?: SourceRange
-  blockId?: string
 }
 
 export interface SourceRange {

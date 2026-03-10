@@ -57,23 +57,6 @@ export function stripScaffoldNodes(tree: SemanticNode): SemanticNode {
   return createNode('program', {}, { body: userBody })
 }
 
-/** Extract blockMappings by walking the tree for metadata.blockId (blocks→code direction) */
-function extractBlockMappingsFromTree(tree: SemanticNode): BlockMapping[] {
-  const mappings: BlockMapping[] = []
-  function walk(node: SemanticNode) {
-    const blockId = (node.metadata as Record<string, unknown> | undefined)?.blockId as string | undefined
-    if (blockId && node.id) {
-      mappings.push({ nodeId: node.id, blockId })
-    }
-    for (const children of Object.values(node.children)) {
-      if (Array.isArray(children)) {
-        for (const child of children) walk(child)
-      }
-    }
-  }
-  walk(tree)
-  return mappings
-}
 
 export interface CodeParser {
   parse(code: string): { rootNode: unknown }
@@ -153,19 +136,28 @@ export class SyncController {
     return this.codePatcherFn(code, this.currentTree)
   }
 
+  /** Set block mappings from external source (e.g., blockly-panel extraction) */
+  setBlockMappings(mappings: BlockMapping[]): void {
+    this.blockMappings = mappings
+  }
+
+
   /** Handle edit:blocks event — sync blocks → semantic tree → code */
   private handleEditBlocks(data: { blocklyState: unknown }): void {
     if (this.syncing) return
     this.syncing = true
     try {
-      const blocklyState = data.blocklyState as { tree: SemanticNode }
+      const blocklyState = data.blocklyState as { tree: SemanticNode; blockMappings?: BlockMapping[] }
       const tree = blocklyState.tree
       this.currentTree = tree
       const { code, mappings } = generateCodeWithMapping(tree, this.language, this.style)
       this.codeMappings = mappings
 
-      // Extract blockMappings from tree's metadata.blockId (real Blockly workspace IDs)
-      this.blockMappings = extractBlockMappingsFromTree(tree)
+      // Use blockMappings from extraction if provided
+      if (blocklyState.blockMappings) {
+        this.blockMappings = blocklyState.blockMappings
+      }
+
 
       // Compute scaffold result for ghost line decorations
       let scaffoldResult: ScaffoldResult | undefined
@@ -224,6 +216,7 @@ export class SyncController {
             const convDisplay = this.cognitiveLevel === 0 ? stripScaffoldNodes(converted) : converted
             const convRender = renderToBlocklyState(convDisplay)
             this.blockMappings = convRender.blockMappings
+      
             this.bus.emit('semantic:update', { tree: converted, blockState: convRender, source: 'code' })
           }
         }
@@ -249,6 +242,7 @@ export class SyncController {
       const renderResult = renderToBlocklyState(displayTree)
       this.blockMappings = renderResult.blockMappings
 
+
       this.bus.emit('semantic:update', { tree, blockState: renderResult, source: 'code' })
     } finally {
       this.syncing = false
@@ -256,10 +250,10 @@ export class SyncController {
   }
 
   /** Convenience: trigger blocks→code sync from external code (e.g., app.ts) */
-  syncBlocksToCode(tree?: SemanticNode): void {
+  syncBlocksToCode(tree?: SemanticNode, blockMappings?: BlockMapping[]): void {
     const t = tree ?? this.currentTree
     if (!t) return
-    this.handleEditBlocks({ blocklyState: { tree: t } })
+    this.handleEditBlocks({ blocklyState: { tree: t, blockMappings } })
   }
 
   /**
@@ -306,6 +300,7 @@ export class SyncController {
       const displayTree = this.cognitiveLevel === 0 ? stripScaffoldNodes(fullTree) : fullTree
       const renderResult = renderToBlocklyState(displayTree)
       this.blockMappings = renderResult.blockMappings
+
 
       // Emit resync event — updates both code and block panels
       this.bus.emit('semantic:update', {
@@ -354,6 +349,15 @@ export class SyncController {
     return [...this.blockMappings]
   }
 
+  /** Build blockId→nodeId reverse map for extraction to reuse original nodeIds */
+  getBlockIdToNodeIdMap(): Map<string, string> {
+    const map = new Map<string, string>()
+    for (const bm of this.blockMappings) {
+      map.set(bm.blockId, bm.nodeId)
+    }
+    return map
+  }
+
   /** Block→Code: blockId → BlockMapping → nodeId → CodeMapping → {startLine, endLine} */
   getMappingForBlock(blockId: string): { blockId: string; startLine: number; endLine: number } | null {
     const bm = this.blockMappings.find(m => m.blockId === blockId)
@@ -363,8 +367,55 @@ export class SyncController {
     return { blockId, startLine: cm.startLine, endLine: cm.endLine }
   }
 
+  /** Node→Block+Code: nodeId → blockId (if block exists) + startLine/endLine (if code exists) */
+  getMappingForNode(nodeId: string): { blockId: string | null; startLine: number | null; endLine: number | null } | null {
+    const bm = this.blockMappings.find(m => m.nodeId === nodeId)
+    let cm = this.codeMappings.find(m => m.nodeId === nodeId)
+
+    // Fallback: expression nodes don't have codeMappings — walk up the tree to find
+    // the nearest ancestor that does (e.g., while_loop containing a scanf expression)
+    if (!cm && this.currentTree) {
+      const ancestorId = this.findAncestorWithCodeMapping(this.currentTree, nodeId)
+      if (ancestorId) cm = this.codeMappings.find(m => m.nodeId === ancestorId)
+    }
+
+    if (!bm && !cm) return null
+    return {
+      blockId: bm?.blockId ?? null,
+      startLine: cm?.startLine ?? null,
+      endLine: cm?.endLine ?? null,
+    }
+  }
+
+  /** Walk tree to find the nearest ancestor of targetId that has a codeMapping */
+  private findAncestorWithCodeMapping(node: SemanticNode, targetId: string): string | null {
+    // Check if targetId is a descendant of this node
+    if (!this.containsNodeId(node, targetId)) return null
+    // This node contains the target — check children for a tighter match
+    for (const children of Object.values(node.children)) {
+      for (const child of children) {
+        const found = this.findAncestorWithCodeMapping(child, targetId)
+        if (found) return found
+      }
+    }
+    // No child ancestor found — this node is the nearest ancestor with a codeMapping (if it has one)
+    if (this.codeMappings.some(m => m.nodeId === node.id)) return node.id
+    return null
+  }
+
+  /** Check if a node or any descendant has the given id */
+  private containsNodeId(node: SemanticNode, targetId: string): boolean {
+    if (node.id === targetId) return true
+    for (const children of Object.values(node.children)) {
+      for (const child of children) {
+        if (this.containsNodeId(child, targetId)) return true
+      }
+    }
+    return false
+  }
+
   /** Code→Block: line → CodeMapping → nodeId → BlockMapping → {blockId} */
-  getMappingForLine(line: number): { blockId: string; startLine: number; endLine: number } | null {
+  getMappingForLine(line: number): { blockId: string | null; startLine: number; endLine: number } | null {
     let bestCm: CodeMapping | null = null
     for (const cm of this.codeMappings) {
       if (line >= cm.startLine && line <= cm.endLine) {
@@ -375,8 +426,7 @@ export class SyncController {
     }
     if (!bestCm) return null
     const bm = this.blockMappings.find(m => m.nodeId === bestCm!.nodeId)
-    if (!bm) return null
-    return { blockId: bm.blockId, startLine: bestCm.startLine, endLine: bestCm.endLine }
+    return { blockId: bm?.blockId ?? null, startLine: bestCm.startLine, endLine: bestCm.endLine }
   }
 
   private findErrors(node: import('../core/lift/types').AstNode): SyncError[] {

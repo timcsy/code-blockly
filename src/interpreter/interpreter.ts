@@ -34,7 +34,7 @@ export class SemanticInterpreter {
   private scanfTokenBuffer: string[] = []  // buffered tokens for scanf/cin whitespace splitting
   private aborted = false
   private abortReject: ((reason: RuntimeError) => void) | null = null
-  private waitingCallback: ((blockId: string | null) => void) | null = null
+  private waitingCallback: ((nodeId: string | null) => void) | null = null
   private stepRecordCallback: ((step: StepInfo) => Promise<void>) | null = null
   private currentNode: SemanticNode | null = null
 
@@ -56,7 +56,7 @@ export class SemanticInterpreter {
   private awaitInput(): Promise<string | null> {
     if (this.aborted) return Promise.reject(new RuntimeError(RUNTIME_ERRORS.ABORTED))
     // Notify that interpreter is waiting for input
-    this.waitingCallback?.(this.currentNode?.metadata?.blockId ?? null)
+    this.waitingCallback?.(this.currentNode?.id ?? null)
     return new Promise<string | null>((resolve, reject) => {
       this.abortReject = reject
       this.inputProvider!().then(val => {
@@ -69,7 +69,7 @@ export class SemanticInterpreter {
   }
 
   /** Register a callback fired when interpreter is waiting (e.g., for input) */
-  setWaitingCallback(callback: ((blockId: string | null) => void) | null): void {
+  setWaitingCallback(callback: ((nodeId: string | null) => void) | null): void {
     this.waitingCallback = callback
   }
 
@@ -278,7 +278,7 @@ export class SemanticInterpreter {
 
     const step: StepInfo = {
       node,
-      blockId: node.metadata?.blockId ?? null,
+      nodeId: node.id,
       sourceRange: node.metadata?.sourceRange
         ? { start: node.metadata.sourceRange.startLine, end: node.metadata.sourceRange.endLine }
         : null,
@@ -790,34 +790,11 @@ export class SemanticInterpreter {
   private execFuncDef(node: SemanticNode): void {
     const name = String(node.properties.name)
     const returnType = String(node.properties.return_type || 'void')
-    // Prefer structured param_decl children, fallback to legacy string[] properties
     const paramChildren = node.children.params ?? []
-    let params: { type: string; name: string }[] = []
-    if (paramChildren.length > 0) {
-      params = paramChildren.map(p => ({
-        type: String(p.properties.type ?? 'int'),
-        name: String(p.properties.name ?? ''),
-      }))
-    } else {
-      const rawParams = node.properties.params
-      if (Array.isArray(rawParams)) {
-        // Legacy params from blockly-panel: ["int x", "float y", "int arr[]", "int& ref", ...]
-        params = rawParams.map((p: unknown) => {
-          const s = String(p)
-          const spaceIdx = s.indexOf(' ')
-          if (spaceIdx < 0) return { type: 'int', name: s }
-          let type = s.slice(0, spaceIdx)
-          let name = s.slice(spaceIdx + 1).replace(/\[\]$/, '')
-          if (name.startsWith('&')) {
-            type = type + '&'
-            name = name.slice(1)
-          }
-          return { type, name }
-        })
-      } else if (typeof rawParams === 'string' && rawParams.startsWith('[')) {
-        try { params = JSON.parse(rawParams) } catch { params = [] }
-      }
-    }
+    const params = paramChildren.map(p => ({
+      type: String(p.properties.type ?? 'int'),
+      name: String(p.properties.name ?? ''),
+    }))
     this.functions.set(name, {
       name,
       params,
@@ -972,31 +949,22 @@ export class SemanticInterpreter {
       return { type: 'int', value: itemsRead }
     }
 
-    // Legacy fallback: properties.variable (single variable)
-    const targetVar = node.properties.variable ? String(node.properties.variable) : null
-    let targetType = String(node.properties.type || 'string')
-
-    if (targetVar) {
-      try {
-        const existing = this.scope.get(targetVar)
-        targetType = existing.type
-      } catch { /* variable might not exist yet */ }
-    }
-
-    let raw = this.io.read()
+    // Expression form: input used as a value (e.g., int x = cin >> x)
+    // Read one value and return it
+    const targetType = String(node.properties.type || 'string')
+    let raw = this.readCinToken()
     if (raw === null && this.inputProvider) {
-      raw = await this.awaitInput()
+      const line = await this.awaitInput()
+      if (line !== null) {
+        const tokens = line.trim().split(/\s+/).filter(t => t.length > 0)
+        this.scanfTokenBuffer.push(...tokens)
+        raw = this.readCinToken()
+      }
     }
     if (raw === null) {
-      return { type: 'int', value: 0 }  // EOF: falsy
+      return { type: 'int', value: 0 }  // EOF
     }
-    const val = parseInputValue(raw, targetType) ?? defaultValue(targetType)
-
-    if (targetVar) {
-      this.scope.set(targetVar, val)
-    }
-
-    return val
+    return parseInputValue(raw, targetType) ?? defaultValue(targetType)
   }
 
   /** printf("format", args...) — parse format string, evaluate args, output formatted text */

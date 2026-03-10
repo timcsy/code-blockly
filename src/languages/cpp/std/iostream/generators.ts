@@ -33,15 +33,10 @@ export function registerIostreamGenerators(g: Map<string, NodeGenerator>, style:
   })
 
   g.set('input', (node, ctx) => {
-    // Support both: children.values (var_ref nodes) and properties.variable (legacy)
     const valueNodes = node.children.values ?? []
-    let vars: string[]
-    if (valueNodes.length > 0) {
-      vars = valueNodes.map(v => generateExpression(v, ctx))
-    } else {
-      const propVars = node.properties.variables
-      vars = (Array.isArray(propVars) ? propVars : undefined) ?? [String(node.properties.variable ?? 'x')]
-    }
+    const vars = valueNodes.length > 0
+      ? valueNodes.map(v => generateExpression(v, ctx))
+      : ['x']
     if (style.io_style === 'cout') {
       const expr = `cin >> ${vars.join(' >> ')}`
       if (ctx.isExpression) return expr

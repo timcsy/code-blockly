@@ -13,6 +13,7 @@ interface ExtractorBlock {
   getFieldValue(name: string): string | null
   getInputTargetBlock(name: string): ExtractorBlock | null
   getInput(name: string): unknown | null
+  saveExtraState?(): Record<string, unknown> | null
 }
 
 function asBlock(b: unknown): ExtractorBlock {
@@ -92,7 +93,7 @@ function buildElseIfChain(block: ExtractorBlock, index: number, ctx: BlockExtrac
 
 /** Extract three-mode args (printf/scanf dynamic args) */
 function extractThreeModeArgs(block: ExtractorBlock, ctx: BlockExtractContext): SemanticNode[] {
-  const extraState = (block as unknown as { extraState?: { args?: Array<{ mode: string; text?: string }> } }).extraState
+  const extraState = block.saveExtraState?.() as { args?: Array<{ mode: string; text?: string }> } | null
   const argSlots = extraState?.args ?? []
   const args: SemanticNode[] = []
   for (let i = 0; i < argSlots.length; i++) {
@@ -301,7 +302,7 @@ export function registerCppExtractors(registry: BlockExtractorRegistry): void {
 
   const extractInput = (b: unknown, _ctx: BlockExtractContext): SemanticNode | null => {
     const block = asBlock(b)
-    const extraState = (block as unknown as { extraState?: { args?: Array<{ mode: string; text?: string }> } }).extraState
+    const extraState = block.saveExtraState?.() as { args?: Array<{ mode: string; text?: string }> } | null
     const args = extraState?.args ?? []
     const varNames: string[] = []
     for (const a of args) {

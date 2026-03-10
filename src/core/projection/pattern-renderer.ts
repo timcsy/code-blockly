@@ -161,6 +161,11 @@ export class PatternRenderer {
     return this.statementOnlyBlockTypes.has(blockType)
   }
 
+  /** Check if a block type is expression-only (has output, no previous/next connection) */
+  isExpressionOnly(blockType: string): boolean {
+    return this.expressionOnlyBlockTypes.has(blockType)
+  }
+
   /** Auto-derive renderMapping from blockDef and concept */
   private deriveRenderMapping(spec: BlockSpec): RenderMapping {
     const mapping: RenderMapping = {

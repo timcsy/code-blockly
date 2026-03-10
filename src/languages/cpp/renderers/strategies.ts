@@ -11,22 +11,14 @@ export function registerCppRenderStrategies(registry: RenderStrategyRegistry): v
       inputs: {},
     }
 
-    // Collect variable names from modern or legacy format
     const varNames: string[] = []
     const inputValues = node.children.values ?? []
     if (inputValues.length > 0) {
       for (const v of inputValues) {
         varNames.push((v.properties.name as string) ?? 'x')
       }
-    } else {
-      const singleVar = (node.properties.variable as string) ?? 'x'
-      const vars = node.properties.variables
-      if (vars) {
-        const varList = typeof vars === 'string' ? vars.split(',') : (Array.isArray(vars) ? vars : [])
-        for (const v of varList) varNames.push(v)
-      }
-      if (varNames.length === 0) varNames.push(singleVar)
     }
+    if (varNames.length === 0) varNames.push('x')
 
     // Produce extraState.args matching u_input's loadExtraState format
     block.extraState = {
@@ -114,7 +106,6 @@ export function registerCppRenderStrategies(registry: RenderStrategyRegistry): v
       inputs: {},
     }
 
-    // Prefer structured param_decl children, fallback to legacy string[] properties
     const paramChildren = node.children.params ?? []
     if (paramChildren.length > 0) {
       for (let i = 0; i < paramChildren.length; i++) {
@@ -122,19 +113,6 @@ export function registerCppRenderStrategies(registry: RenderStrategyRegistry): v
         block.fields[`PARAM_${i}`] = paramChildren[i].properties.name ?? `p${i}`
       }
       block.extraState = { paramCount: paramChildren.length }
-    } else {
-      const params = node.properties.params
-      if (Array.isArray(params)) {
-        const paramCount = params.length
-        for (let i = 0; i < paramCount; i++) {
-          const { type, name } = parseParamTypeAndName(params[i] as string, i)
-          block.fields[`TYPE_${i}`] = type
-          block.fields[`PARAM_${i}`] = name
-        }
-        if (paramCount > 0) {
-          block.extraState = { paramCount }
-        }
-      }
     }
 
     const bodyChildren = node.children.body ?? []
@@ -220,21 +198,12 @@ export function registerCppRenderStrategies(registry: RenderStrategyRegistry): v
       inputs: {},
     }
 
-    // Prefer structured param_decl children, fallback to legacy string[] properties
     const paramChildren = node.children.params ?? []
     if (paramChildren.length > 0) {
       for (let i = 0; i < paramChildren.length; i++) {
         block.fields[`TYPE_${i}`] = paramChildren[i].properties.type ?? 'int'
       }
       block.extraState = { paramCount: paramChildren.length }
-    } else {
-      const params = node.properties.params
-      if (Array.isArray(params) && params.length > 0) {
-        for (let i = 0; i < params.length; i++) {
-          block.fields[`TYPE_${i}`] = params[i] as string
-        }
-        block.extraState = { paramCount: params.length }
-      }
     }
 
     return block
@@ -344,37 +313,6 @@ export function registerCppRenderStrategies(registry: RenderStrategyRegistry): v
 
     return block
   })
-}
-
-/** Known compound type prefixes (longest first for greedy match) */
-const COMPOUND_TYPES = [
-  'unsigned long long',
-  'long long',
-  'unsigned long',
-  'unsigned int',
-  'unsigned short',
-  'unsigned char',
-  'long double',
-  'signed char',
-]
-
-/** Parse a parameter declaration string like "long long x" into { type, name } */
-function parseParamTypeAndName(param: string, index: number): { type: string; name: string } {
-  const trimmed = param.trim()
-  // Try compound types first
-  for (const ct of COMPOUND_TYPES) {
-    if (trimmed.startsWith(ct + ' ')) {
-      const rest = trimmed.slice(ct.length).trim()
-      // Handle pointer/reference: "long long *p" or "long long &r"
-      if (rest.startsWith('*') || rest.startsWith('&')) {
-        return { type: ct + rest[0], name: rest.slice(1).trim() || `p${index}` }
-      }
-      return { type: ct, name: rest || `p${index}` }
-    }
-  }
-  // Simple split: first token is type, rest is name (handles "int* p", "char x", etc.)
-  const parts = trimmed.split(/\s+/)
-  return { type: parts[0] ?? 'int', name: parts.slice(1).join(' ') || `p${index}` }
 }
 
 /** Map semantic arg nodes to three-mode arg slots, using compose mode for non-var_ref */

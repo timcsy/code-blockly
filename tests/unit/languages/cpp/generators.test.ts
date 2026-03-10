@@ -205,7 +205,7 @@ describe('C++ I/O generator', () => {
   })
 
   it('should generate cin', () => {
-    const input = createNode('input', { variable: 'n' })
+    const input = createNode('input', {}, { values: [createNode('var_ref', { name: 'n' })] })
     const code = generateCode(makeProgram(input), 'cpp', apcsStyle)
     expect(code).toBe('cin >> n;')
   })
@@ -219,7 +219,7 @@ describe('C++ I/O generator', () => {
   })
 
   it('should generate scanf style', () => {
-    const input = createNode('input', { variable: 'n' })
+    const input = createNode('input', {}, { values: [createNode('var_ref', { name: 'n' })] })
     const code = generateCode(makeProgram(input), 'cpp', printfStyle)
     expect(code).toContain('scanf')
     expect(code).toContain('&n')
@@ -504,10 +504,15 @@ describe('C++ expression generators (for expression blocks)', () => {
     expect(code).toContain('int getVal();')
   })
 
-  it('should generate legacy forward_decl with raw name', () => {
-    // Backward compat: if name contains the full signature (no return_type)
+  it('should generate structured forward_decl', () => {
     const fwd = createNode('forward_decl', {
-      name: 'void listp(int *, int);',
+      return_type: 'void',
+      name: 'listp',
+    }, {
+      params: [
+        createNode('param_decl', { type: 'int *' }),
+        createNode('param_decl', { type: 'int' }),
+      ],
     })
     const code = generateCode(makeProgram(fwd), 'cpp', apcsStyle)
     expect(code).toContain('void listp(int *, int);')

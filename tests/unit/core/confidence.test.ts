@@ -8,7 +8,7 @@ import { ConceptRegistry } from '../../../src/core/concept-registry'
 import { createNode } from '../../../src/core/semantic-tree'
 import { LiftContextData } from '../../../src/core/lift/lift-context'
 import type { AstNode, LiftContext } from '../../../src/core/lift/types'
-import { registerExpressionLifters } from '../../../src/languages/cpp/lifters/expressions'
+import { registerExpressionLifters } from '../../../src/languages/cpp/core/lifters/expressions'
 import type { BlockSpec, LiftPattern, ConceptDefJSON, BlockProjectionJSON } from '../../../src/core/types'
 import { BlockSpecRegistry } from '../../../src/core/block-spec-registry'
 

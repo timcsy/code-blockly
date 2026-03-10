@@ -139,7 +139,7 @@ export class App {
       }
       // Update Blockly: code→blocks and resync both produce blockState
       if ((data.source === 'code' || data.source === 'resync') && data.blockState) {
-        this.blocklyPanel?.setState(data.blockState as object)
+        this.blocklyPanel?.onSemanticUpdate(data)
       }
     })
 
@@ -168,7 +168,7 @@ export class App {
       {
         getBlocksDirty: () => this.blocksDirty,
         syncBeforeRun: () => {
-          this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
+          this.syncBlocksToCodeWithMappings()
         },
       },
     )
@@ -177,7 +177,7 @@ export class App {
     // 11. Setup toolbar + selectors
     setupToolbarButtons({
       onSyncBlocks: () => {
-        this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
+        this.syncBlocksToCodeWithMappings()
         this.blocksDirty = false
         this.updateSyncHints()
       },
@@ -215,7 +215,7 @@ export class App {
       onStyleChange: (style) => {
         this.syncController?.setStyle(style)
         this.syncController?.setCodingStyle(style)
-        this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
+        this.syncBlocksToCodeWithMappings()
         this.currentStylePreset = style
         this.refreshStatusBar()
         const ioPref = style.io_style === 'printf' ? 'cstdio' : 'iostream'
@@ -237,7 +237,7 @@ export class App {
         await this.localeLoader.load(locale)
         this.currentLocale = locale
         this.updateToolboxForLevel(this.currentLevel)
-        this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
+        this.syncBlocksToCodeWithMappings()
         this.refreshStatusBar()
       },
     })
@@ -320,14 +320,14 @@ export class App {
         showStyleActionBar(`偵測到少數 ${altIo} 用法（目前風格為 ${curIo}）`, [
           { label: '保留（刻意使用）', action: () => {} },
           { label: `統一為 ${curIo}`, primary: true, action: () => {
-            this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
+            this.syncBlocksToCodeWithMappings()
           }},
         ])
       }
     })
     this.syncController!.onStyleExceptions((exceptions, apply) => {
       showStyleActionBar(`積木風格不符：${exceptions.map(e => `${e.label} → ${e.suggestion}`).join('、')}`, [
-        { label: '自動轉換', primary: true, action: () => { apply(); this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined) }},
+        { label: '自動轉換', primary: true, action: () => { apply(); this.syncBlocksToCodeWithMappings() }},
         { label: '保留', action: () => {} },
       ])
     })
@@ -341,7 +341,7 @@ export class App {
     this.refreshStatusBar()
     const ioPref = preset.io_style === 'printf' ? 'cstdio' : 'iostream'
     if (ioPref !== this.currentIoPreference) { this.currentIoPreference = ioPref; this.updateToolboxForLevel(this.currentLevel) }
-    this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
+    this.syncBlocksToCodeWithMappings()
   }
 
   private callBuildToolbox(level?: CognitiveLevel, ioPreference?: 'iostream' | 'cstdio'): object {
@@ -373,6 +373,13 @@ export class App {
     }
   }
 
+  /** Extract tree + blockMappings and sync to code */
+  private syncBlocksToCodeWithMappings(): void {
+    const tree = this.blocklyPanel?.extractSemanticTree()
+    const blockMappings = this.blocklyPanel?.getBlockMappings()
+    this.syncController?.syncBlocksToCode(tree, blockMappings)
+  }
+
   private updateToolboxForLevel(level: CognitiveLevel): void {
     const ws = this.blocklyPanel?.getWorkspace()
     if (!ws) return
@@ -384,7 +391,9 @@ export class App {
       if (this._codeToBlocksInProgress) return
       this.blocksDirty = true; this.updateSyncHints()
       if (this.autoSync) {
-        this.syncController!.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree())
+        const tree = this.blocklyPanel?.extractSemanticTree()
+        const blockMappings = this.blocklyPanel?.getBlockMappings()
+        this.syncController!.syncBlocksToCode(tree, blockMappings)
         this.blocksDirty = false; this.updateSyncHints()
       }
       this.runBlockDiagnostics(); this.autoSave()
@@ -408,7 +417,7 @@ export class App {
       try { if (Blockly.getSelected()) Blockly.common.setSelected(null as unknown as Blockly.ISelectable) } catch { /* ignore */ }
       const m = this.syncController?.getMappingForLine(line - 1)
       if (!m) return
-      this.blocklyPanel?.highlightBlock(m.blockId, 'code-to-block')
+      if (m.blockId) this.blocklyPanel?.highlightBlock(m.blockId, 'code-to-block')
       this.monacoPanel?.addHighlight(m.startLine + 1, m.endLine + 1, 'code-to-block')
     })
   }
@@ -438,7 +447,7 @@ export class App {
       this.blocklyPanel?.setState(state.blocklyState)
     }
     // Re-generate code from restored blocks (saved code may be stale)
-    this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
+    this.syncBlocksToCodeWithMappings()
   }
 
   private updateSyncHints(): void {
@@ -464,7 +473,7 @@ export class App {
     }
     if (!this.autoSync) return
     if (this.blocksDirty) {
-      this.syncController?.syncBlocksToCode(this.blocklyPanel?.extractSemanticTree() ?? undefined)
+      this.syncBlocksToCodeWithMappings()
       this.blocksDirty = false; this.updateSyncHints()
     }
     if (this.codeDirty) this.syncController?.syncCodeToBlocks(this.monacoPanel?.getCode())
