@@ -21,7 +21,7 @@ function toCodingStyle(preset: StylePreset): CodingStyle {
     headerStyle: preset.header_style === 'bits' ? 'bits' : 'iostream',
   }
 }
-import type { SourceMapping } from '../core/projection/code-generator'
+import type { CodeMapping, BlockMapping } from '../core/projection/code-generator'
 import { renderToBlocklyState } from '../core/projection/block-renderer'
 import { createNode } from '../core/semantic-tree'
 import { Lifter } from '../core/lift/lifter'
@@ -57,6 +57,24 @@ export function stripScaffoldNodes(tree: SemanticNode): SemanticNode {
   return createNode('program', {}, { body: userBody })
 }
 
+/** Extract blockMappings by walking the tree for metadata.blockId (blocks→code direction) */
+function extractBlockMappingsFromTree(tree: SemanticNode): BlockMapping[] {
+  const mappings: BlockMapping[] = []
+  function walk(node: SemanticNode) {
+    const blockId = (node.metadata as Record<string, unknown> | undefined)?.blockId as string | undefined
+    if (blockId && node.id) {
+      mappings.push({ nodeId: node.id, blockId })
+    }
+    for (const children of Object.values(node.children)) {
+      if (Array.isArray(children)) {
+        for (const child of children) walk(child)
+      }
+    }
+  }
+  walk(tree)
+  return mappings
+}
+
 export interface CodeParser {
   parse(code: string): { rootNode: unknown }
 }
@@ -69,7 +87,8 @@ export class SyncController {
   private lifter: Lifter | null = null
   private parser: CodeParser | null = null
   private syncing = false
-  private sourceMappings: SourceMapping[] = []
+  private codeMappings: CodeMapping[] = []
+  private blockMappings: BlockMapping[] = []
   private onErrorCallback: ((errors: SyncError[]) => void) | null = null
   private onStyleExceptionsCallback: ((exceptions: StyleException[], apply: () => void) => void) | null = null
   private onIoConformanceCallback: ((result: IoConformanceResult) => void) | null = null
@@ -143,7 +162,10 @@ export class SyncController {
       const tree = blocklyState.tree
       this.currentTree = tree
       const { code, mappings } = generateCodeWithMapping(tree, this.language, this.style)
-      this.sourceMappings = mappings
+      this.codeMappings = mappings
+
+      // Extract blockMappings from tree's metadata.blockId (real Blockly workspace IDs)
+      this.blockMappings = extractBlockMappingsFromTree(tree)
 
       // Compute scaffold result for ghost line decorations
       let scaffoldResult: ScaffoldResult | undefined
@@ -197,10 +219,12 @@ export class SyncController {
           applySemanticConversions = () => {
             const converted = applyStyleConversions(currentTree, exceptions)
             this.currentTree = converted
+            const { mappings: convMappings } = generateCodeWithMapping(converted, this.language, this.style)
+            this.codeMappings = convMappings
             const convDisplay = this.cognitiveLevel === 0 ? stripScaffoldNodes(converted) : converted
-            const blockState = renderToBlocklyState(convDisplay)
-            this.bus.emit('semantic:update', { tree: converted, blockState, source: 'code' })
-            // Mappings will be rebuilt by caller after Blockly renders
+            const convRender = renderToBlocklyState(convDisplay)
+            this.blockMappings = convRender.blockMappings
+            this.bus.emit('semantic:update', { tree: converted, blockState: convRender, source: 'code' })
           }
         }
       }
@@ -215,15 +239,17 @@ export class SyncController {
       }
 
       this.currentTree = tree
+
+      // Build codeMappings directly from lifted tree (node.id always available — no blockId dependency)
+      const { mappings: codeMappings } = generateCodeWithMapping(tree, this.language, this.style)
+      this.codeMappings = codeMappings
+
       // For L0: strip scaffold nodes so blocks only show user's logic
       const displayTree = this.cognitiveLevel === 0 ? stripScaffoldNodes(tree) : tree
-      const blockState = renderToBlocklyState(displayTree)
+      const renderResult = renderToBlocklyState(displayTree)
+      this.blockMappings = renderResult.blockMappings
 
-      // Emit update — Blockly will render blocks synchronously (assigning blockIds).
-      // Source mappings are NOT built here because the lifted tree has no blockIds.
-      // The caller (app.ts) must call rebuildSourceMappings() with the Blockly tree
-      // after this returns, since only Blockly-extracted trees have blockIds.
-      this.bus.emit('semantic:update', { tree, blockState, source: 'code' })
+      this.bus.emit('semantic:update', { tree, blockState: renderResult, source: 'code' })
     } finally {
       this.syncing = false
     }
@@ -266,7 +292,7 @@ export class SyncController {
 
       // Generate code (scaffold wraps body-only trees; full trees use legacy path)
       const { code, mappings } = generateCodeWithMapping(fullTree, this.language, this.style)
-      this.sourceMappings = mappings
+      this.codeMappings = mappings
 
       // Compute scaffold result for Monaco ghost decorations
       let scaffoldResult: ScaffoldResult | undefined
@@ -278,11 +304,12 @@ export class SyncController {
 
       // For blocks: strip scaffold if L0
       const displayTree = this.cognitiveLevel === 0 ? stripScaffoldNodes(fullTree) : fullTree
-      const blockState = renderToBlocklyState(displayTree)
+      const renderResult = renderToBlocklyState(displayTree)
+      this.blockMappings = renderResult.blockMappings
 
       // Emit resync event — updates both code and block panels
       this.bus.emit('semantic:update', {
-        tree: fullTree, code, blockState, source: 'resync', mappings, scaffoldResult,
+        tree: fullTree, code, blockState: renderResult, source: 'resync', mappings, scaffoldResult,
       })
     } finally {
       this.syncing = false
@@ -319,36 +346,37 @@ export class SyncController {
     return this.syncing
   }
 
-  /** Rebuild source mappings — requires bus to request current blocks state */
-  rebuildSourceMappings(tree?: SemanticNode): void {
-    try {
-      const t = tree ?? this.currentTree
-      if (!t) return
-      const { mappings } = generateCodeWithMapping(t, this.language, this.style)
-      this.sourceMappings = mappings
-    } catch {
-      // silently ignore — mappings may be stale but that's acceptable
-    }
+  getCodeMappings(): CodeMapping[] {
+    return [...this.codeMappings]
   }
 
-  getSourceMappings(): SourceMapping[] {
-    return [...this.sourceMappings]
+  getBlockMappings(): BlockMapping[] {
+    return [...this.blockMappings]
   }
 
-  getMappingForBlock(blockId: string): SourceMapping | null {
-    return this.sourceMappings.find(m => m.blockId === blockId) ?? null
+  /** Block→Code: blockId → BlockMapping → nodeId → CodeMapping → {startLine, endLine} */
+  getMappingForBlock(blockId: string): { blockId: string; startLine: number; endLine: number } | null {
+    const bm = this.blockMappings.find(m => m.blockId === blockId)
+    if (!bm) return null
+    const cm = this.codeMappings.find(m => m.nodeId === bm.nodeId)
+    if (!cm) return null
+    return { blockId, startLine: cm.startLine, endLine: cm.endLine }
   }
 
-  getMappingForLine(line: number): SourceMapping | null {
-    let best: SourceMapping | null = null
-    for (const m of this.sourceMappings) {
-      if (line >= m.startLine && line <= m.endLine) {
-        if (!best || (m.endLine - m.startLine) < (best.endLine - best.startLine)) {
-          best = m
+  /** Code→Block: line → CodeMapping → nodeId → BlockMapping → {blockId} */
+  getMappingForLine(line: number): { blockId: string; startLine: number; endLine: number } | null {
+    let bestCm: CodeMapping | null = null
+    for (const cm of this.codeMappings) {
+      if (line >= cm.startLine && line <= cm.endLine) {
+        if (!bestCm || (cm.endLine - cm.startLine) < (bestCm.endLine - bestCm.startLine)) {
+          bestCm = cm
         }
       }
     }
-    return best
+    if (!bestCm) return null
+    const bm = this.blockMappings.find(m => m.nodeId === bestCm!.nodeId)
+    if (!bm) return null
+    return { blockId: bm.blockId, startLine: bestCm.startLine, endLine: bestCm.endLine }
   }
 
   private findErrors(node: import('../core/lift/types').AstNode): SyncError[] {

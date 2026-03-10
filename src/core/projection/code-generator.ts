@@ -7,10 +7,15 @@ export type NodeGenerator = (node: SemanticNode, ctx: GeneratorContext) => strin
 
 export type LanguageGeneratorFactory = (style: StylePreset) => Map<string, NodeGenerator>
 
-export interface SourceMapping {
-  blockId: string
+export interface CodeMapping {
+  nodeId: string
   startLine: number
   endLine: number
+}
+
+export interface BlockMapping {
+  nodeId: string
+  blockId: string
 }
 
 export interface GeneratorContext {
@@ -20,7 +25,7 @@ export interface GeneratorContext {
   generators: Map<string, NodeGenerator>
   templateGenerator?: TemplateGenerator
   isExpression?: boolean
-  _mappings?: SourceMapping[]
+  _mappings?: CodeMapping[]
   _lineCount?: number
   /** Optional dependency resolver for auto-include resolution */
   dependencyResolver?: DependencyResolver
@@ -79,10 +84,10 @@ export function generateCodeWithMapping(
   tree: SemanticNode,
   language: string,
   style: StylePreset,
-): { code: string; mappings: SourceMapping[] } {
+): { code: string; mappings: CodeMapping[] } {
   const factory = languageFactories.get(language)
   const generators = factory ? factory(style) : new Map<string, NodeGenerator>()
-  const mappings: SourceMapping[] = []
+  const mappings: CodeMapping[] = []
   const ctx: GeneratorContext = { indent: 0, style, language, generators, _mappings: mappings, _lineCount: 0 }
   if (globalDependencyResolver) ctx.dependencyResolver = globalDependencyResolver
   if (globalProgramScaffold) ctx.programScaffold = globalProgramScaffold
@@ -111,8 +116,8 @@ function wireTemplateFallbacks(ctx: GeneratorContext): void {
 }
 
 export function generateNode(node: SemanticNode, ctx: GeneratorContext): string {
-  const blockId = (node.metadata as Record<string, unknown> | undefined)?.blockId as string | undefined
-  const tracking = ctx._mappings && blockId
+  const nodeId = node.id
+  const tracking = ctx._mappings && nodeId
 
   const lineCountBefore = ctx._lineCount ?? 0
   let startLine = 0
@@ -201,7 +206,7 @@ export function generateNode(node: SemanticNode, ctx: GeneratorContext): string 
 
     if (tracking) {
       ctx._mappings.push({
-        blockId: blockId!,
+        nodeId: nodeId!,
         startLine,
         endLine: ctx._lineCount - 1,
       })

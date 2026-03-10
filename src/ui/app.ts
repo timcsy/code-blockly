@@ -287,8 +287,6 @@ export class App {
           const linesDelta = patched.split('\n').length - code.split('\n').length
           this.monacoPanel?.setCodePreserveCursor(patched, linesDelta)
         }
-        // Always rebuild mappings with Blockly tree (has blockIds) — lifted tree has none
-        this.syncController?.rebuildSourceMappings(this.blocklyPanel?.extractSemanticTree() ?? undefined)
         this.codeDirty = false
         this.blocksDirty = false
         this.updateSyncHints()

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { SyncController, stripScaffoldNodes } from '../../../src/ui/sync-controller'
 import type { CodeParser, SyncError } from '../../../src/ui/sync-controller'
 import type { StylePreset } from '../../../src/core/types'
+import type { CodeMapping, BlockMapping } from '../../../src/core/projection/code-generator'
 import { createNode } from '../../../src/core/semantic-tree'
 import { SemanticBus } from '../../../src/core/semantic-bus'
 import { Lifter } from '../../../src/core/lift/lifter'
@@ -447,6 +448,71 @@ describe('SyncController (bus-based)', () => {
       bus.emit('edit:code', { code })
 
       expect(ioCallback).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('nodeId-based cross-projection queries (US2)', () => {
+    it('getMappingForBlock should resolve via blockId→nodeId→codeMappings join', () => {
+      // Simulate a tree from extractSemanticTree (has metadata.blockId)
+      const decl = createNode('var_declare', { name: 'x', type: 'int' }, { initializer: [] })
+      ;(decl as Record<string, unknown>).metadata = { blockId: 'blk_1' }
+      const tree = createNode('program', {}, { body: [decl] })
+
+      // Trigger blocks→code sync (populates codeMappings and blockMappings)
+      bus.emit('edit:blocks', { blocklyState: { tree } })
+
+      // codeMappings should use nodeId
+      const codeMappings = controller.getCodeMappings()
+      expect(codeMappings.length).toBeGreaterThanOrEqual(1)
+      const declCodeMapping = codeMappings.find(m => m.nodeId === decl.id)
+      expect(declCodeMapping).toBeDefined()
+
+      // blockMappings should have nodeId→blockId from metadata
+      const blockMappings = controller.getBlockMappings()
+      expect(blockMappings.length).toBeGreaterThanOrEqual(1)
+      expect(blockMappings.find(m => m.blockId === 'blk_1')).toBeDefined()
+
+      // getMappingForBlock resolves via nodeId join
+      const result = controller.getMappingForBlock('blk_1')
+      expect(result).not.toBeNull()
+      expect(result!.startLine).toBe(declCodeMapping!.startLine)
+      expect(result!.endLine).toBe(declCodeMapping!.endLine)
+    })
+
+    it('getMappingForLine should resolve via line→codeMappings→nodeId→blockMappings join', () => {
+      const decl = createNode('var_declare', { name: 'x', type: 'int' }, { initializer: [] })
+      ;(decl as Record<string, unknown>).metadata = { blockId: 'blk_1' }
+      const tree = createNode('program', {}, { body: [decl] })
+
+      bus.emit('edit:blocks', { blocklyState: { tree } })
+
+      // getMappingForLine should find a mapping for line 0 via nodeId join
+      const mapping = controller.getMappingForLine(0)
+      expect(mapping).not.toBeNull()
+      if (mapping) {
+        expect(mapping.blockId).toBe('blk_1')
+        expect(typeof mapping.blockId).toBe('string')
+      }
+    })
+
+    it('getMappingForBlock should return null for unknown blockId', () => {
+      const tree = createNode('program', {}, { body: [] })
+      bus.emit('edit:blocks', { blocklyState: { tree } })
+
+      const result = controller.getMappingForBlock('nonexistent')
+      expect(result).toBeNull()
+    })
+
+    it('codeMappings should not contain blockId field (FR-001)', () => {
+      const decl = createNode('var_declare', { name: 'x', type: 'int' }, { initializer: [] })
+      const tree = createNode('program', {}, { body: [decl] })
+      bus.emit('edit:blocks', { blocklyState: { tree } })
+
+      const codeMappings = controller.getCodeMappings()
+      for (const cm of codeMappings) {
+        expect('blockId' in cm).toBe(false)
+        expect(cm.nodeId).toBeDefined()
+      }
     })
   })
 })
