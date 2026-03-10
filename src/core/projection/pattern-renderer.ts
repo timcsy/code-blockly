@@ -1,5 +1,6 @@
 import type { SemanticNode, BlockSpec, RenderMapping } from '../types'
 import type { RenderStrategyRegistry, RenderContext } from '../registry/render-strategy-registry'
+import { FIELD_COMMON_MAPPINGS, INPUT_COMMON_MAPPINGS } from './common-mappings'
 
 interface BlockState {
   type: string
@@ -15,10 +16,10 @@ interface RenderSpec {
   mapping: RenderMapping
 }
 
-let blockIdCounter = 0
+import { nextBlockId as _nextBlockId, resetBlockIdCounter } from './common-mappings'
 
 function nextBlockId(): string {
-  return `pblock_${++blockIdCounter}`
+  return _nextBlockId('pblock_')
 }
 
 /**
@@ -38,7 +39,7 @@ export class PatternRenderer {
 
   /** Reset block ID counter (for testing) */
   resetIds(): void {
-    blockIdCounter = 0
+    resetBlockIdCounter()
   }
 
   /** Load block specs and build conceptId → RenderSpec index */
@@ -248,21 +249,7 @@ export class PatternRenderer {
       if (prop.toLowerCase() === lower) return prop
     }
     // Try common mappings
-    const commonMappings: Record<string, string[]> = {
-      'OP': ['operator'],
-      'NUM': ['value'],
-      'TEXT': ['value'],
-      'VAR': ['variable', 'var_name'],
-      'ARRAY': ['name'],
-      'NS': ['namespace'],
-      'HEADER': ['header'],
-      'RETURN_TYPE': ['return_type'],
-      'PARAMS': ['params'],
-      'ARGS': ['args'],
-      'BOUND': ['inclusive'],
-      'FORMAT': ['format'],
-    }
-    const mapped = commonMappings[fieldName]
+    const mapped = FIELD_COMMON_MAPPINGS[fieldName]
     if (mapped) {
       for (const m of mapped) {
         if (properties.includes(m)) return m
@@ -278,17 +265,7 @@ export class PatternRenderer {
       if (child.toLowerCase() === lower) return child
     }
     // Common mappings
-    const commonMappings: Record<string, string[]> = {
-      'COND': ['condition'],
-      'CONDITION': ['condition'],
-      'THEN': ['then_body', 'then'],
-      'ELSE': ['else_body', 'else'],
-      'BODY': ['body', 'then_body'],
-      'A': ['left', 'operand'],
-      'B': ['right'],
-      'EXPR': ['values', 'expression'],
-    }
-    const mapped = commonMappings[inputName]
+    const mapped = INPUT_COMMON_MAPPINGS[inputName]
     if (mapped) {
       for (const m of mapped) {
         if (m in children) return m

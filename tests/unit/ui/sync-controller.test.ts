@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import { SyncController, stripScaffoldNodes } from '../../../src/ui/sync-controller'
+import { SyncController } from '../../../src/ui/sync-controller'
+import { cppStripScaffoldNodes as stripScaffoldNodes } from '../../../src/languages/cpp/cpp-scaffold-filter'
 import type { CodeParser, SyncError } from '../../../src/ui/sync-controller'
 import type { StylePreset } from '../../../src/core/types'
 import type { CodeMapping, BlockMapping } from '../../../src/core/projection/code-generator'

@@ -1,22 +1,8 @@
 import type { BlockSpecRegistry } from '../core/block-spec-registry'
-import type { CognitiveLevel } from '../core/types'
+import type { CognitiveLevel, ToolboxCategoryDef } from '../core/types'
 import { isBlockAvailable, getBlockLevel } from '../core/cognitive-levels'
 
-type ExtraBlockDef = string | { type: string; extraState?: Record<string, unknown>; level?: CognitiveLevel }
-
-export interface ToolboxCategoryDef {
-  key: string
-  nameKey: string
-  fallback: string
-  colorKey: string
-  registryCategories: string[]
-  extraTypes?: ExtraBlockDef[]
-  excludeTypes?: string[]
-  /** If true, this category uses the I/O builder (iostream/cstdio sorting) */
-  isIoCategory?: boolean
-  /** Custom content builder for special categories */
-  buildContents?: (registry: BlockSpecRegistry, level: CognitiveLevel, ioPreference: 'iostream' | 'cstdio') => { kind: string; type: string }[]
-}
+export type { ToolboxCategoryDef }
 
 export interface ToolboxBuildConfig {
   blockSpecRegistry: BlockSpecRegistry

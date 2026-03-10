@@ -1,4 +1,5 @@
 import type { SemanticNode } from '../core/types'
+import { CPP_BUILTIN_CONSTANTS, CPP_BUILTIN_NAMES } from '../languages/cpp/builtins'
 import type { RuntimeValue, FunctionDef, ExecutionStatus, StepInfo } from './types'
 import { defaultValue, valueToString } from './types'
 import { RuntimeError, RUNTIME_ERRORS } from './errors'
@@ -112,11 +113,10 @@ export class SemanticInterpreter implements ExecutionContext {
 
     this.scanfTokenBuffer = []
 
-    // Built-in C/C++ constants
-    this.scope.declare('EOF', { type: 'int', value: -1 })
-    this.scope.declare('true', { type: 'int', value: 1 })
-    this.scope.declare('false', { type: 'int', value: 0 })
-    this.scope.declare('NULL', { type: 'int', value: 0 })
+    // Built-in C/C++ constants — declare subset needed for scope-based lookup
+    for (const [name, val] of Object.entries(CPP_BUILTIN_CONSTANTS)) {
+      this.scope.declare(name, { type: val.type, value: val.value })
+    }
 
     try {
       await this.executeNode(program)
@@ -289,10 +289,9 @@ export class SemanticInterpreter implements ExecutionContext {
     ])
     if (!statementConcepts.has(concept)) return
 
-    const BUILTIN_NAMES = new Set(['EOF', 'true', 'false', 'NULL', 'nullptr', 'INT_MAX', 'INT_MIN', 'LLONG_MAX', 'LLONG_MIN', 'SIZE_MAX'])
     const scopeSnapshot: { name: string; type: string; value: string }[] = []
     for (const [name, val] of this.scope.getAll()) {
-      if (BUILTIN_NAMES.has(name)) continue
+      if (CPP_BUILTIN_NAMES.has(name)) continue
       scopeSnapshot.push({ name, type: val.type, value: valueToString(val) })
     }
 

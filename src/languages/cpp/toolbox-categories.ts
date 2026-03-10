@@ -1,7 +1,7 @@
 import type { BlockSpecRegistry } from '../../core/block-spec-registry'
 import type { CognitiveLevel } from '../../core/types'
 import { isBlockAvailable } from '../../core/cognitive-levels'
-import type { ToolboxCategoryDef } from '../../ui/toolbox-builder'
+import type { ToolboxCategoryDef } from '../../core/types'
 
 /**
  * C++ language category definitions for the toolbox.

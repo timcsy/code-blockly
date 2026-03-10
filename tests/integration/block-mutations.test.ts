@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { runDiagnostics } from '../../src/core/diagnostics'
 import type { DiagnosticBlock } from '../../src/core/diagnostics'
+import { cppDiagnosticRules } from '../../src/languages/cpp/diagnostics'
 
 function makeBlock(overrides: Partial<DiagnosticBlock> & { id: string; type: string }): DiagnosticBlock {
   return {
@@ -15,7 +16,7 @@ describe('Block mutations integration', () => {
   describe('if-else with else-if chains', () => {
     it('should diagnose missing condition in u_if_else', () => {
       const block = makeBlock({ id: 'if1', type: 'u_if_else' })
-      const result = runDiagnostics([block])
+      const result = runDiagnostics([block], cppDiagnosticRules)
       expect(result).toHaveLength(1)
       expect(result[0].message).toBe('DIAG_MISSING_CONDITION')
     })
@@ -27,7 +28,7 @@ describe('Block mutations integration', () => {
         getInputTargetBlock: (name: string) =>
           name === 'CONDITION' ? makeBlock({ id: 'c', type: 'u_compare' }) : null,
       })
-      expect(runDiagnostics([block])).toEqual([])
+      expect(runDiagnostics([block], cppDiagnosticRules)).toEqual([])
     })
   })
 
@@ -41,7 +42,7 @@ describe('Block mutations integration', () => {
           return null
         },
       })
-      const result = runDiagnostics([block])
+      const result = runDiagnostics([block], cppDiagnosticRules)
       expect(result).toHaveLength(1)
       expect(result[0].message).toBe('DIAG_MISSING_VALUE')
     })
@@ -56,7 +57,7 @@ describe('Block mutations integration', () => {
           return null
         },
       })
-      expect(runDiagnostics([block])).toEqual([])
+      expect(runDiagnostics([block], cppDiagnosticRules)).toEqual([])
     })
 
     it('should detect empty name among multiple vars', () => {
@@ -70,7 +71,7 @@ describe('Block mutations integration', () => {
           return null
         },
       })
-      const result = runDiagnostics([block])
+      const result = runDiagnostics([block], cppDiagnosticRules)
       expect(result).toHaveLength(1)
     })
   })
@@ -78,7 +79,7 @@ describe('Block mutations integration', () => {
   describe('input block multi-variable', () => {
     it('should not diagnose u_input (no current rule)', () => {
       const block = makeBlock({ id: 'i1', type: 'u_input' })
-      expect(runDiagnostics([block])).toEqual([])
+      expect(runDiagnostics([block], cppDiagnosticRules)).toEqual([])
     })
   })
 
@@ -99,7 +100,7 @@ describe('Block mutations integration', () => {
           getFieldValue: (name: string) => name === 'NAME' ? '' : null,
         }), // empty name
       ]
-      const result = runDiagnostics(blocks)
+      const result = runDiagnostics(blocks, cppDiagnosticRules)
       expect(result).toHaveLength(3)
       expect(result.map(d => d.blockId).sort()).toEqual(['b1', 'b2', 'b4'])
     })

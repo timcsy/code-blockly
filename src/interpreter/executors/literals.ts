@@ -1,5 +1,6 @@
 import type { ConceptExecutor } from '../executor-registry'
 import { unescapeC } from '../../core/registry/transform-registry'
+import { CPP_BUILTIN_CONSTANTS } from '../../languages/cpp/builtins'
 
 export function registerLiteralExecutors(register: (concept: string, executor: ConceptExecutor) => void): void {
   register('number_literal', async (node) => {
@@ -17,17 +18,9 @@ export function registerLiteralExecutors(register: (concept: string, executor: C
 
   register('builtin_constant', async (node) => {
     const value = String(node.properties.value)
-    switch (value) {
-      case 'true': return { type: 'int', value: 1 }
-      case 'false': return { type: 'int', value: 0 }
-      case 'EOF': return { type: 'int', value: -1 }
-      case 'NULL': case 'nullptr': return { type: 'int', value: 0 }
-      case 'INT_MAX': return { type: 'int', value: 2147483647 }
-      case 'INT_MIN': return { type: 'int', value: -2147483648 }
-      case 'LLONG_MAX': return { type: 'int', value: Number.MAX_SAFE_INTEGER }
-      case 'LLONG_MIN': return { type: 'int', value: Number.MIN_SAFE_INTEGER }
-      default: return { type: 'int', value: 0 }
-    }
+    const builtin = CPP_BUILTIN_CONSTANTS[value]
+    if (builtin) return { type: builtin.type, value: builtin.value }
+    return { type: 'int', value: 0 }
   })
 
   register('endl', async () => {

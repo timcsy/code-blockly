@@ -358,3 +358,21 @@ export interface LiftResult {
   errors: LiftError[]
   hasUnresolved: boolean
 }
+
+// ─── Toolbox ───
+
+type ExtraBlockDef = string | { type: string; extraState?: Record<string, unknown>; level?: CognitiveLevel }
+
+export interface ToolboxCategoryDef {
+  key: string
+  nameKey: string
+  fallback: string
+  colorKey: string
+  registryCategories: string[]
+  extraTypes?: ExtraBlockDef[]
+  excludeTypes?: string[]
+  /** If true, this category uses the I/O builder (iostream/cstdio sorting) */
+  isIoCategory?: boolean
+  /** Custom content builder for special categories */
+  buildContents?: (registry: import('./block-spec-registry').BlockSpecRegistry, level: CognitiveLevel, ioPreference: 'iostream' | 'cstdio') => { kind: string; type: string }[]
+}

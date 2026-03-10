@@ -1,5 +1,6 @@
 import type { SemanticNode, BlockSpec, RenderMapping } from '../types'
 import { createNode } from '../semantic-tree'
+import { FIELD_COMMON_MAPPINGS, INPUT_COMMON_MAPPINGS } from './common-mappings'
 
 interface BlockState {
   type: string
@@ -147,20 +148,7 @@ export class PatternExtractor {
     for (const prop of properties) {
       if (prop.toLowerCase() === lower) return prop
     }
-    const commonMappings: Record<string, string[]> = {
-      'OP': ['operator'],
-      'NUM': ['value'],
-      'TEXT': ['value'],
-      'VAR': ['variable'],
-      'ARRAY': ['name'],
-      'NS': ['namespace'],
-      'HEADER': ['header'],
-      'RETURN_TYPE': ['return_type'],
-      'PARAMS': ['params'],
-      'ARGS': ['args'],
-      'FORMAT': ['format'],
-    }
-    const mapped = commonMappings[fieldName]
+    const mapped = FIELD_COMMON_MAPPINGS[fieldName]
     if (mapped) {
       for (const m of mapped) {
         if (properties.includes(m)) return m
@@ -174,17 +162,7 @@ export class PatternExtractor {
     for (const child of Object.keys(children)) {
       if (child.toLowerCase() === lower) return child
     }
-    const commonMappings: Record<string, string[]> = {
-      'COND': ['condition'],
-      'CONDITION': ['condition'],
-      'THEN': ['then_body', 'then'],
-      'ELSE': ['else_body', 'else'],
-      'BODY': ['body', 'then_body'],
-      'A': ['left', 'operand'],
-      'B': ['right'],
-      'EXPR': ['values', 'expression'],
-    }
-    const mapped = commonMappings[inputName]
+    const mapped = INPUT_COMMON_MAPPINGS[inputName]
     if (mapped) {
       for (const m of mapped) {
         if (m in children) return m

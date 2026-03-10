@@ -275,8 +275,8 @@ export function generateExpression(node: SemanticNode, ctx: GeneratorContext): s
   const exprCtx = ctx.isExpression ? ctx : { ...ctx, isExpression: true }
   const generator = exprCtx.generators.get(node.concept)
   if (generator) return generator(node, exprCtx)
-  if (node.concept === 'raw_code') return node.metadata?.rawCode ?? ''
-  if (node.concept === 'unresolved') return node.metadata?.rawCode ?? ''
+  // Meta-concepts that carry raw code — expression context returns raw value without formatting
+  if (node.metadata?.rawCode != null) return String(node.metadata.rawCode)
   return `/* ${node.concept} */`
 }
 

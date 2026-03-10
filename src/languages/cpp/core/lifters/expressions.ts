@@ -2,6 +2,7 @@ import type { Lifter } from '../../../../core/lift/lifter'
 import type { SemanticNode } from '../../../../core/types'
 import type { AstNode, LiftContext } from '../../../../core/lift/types'
 import { createNode } from '../../../../core/semantic-tree'
+import { CPP_BUILTIN_NAMES } from '../../builtins'
 
 const ARITHMETIC_OPS = new Set(['+', '-', '*', '/', '%'])
 const COMPARE_OPS = new Set(['>', '<', '>=', '<=', '==', '!='])
@@ -13,11 +14,9 @@ export function registerExpressionLifters(lifter: Lifter): void {
   })
 
   // Built-in constants: identifiers that are language keywords/constants
-  const BUILTIN_CONSTANTS = new Set(['EOF', 'NULL', 'nullptr', 'true', 'false', 'INT_MAX', 'INT_MIN', 'LLONG_MAX', 'LLONG_MIN', 'SIZE_MAX'])
-
   lifter.register('identifier', (node) => {
     const name = node.text
-    if (BUILTIN_CONSTANTS.has(name)) {
+    if (CPP_BUILTIN_NAMES.has(name)) {
       return createNode('builtin_constant', { value: name })
     }
     return createNode('var_ref', { name })

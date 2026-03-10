@@ -2,6 +2,7 @@ import type { SemanticNode } from '../types'
 import type { BlockMapping } from './code-generator'
 import { PatternRenderer } from './pattern-renderer'
 import type { RenderContext } from '../registry/render-strategy-registry'
+import { nextBlockId, resetBlockIdCounter } from './common-mappings'
 
 interface BlockState {
   type: string
@@ -28,17 +29,11 @@ export function setPatternRenderer(pr: PatternRenderer): void {
   globalPatternRenderer = pr
 }
 
-let blockIdCounter = 0
-
-function nextBlockId(): string {
-  return `block_${++blockIdCounter}`
-}
-
 /** Module-level collection for block mappings during a render pass */
 let currentBlockMappings: BlockMapping[] = []
 
 export function renderToBlocklyState(tree: SemanticNode): WorkspaceBlockState & { blockMappings: BlockMapping[] } {
-  blockIdCounter = 0
+  resetBlockIdCounter()
   currentBlockMappings = []
 
   if (tree.concept !== 'program') {
@@ -93,7 +88,7 @@ const renderCtx: RenderContext = {
   renderBlock: (n) => renderBlock(n),
   renderExpression: (n) => renderExpression(n),
   renderStatementChain: (ns) => renderStatementChain(ns),
-  nextBlockId: () => nextBlockId(),
+  nextBlockId: () => nextBlockId('block_'),
 }
 
 function renderBlock(node: SemanticNode): BlockState | null {
@@ -109,26 +104,19 @@ function renderBlock(node: SemanticNode): BlockState | null {
   }
 
   if (!block) {
-    // Special cases not handled by PatternRenderer (no BlockSpec)
-    if (node.concept === 'raw_code') {
+    // Fallback for meta-concepts with rawCode (raw_code, unresolved, etc.)
+    if (node.metadata?.rawCode != null || node.concept === 'raw_code' || node.concept === 'unresolved') {
+      const extra: Record<string, unknown> = {}
+      if (node.concept === 'unresolved') {
+        extra.unresolved = true
+        extra.nodeType = node.properties.node_type
+      }
       block = {
         type: 'c_raw_code',
-        id: nextBlockId(),
+        id: nextBlockId('block_'),
         fields: { CODE: node.metadata?.rawCode ?? node.properties.code ?? '' },
         inputs: {},
-      }
-      propagateMetadata(block, node)
-      // 預設降級原因為 unsupported（若無明確標記）
-      if (!block.extraState?.degradationCause) {
-        block.extraState = { ...block.extraState, degradationCause: node.metadata?.degradationCause ?? 'unsupported' }
-      }
-    } else if (node.concept === 'unresolved') {
-      block = {
-        type: 'c_raw_code',
-        id: nextBlockId(),
-        fields: { CODE: node.metadata?.rawCode ?? '' },
-        inputs: {},
-        extraState: { unresolved: true, nodeType: node.properties.node_type },
+        extraState: Object.keys(extra).length > 0 ? extra : undefined,
       }
       propagateMetadata(block, node)
       if (!block.extraState?.degradationCause) {

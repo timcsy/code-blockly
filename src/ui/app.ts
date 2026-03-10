@@ -8,6 +8,7 @@ import { showToast } from './toolbar/toast'
 import { showStyleActionBar } from './toolbar/style-action-bar'
 import { runDiagnostics } from '../core/diagnostics'
 import type { DiagnosticBlock } from '../core/diagnostics'
+import { cppDiagnosticRules } from '../languages/cpp/diagnostics'
 import { registerCppLanguage } from '../languages/cpp/generators'
 import { setDependencyResolver, setProgramScaffold, setScaffoldConfig } from '../core/projection/code-generator'
 import { setBlockSpecRegistry } from '../core/cognitive-levels'
@@ -513,7 +514,7 @@ export class App {
       },
       getInput: (n: string) => block.getInput(n),
     })
-    for (const d of runDiagnostics(allBlocks.map(adapt))) {
+    for (const d of runDiagnostics(allBlocks.map(adapt), cppDiagnosticRules)) {
       const block = workspace.getBlockById(d.blockId)
       if (block) block.setWarningText(Blockly.Msg[d.message] || d.message)
     }

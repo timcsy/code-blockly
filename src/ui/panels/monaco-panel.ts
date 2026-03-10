@@ -28,9 +28,8 @@ export class MonacoPanel implements ViewHost {
   private hoverProvider: monaco.IDisposable | null = null
   private onPinCallback: ((code: string) => void) | null = null
 
-  constructor(container: HTMLElement, bus?: SemanticBus) {
+  constructor(container: HTMLElement) {
     this.container = container
-    void bus
   }
 
   async initialize(_config: ViewConfig): Promise<void> {

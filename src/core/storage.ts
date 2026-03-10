@@ -17,6 +17,12 @@ export interface SavedState {
 }
 
 export class StorageService {
+  private defaultLanguage: string
+
+  constructor(defaultLanguage = 'cpp') {
+    this.defaultLanguage = defaultLanguage
+  }
+
   /** Save state to localStorage */
   save(state: Partial<SavedState>): boolean {
     try {
@@ -26,7 +32,7 @@ export class StorageService {
         tree: state.tree ?? existing?.tree ?? null,
         blocklyState: state.blocklyState ?? existing?.blocklyState ?? {},
         code: state.code ?? existing?.code ?? '',
-        language: state.language ?? existing?.language ?? 'cpp',
+        language: state.language ?? existing?.language ?? this.defaultLanguage,
         styleId: state.styleId ?? existing?.styleId ?? 'apcs',
         level: state.level ?? existing?.level ?? 1,
         lastModified: new Date().toISOString(),

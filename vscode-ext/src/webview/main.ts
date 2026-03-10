@@ -20,6 +20,7 @@ import { BlockStyleSelector } from '../../../src/ui/toolbar/block-style-selector
 import type { BlockStylePreset } from '../../../src/languages/style'
 import { runDiagnostics } from '../../../src/core/diagnostics'
 import type { DiagnosticBlock } from '../../../src/core/diagnostics'
+import { cppDiagnosticRules } from '../../../src/languages/cpp/diagnostics'
 import { send, onMessage } from './bridge-client'
 
 // i18n
@@ -352,7 +353,7 @@ function runBlockDiagnostics(): void {
     },
     getInput: (n: string) => block.getInput(n),
   })
-  for (const d of runDiagnostics(allBlocks.map(adapt))) {
+  for (const d of runDiagnostics(allBlocks.map(adapt), cppDiagnosticRules)) {
     const block = workspace.getBlockById(d.blockId)
     if (block) block.setWarningText(Blockly.Msg[d.message] || d.message)
   }

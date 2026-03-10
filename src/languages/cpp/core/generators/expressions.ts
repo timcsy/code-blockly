@@ -2,39 +2,38 @@ import type { NodeGenerator } from '../../../../core/projection/code-generator'
 import { generateExpression } from '../../../../core/projection/code-generator'
 import type { SemanticNode } from '../../../../core/types'
 
+/** C++ operator precedence data (higher = binds tighter). */
+const PRECEDENCE_MAP = new Map<string, number>([
+  ['cpp_comma_expr', 1],
+  ['var_assign', 2],
+  ['cpp_compound_assign_expr', 2],
+  ['cpp_ternary', 3],
+  ['negate', 14],
+  ['logic_not', 14],
+  ['bitwise_not', 14],
+  ['cpp_address_of', 14],
+  ['cpp_pointer_deref', 14],
+  ['cpp_cast', 14],
+  ['cpp_increment_expr', 15],
+  ['func_call_expr', 16],
+  ['array_access', 16],
+])
+
+/** Operator-dependent precedence for concepts with varying operators. */
+const OPERATOR_PRECEDENCE: Record<string, (op: unknown) => number> = {
+  logic: (op) => op === '||' ? 4 : 5,
+  compare: (op) => (op === '==' || op === '!=') ? 8 : 9,
+  arithmetic: (op) => (op === '+' || op === '-') ? 11 : 12,
+}
+
 /** C++ operator precedence (higher = binds tighter) */
 function precedence(node: SemanticNode | undefined): number {
   if (!node) return 100
-  switch (node.concept) {
-    case 'cpp_comma_expr': return 1
-    case 'var_assign': return 2
-    case 'cpp_compound_assign_expr': return 2
-    case 'cpp_ternary': return 3
-    case 'logic': {
-      const op = node.properties.operator
-      return op === '||' ? 4 : 5 // || = 4, && = 5
-    }
-    case 'compare': {
-      const op = node.properties.operator
-      return (op === '==' || op === '!=') ? 8 : 9 // == != = 8, < > <= >= = 9
-    }
-    case 'arithmetic': {
-      const op = node.properties.operator
-      return (op === '+' || op === '-') ? 11 : 12 // + - = 11, * / % = 12
-    }
-    case 'negate':
-    case 'logic_not':
-    case 'bitwise_not':
-    case 'cpp_address_of':
-    case 'cpp_pointer_deref':
-    case 'cpp_cast':
-      return 14 // unary prefix
-    case 'cpp_increment_expr': return 15
-    case 'func_call_expr':
-    case 'array_access':
-      return 16
-    default: return 100 // literals, var_ref, etc. — never need parens
-  }
+  const fixed = PRECEDENCE_MAP.get(node.concept)
+  if (fixed !== undefined) return fixed
+  const opFn = OPERATOR_PRECEDENCE[node.concept]
+  if (opFn) return opFn(node.properties.operator)
+  return 100 // literals, var_ref, etc. — never need parens
 }
 
 /** Wrap child expression in parentheses if its precedence is lower than parent's */

@@ -23,7 +23,6 @@ function toCodingStyle(preset: StylePreset): CodingStyle {
 }
 import type { CodeMapping, BlockMapping } from '../core/projection/code-generator'
 import { renderToBlocklyState } from '../core/projection/block-renderer'
-// createNode no longer needed here — stripScaffoldNodes moved to cpp-scaffold-filter.ts
 import { Lifter } from '../core/lift/lifter'
 import { SemanticBus } from '../core/semantic-bus'
 
@@ -34,13 +33,6 @@ export type ScaffoldNodeFilter = (tree: SemanticNode) => SemanticNode
 function identityFilter(tree: SemanticNode): SemanticNode {
   return tree
 }
-
-/**
- * @deprecated Use cppStripScaffoldNodes from languages/cpp/cpp-scaffold-filter.ts via setScaffoldNodeFilter.
- * Delegates to the injected scaffold node filter (for backward compatibility).
- */
-export { cppStripScaffoldNodes as stripScaffoldNodes } from '../languages/cpp/cpp-scaffold-filter'
-
 
 export interface CodeParser {
   parse(code: string): { rootNode: unknown }
@@ -108,6 +100,11 @@ export class SyncController {
 
   setCognitiveLevel(level: CognitiveLevel): void {
     this.cognitiveLevel = level
+  }
+
+  /** Whether scaffold nodes should be stripped for display (L0 mode). */
+  private shouldStripScaffold(): boolean {
+    return this.cognitiveLevel === 0
   }
 
   /** Set the scaffold node filter for L0 display (strip scaffold from blocks) */
@@ -203,7 +200,7 @@ export class SyncController {
             this.currentTree = converted
             const { mappings: convMappings } = generateCodeWithMapping(converted, this.language, this.style)
             this.codeMappings = convMappings
-            const convDisplay = this.cognitiveLevel === 0 ? this.scaffoldNodeFilter(converted) : converted
+            const convDisplay = this.shouldStripScaffold() ? this.scaffoldNodeFilter(converted) : converted
             const convRender = renderToBlocklyState(convDisplay)
             this.blockMappings = convRender.blockMappings
       
@@ -228,7 +225,7 @@ export class SyncController {
       this.codeMappings = codeMappings
 
       // For L0: strip scaffold nodes so blocks only show user's logic
-      const displayTree = this.cognitiveLevel === 0 ? this.scaffoldNodeFilter(tree) : tree
+      const displayTree = this.shouldStripScaffold() ? this.scaffoldNodeFilter(tree) : tree
       const renderResult = renderToBlocklyState(displayTree)
       this.blockMappings = renderResult.blockMappings
 
@@ -287,7 +284,7 @@ export class SyncController {
       }
 
       // For blocks: strip scaffold if L0
-      const displayTree = this.cognitiveLevel === 0 ? this.scaffoldNodeFilter(fullTree) : fullTree
+      const displayTree = this.shouldStripScaffold() ? this.scaffoldNodeFilter(fullTree) : fullTree
       const renderResult = renderToBlocklyState(displayTree)
       this.blockMappings = renderResult.blockMappings
 
