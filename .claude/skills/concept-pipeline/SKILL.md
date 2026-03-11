@@ -60,9 +60,8 @@ $ARGUMENTS
 在 {language} 的 {topic} 中找到 {N} 個概念：
   通用概念：{list}
   語言特定概念：{list}
-  L0：{list}
-  L1：{list}
-  L2：{list}
+  按 Topic 層級樹節點分組：
+  {各節點 label}：{概念 list}
 
 建議實作順序：{ordered list}
 
@@ -95,8 +94,8 @@ $ARGUMENTS
 
 **跳過條件**：設定了 `--dry-run` 或 `--skip-fuzz` 旗標。
 
-根據新增概念的認知層級自動決定難度和範疇（scope）：
-- 難度：取新概念中最高的認知層級（L0→easy、L1→medium、L2→hard）
+根據新增概念在 Topic 層級樹中的深度自動決定難度和範疇（scope）：
+- 難度：取新概念所在最深層級樹節點的深度（depth 0→easy、depth 1→medium、depth 2+→hard）
 - 範疇：從新概念的分類中推導（例如新增了迴圈相關概念則範疇為 `loops`）
 
 1. **調用**：`/concept.fuzz {lang} {difficulty} {scope} {count}`
@@ -130,7 +129,7 @@ $ARGUMENTS
 
 ### 覆蓋影響
 - {language} 之前：{N} 個概念 → 之後：{N+M} 個概念
-- 新的認知層級覆蓋：L0 +{n}、L1 +{n}、L2 +{n}
+- 新的 Topic 層級樹覆蓋：各節點新增概念數
 
 ### 建議後續步驟
 1. 修復已阻擋的概念

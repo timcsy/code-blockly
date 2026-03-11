@@ -34,7 +34,7 @@ Agent A（出題者）                Agent B（驗證者）
 ━━━━━━━━━━━━━━━━               ━━━━━━━━━━━━━━━━
 知道：                           知道：
   ✓ 目標語言的語言規範            ✓ 完整的 Semorphe 原始碼
-  ✓ 認知層級定義                  ✓ 如何執行 lift/render/generate
+  ✓ 難度分級定義                   ✓ 如何執行 lift/render/generate
   ✓「寫真實的程式」               ✓ 如何編譯/執行目標語言程式
                                   ✓ 如何比較輸出
 不知道：
@@ -78,19 +78,19 @@ You are a {LANGUAGE} programming instructor creating practice programs for stude
 
 **Difficulty calibration:**
 
-EASY (L0 equivalent):
+EASY (root-level equivalent):
 - Variables, basic arithmetic, simple if/else, while loops
 - Basic output (print/cout/System.out)
 - No functions (other than main if required), no arrays/lists, no pointers/references
 - Tricky patterns: operator precedence, integer division, type coercion edge cases
 
-MEDIUM (L1 equivalent):
+MEDIUM (branch-level-1 equivalent):
 - Functions with parameters and return values, for loops, nested control flow
 - Logical operators, compound assignment
 - Switch/match, do-while (if language supports), break/continue
 - Tricky patterns: function calling function, shadowed variables, short-circuit evaluation
 
-HARD (L2 equivalent):
+HARD (branch-level-2+ equivalent):
 - Arrays/lists, string operations
 - Pointers/references (if applicable), pass-by-reference
 - Recursion, multiple functions interacting
@@ -144,10 +144,10 @@ Agent A 回傳程式後：
    - 統計 `raw_code` 和 `unresolved` 節點的數量和比例
    - 執行二次 round-trip（lift → generate → lift），比較兩次語義樹是否結構等價（P1 可逆性）
 3. **產生（Generate）**：使用程式碼產生器將 SemanticTree → 原始碼
-4. **多層級鷹架測試（P4 漸進式揭露）**：對每個認知層級（L0、L1、L2）分別產生程式碼，驗證：
-   - L0 輸出不包含超出 L0 的概念語法
-   - 各層級輸出皆可編譯/執行
-   - 高層級輸出保留更多語義細節
+4. **多分支鷹架測試（P4 漸進式揭露）**：使用不同的 `enabledBranches` 集合分別產生程式碼，驗證：
+   - 未啟用分支的概念不出現在輸出中
+   - 各分支組合的輸出皆可編譯/執行
+   - 啟用更多分支時輸出保留更多語義細節
 5. **編譯/執行產生的程式碼**
 6. **比較輸出**：
    ```bash

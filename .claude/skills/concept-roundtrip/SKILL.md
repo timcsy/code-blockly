@@ -51,10 +51,11 @@ $ARGUMENTS
 - 包含該概念特有的邊界案例
 
 **如果是難度等級：**
-- 產生涵蓋該認知層級所有概念的程式
-- L0：var_declare、var_assign、arithmetic、compare、if、while_loop、print、input
-- L1：logic、func_def、func_call、return、count_loop、break、continue
-- L2：array_declare、array_access 及語言特定的進階概念
+- 產生涵蓋對應 Topic 層級樹深度所有概念的程式
+- easy：Topic 層級樹根節點的概念（如 var_declare、arithmetic、if、while_loop、print）
+- medium：第一層分支的概念（如 func_def、func_call、count_loop、break、continue）
+- hard：第二層以上分支的概念（如 array_declare、array_access 及語言特定的進階概念）
+- 使用 `getVisibleConcepts(topic, enabledBranches)` 取得對應分支的可見概念集
 
 **如果是 `all`：**
 - 為每個支援的概念產生一個典範程式
@@ -107,11 +108,11 @@ diff /tmp/semorphe-roundtrip/test_{id}_expected.txt /tmp/semorphe-roundtrip/test
 - **二次 round-trip 驗證**：對產生的程式碼再次 lift，比較兩次語義樹是否結構等價（節點類型、屬性、子節點結構相同），驗證 P1 可逆性
 - 統計 `raw_code`/`unresolved` 節點佔總節點的比例
 
-**層級三 — 多層級鷹架行為（P4 漸進式揭露）**：
-- 對同一個語義樹，分別以 L0、L1、L2 三個認知層級產生程式碼
-- 驗證各層級輸出都能編譯/執行
-- 驗證低層級不會出現超出該層級的概念語法（鷹架正確隱藏）
-- 比較各層級的 stdout 輸出（應該相同或等價）
+**層級三 — 多分支鷹架行為（P4 漸進式揭露）**：
+- 對同一個語義樹，使用不同的 `enabledBranches` 集合產生程式碼（例如只啟用根節點、啟用到第一層、啟用全部分支）
+- 驗證各分支組合的輸出都能編譯/執行
+- 驗證未啟用分支的概念不會出現在輸出中（鷹架正確隱藏）
+- 比較各分支組合的 stdout 輸出（應該相同或等價）
 
 **層級四 — 程式碼結構比較**（僅供參考）：
 - 比較原始和產生的程式碼結構（不是精確文字 — 格式可能不同）

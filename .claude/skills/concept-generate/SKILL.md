@@ -49,7 +49,7 @@ $ARGUMENTS
 從探索報告或使用者輸入中，為每個概念提取：
 - 概念名稱（snake_case）
 - 概念類型：通用（universal）還是語言特定（`{lang}:concept`）
-- 認知層級（0/1/2）
+- 建議歸屬的 Topic 層級樹節點
 - 目標語言的語法模式
 - 屬性（積木上的欄位）
 - 子節點（子表達式/語句的輸入槽）
@@ -64,7 +64,6 @@ $ARGUMENTS
   "type": "{prefix}_{concept_name}",
   "conceptId": "{concept_name}",
   "category": "{category}",
-  "level": {0|1|2},
   "message0": "{帶 %1 %2 佔位符的積木標籤}",
   "args0": [
     { "type": "field_input", "name": "FIELD_NAME", "text": "default" },
@@ -178,7 +177,7 @@ describe('{concept_name}', () => {
 
 確認新概念需要在哪些地方註冊：
 - `src/languages/{lang}/toolbox-categories.ts` 中的工具箱分類
-- block JSON 中的認知層級可用性（`level` 欄位）
+- 適當的 Topic JSON 檔案（`src/languages/{lang}/topics/*.json`）中的 `levelTree` 節點，將概念 ID 加入對應節點的 `concepts[]`
 - concept registry 中的概念定義
 - 如果是通用概念，更新 `src/core/types.ts` 的 `UniversalConcept` 型別
 
