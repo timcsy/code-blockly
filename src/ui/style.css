@@ -1149,14 +1149,14 @@ html, body {
 
 /* ─── Mobile Tab Bar ─── */
 
+#mobile-tab-bar-container {
+  flex-shrink: 0;
+}
+
 .mobile-tab-bar {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   height: 48px;
   background: #252526;
   border-top: 1px solid #3c3c3c;
@@ -1499,13 +1499,8 @@ html, body {
     background: #444;
   }
 
-  /* Ensure full height minus toolbar and tab bar.
-     flex: none prevents flex-grow from overriding height
-     (tab bar is position:fixed, so it doesn't occupy flex space) */
-  #editors {
-    flex: none;
-    height: calc(100vh - 36px - 48px);
-  }
+  /* #editors uses flex: 1 from base styles — tab bar is now in normal
+     flex flow, so #editors automatically gets the correct height */
 
   /* Toast above tab bar */
   .toast {
