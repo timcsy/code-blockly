@@ -1499,8 +1499,11 @@ html, body {
     background: #444;
   }
 
-  /* Ensure full height minus toolbar and tab bar */
+  /* Ensure full height minus toolbar and tab bar.
+     flex: none prevents flex-grow from overriding height
+     (tab bar is position:fixed, so it doesn't occupy flex space) */
   #editors {
+    flex: none;
     height: calc(100vh - 36px - 48px);
   }
 
