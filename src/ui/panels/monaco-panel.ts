@@ -159,7 +159,20 @@ export class MonacoPanel implements ViewHost {
       wordBasedSuggestions: 'off',
       parameterHints: { enabled: false },
       hover: { enabled: false },
+      accessibilitySupport: 'off',
+      autoClosingBrackets: 'never',
+      autoClosingQuotes: 'never',
+      autoSurround: 'never',
+      formatOnType: false,
+      snippetSuggestions: 'none',
     })
+    // Force focus on tap — mobile keyboards may not open otherwise
+    const domNode = this.editor?.getDomNode()
+    if (domNode) {
+      domNode.addEventListener('pointerdown', () => {
+        this.editor?.focus()
+      }, { passive: true })
+    }
   }
 
   /** Restore desktop editor options */

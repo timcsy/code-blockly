@@ -299,9 +299,14 @@ export class App {
     this.setupBidirectionalHighlight()
 
     // 12b. Re-layout Monaco when code tab becomes visible (mobile)
+    // Use double-rAF + setTimeout to ensure container is fully painted on real devices
     elements.mobileTabBar?.onTabChange((tab) => {
       if (tab === 'code') {
-        requestAnimationFrame(() => this.monacoPanel?.relayout())
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => this.monacoPanel?.relayout())
+        })
+        // Fallback for devices where rAF fires before paint
+        setTimeout(() => this.monacoPanel?.relayout(), 100)
       }
     })
 
