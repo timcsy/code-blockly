@@ -87,11 +87,18 @@ export class CodeKeyboard {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
     }
+    // Update CSS variable for toast positioning after layout
+    requestAnimationFrame(() => {
+      document.documentElement.style.setProperty(
+        '--kb-height', `${this.container.offsetHeight}px`,
+      )
+    })
   }
 
   hide(): void {
     this.container.style.display = 'none'
     this.stopBackspaceRepeat()
+    document.documentElement.style.setProperty('--kb-height', '0px')
   }
 
   isVisible(): boolean {

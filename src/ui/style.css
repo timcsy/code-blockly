@@ -1504,9 +1504,9 @@ html, body {
   /* #editors uses flex: 1 from base styles — tab bar is now in normal
      flex flow, so #editors automatically gets the correct height */
 
-  /* Toast above tab bar */
+  /* Toast above tab bar + virtual keyboard (--kb-height set by CodeKeyboard) */
   .toast {
-    bottom: 60px;
+    bottom: calc(var(--kb-height, 0px) + 60px);
   }
 
   /* Debug toolbar adjustments */
