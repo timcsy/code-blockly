@@ -1286,7 +1286,7 @@ html, body {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 48px; /* above mobile tab bar */
+  bottom: 0;
   overflow: hidden;
 }
 
