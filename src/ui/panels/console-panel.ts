@@ -26,6 +26,8 @@ export class ConsolePanel implements ViewHost {
   private signalHandler: ((signal: ConsoleSignal) => void) | null = null
   /** Queued input lines from multi-line paste */
   private pendingInputLines: string[] = []
+  private onInputShowCallback: ((input: HTMLInputElement) => void) | null = null
+  private onInputHideCallback: (() => void) | null = null
 
   constructor(container: HTMLElement) {
     this.container = container
@@ -74,6 +76,16 @@ export class ConsolePanel implements ViewHost {
   /** Register a handler for terminal signals (Ctrl+C → SIGINT, Ctrl+D → EOF) */
   onSignal(handler: ((signal: ConsoleSignal) => void) | null): void {
     this.signalHandler = handler
+  }
+
+  /** Called when inline input is shown (for virtual keyboard integration) */
+  onInputShow(callback: (input: HTMLInputElement) => void): void {
+    this.onInputShowCallback = callback
+  }
+
+  /** Called when inline input is hidden/submitted */
+  onInputHide(callback: () => void): void {
+    this.onInputHideCallback = callback
   }
 
   private handleCtrlKey(e: KeyboardEvent): void {
@@ -248,6 +260,8 @@ export class ConsolePanel implements ViewHost {
       this.setStatus('等待輸入...', 'running')
 
       this.scrollToBottom()
+      // Notify virtual keyboard integration before focusing
+      this.onInputShowCallback?.(input)
       input.focus()
     })
   }
@@ -264,6 +278,8 @@ export class ConsolePanel implements ViewHost {
     this.inlineInputLine = null
     // Start a new line after input
     this.currentLineEl = null
+
+    this.onInputHideCallback?.()
 
     if (this.inputResolve) {
       this.inputResolve(val)
@@ -283,6 +299,18 @@ export class ConsolePanel implements ViewHost {
     return [...this.lines]
   }
 
+  /** Submit the current inline input (used by virtual keyboard) */
+  submitCurrentInput(): void {
+    if (this.inlineInput) {
+      this.submitInlineInput(this.inlineInput.value)
+    }
+  }
+
+  /** Get the current inline input element (for virtual keyboard integration) */
+  getInlineInput(): HTMLInputElement | null {
+    return this.inlineInput
+  }
+
   /** Copy all visible output text to clipboard */
   copyOutput(): void {
     const text = Array.from(this.outputEl.querySelectorAll('.console-line'))
@@ -296,11 +324,13 @@ export class ConsolePanel implements ViewHost {
   }
 
   private removeInlineInput(): void {
+    const hadInput = this.inlineInput !== null
     if (this.inlineInputLine) {
       this.inlineInputLine.remove()
       this.inlineInputLine = null
     }
     this.inlineInput = null
+    if (hadInput) this.onInputHideCallback?.()
   }
 
   private removeInputRow(): void {

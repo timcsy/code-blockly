@@ -13,6 +13,7 @@ import { StyleSelector } from './toolbar/style-selector'
 import { BlockStyleSelector } from './toolbar/block-style-selector'
 import { LocaleSelector } from './toolbar/locale-selector'
 import { MobileMenu } from './toolbar/mobile-menu'
+import { CodeKeyboard } from './panels/code-keyboard'
 import { StorageService } from '../core/storage'
 import type { SavedState } from '../core/storage'
 import type { BlockSpecRegistry } from '../core/block-spec-registry'
@@ -31,6 +32,7 @@ export interface AppShellElements {
   layoutManager: LayoutManager
   mobileTabBar: MobileTabBar | null
   mobileMenu: MobileMenu | null
+  codeKeyboard: CodeKeyboard | null
 }
 
 export interface AppShellCallbacks {
@@ -174,6 +176,119 @@ export function createAppLayout(
   appEl.appendChild(tabBarContainer)
   mobileTabBar = new MobileTabBar(tabBarContainer)
 
+  // ─── Virtual Keyboards (touch devices) ───
+
+  // Code keyboard: used for Monaco in both mobile and desktop-touch modes
+  const codeKeyboard = new CodeKeyboard(mobileCodeContainer)
+  codeKeyboard.setEditor(monacoPanel.getEditor()!)
+
+  // Console keyboard: used only in mobile mode
+  const consoleKeyboard = new CodeKeyboard(mobileConsoleContainer)
+
+  // IME toggle buttons
+  const createImeToggle = (parent: HTMLElement) => {
+    const btn = document.createElement('button')
+    btn.className = 'ime-toggle-btn'
+    btn.textContent = '⌨'
+    btn.title = '切換回程式鍵盤'
+    btn.style.display = 'none'
+    parent.appendChild(btn)
+    return btn
+  }
+  const imeToggleBtn = createImeToggle(mobileCodeContainer)
+  const consoleImeToggleBtn = createImeToggle(mobileConsoleContainer)
+  // Desktop-touch IME toggle (lives in rightColumn)
+  const desktopImeToggleBtn = createImeToggle(rightColumn)
+
+  // Suppress native keyboard on a target element
+  const suppressNativeKB = (el: HTMLElement | null) => {
+    if (el) el.setAttribute('inputmode', 'none')
+  }
+  const restoreNativeKB = (el: HTMLElement | null) => {
+    if (el) el.removeAttribute('inputmode')
+  }
+  const getMonacoTextarea = () =>
+    monacoWrapper.querySelector('.monaco-editor .inputarea') as HTMLTextAreaElement | null
+
+  // ── Code keyboard show/hide helpers ──
+
+  const showCodeKeyboard = () => {
+    codeKeyboard.show()
+    imeToggleBtn.style.display = 'none'
+    desktopImeToggleBtn.style.display = 'none'
+    suppressNativeKB(getMonacoTextarea())
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+  }
+
+  const showNativeIME = () => {
+    codeKeyboard.hide()
+    // Show the appropriate toggle button
+    if (layoutManager.getMode() === 'mobile') {
+      imeToggleBtn.style.display = ''
+    } else {
+      desktopImeToggleBtn.style.display = ''
+    }
+    const textarea = getMonacoTextarea()
+    restoreNativeKB(textarea)
+    textarea?.focus()
+    monacoPanel.getEditor()?.focus()
+  }
+
+  codeKeyboard.onNativeIME(() => showNativeIME())
+  imeToggleBtn.addEventListener('click', () => showCodeKeyboard())
+  desktopImeToggleBtn.addEventListener('click', () => showCodeKeyboard())
+
+  // ── Console keyboard show/hide helpers ──
+
+  const showConsoleKeyboard = () => {
+    const input = consolePanel.getInlineInput()
+    if (!input) return
+    consoleKeyboard.show()
+    consoleImeToggleBtn.style.display = 'none'
+    suppressNativeKB(input)
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+  }
+
+  const showConsoleNativeIME = () => {
+    consoleKeyboard.hide()
+    consoleImeToggleBtn.style.display = ''
+    const input = consolePanel.getInlineInput()
+    if (input) {
+      restoreNativeKB(input)
+      input.focus()
+    }
+  }
+
+  consoleKeyboard.onNativeIME(() => showConsoleNativeIME())
+  consoleImeToggleBtn.addEventListener('click', () => showConsoleKeyboard())
+
+  // ── Console input ↔ virtual keyboard wiring ──
+
+  consolePanel.onInputShow((input) => {
+    if (!layoutManager.isTouchDevice()) return
+    if (layoutManager.getMode() === 'mobile') {
+      // Mobile: use dedicated console keyboard
+      suppressNativeKB(input)
+      consoleKeyboard.attachInput(input, () => consolePanel.submitCurrentInput())
+      consoleKeyboard.show()
+    } else {
+      // Desktop-touch: reuse codeKeyboard, switch to input mode
+      suppressNativeKB(input)
+      codeKeyboard.attachInput(input, () => consolePanel.submitCurrentInput())
+      // Keyboard is already visible; just switch target
+    }
+  })
+  consolePanel.onInputHide(() => {
+    if (layoutManager.getMode() === 'mobile') {
+      consoleKeyboard.detachInput()
+      consoleKeyboard.hide()
+      consoleImeToggleBtn.style.display = 'none'
+    } else {
+      // Desktop-touch: revert codeKeyboard back to Monaco mode
+      codeKeyboard.detachInput()
+    }
+  })
+
   // Create mobile menu
   const hamburgerBtn = document.getElementById('hamburger-btn')
   let mobileMenu: MobileMenu | null = null
@@ -203,12 +318,12 @@ export function createAppLayout(
     mobileBlocksContainer.appendChild(blocklyContainer)
     mobileBlocksContainer.classList.add('active')
 
-    // Move monaco to mobile container
-    mobileCodeContainer.appendChild(monacoWrapper)
+    // Move monaco to mobile container (keyboard must stay below)
+    mobileCodeContainer.insertBefore(monacoWrapper, codeKeyboard.getElement())
     mobileCodeContainer.classList.remove('active')
 
-    // Move console/variable (bottom panel) to mobile container
-    mobileConsoleContainer.appendChild(bottomContainer)
+    // Move console/variable (bottom panel) to mobile container (keyboard must stay below)
+    mobileConsoleContainer.insertBefore(bottomContainer, consoleKeyboard.getElement())
     mobileConsoleContainer.classList.remove('active')
 
     // Move selectors into mobile menu
@@ -285,6 +400,15 @@ export function createAppLayout(
     // Apply mobile-friendly Monaco options (reduce IME issues)
     monacoPanel.applyMobileOptions()
 
+    // Move keyboards to mobile containers
+    mobileCodeContainer.insertBefore(codeKeyboard.getElement(), imeToggleBtn)
+    mobileConsoleContainer.insertBefore(consoleKeyboard.getElement(), consoleImeToggleBtn)
+
+    // Show code keyboard if code tab is active
+    if (mobileTabBar!.getActiveTab() === 'code') {
+      showCodeKeyboard()
+    }
+
     window.dispatchEvent(new Event('resize'))
   }
 
@@ -343,6 +467,24 @@ export function createAppLayout(
     // Restore desktop Monaco options
     monacoPanel.applyDesktopOptions()
 
+    // Clean up mobile keyboards
+    consoleKeyboard.detachInput()
+    consoleKeyboard.hide()
+    imeToggleBtn.style.display = 'none'
+    consoleImeToggleBtn.style.display = 'none'
+
+    if (layoutManager.isTouchDevice()) {
+      // Desktop-touch: move code keyboard to right column, show it
+      rightColumn.insertBefore(codeKeyboard.getElement(), desktopImeToggleBtn)
+      codeKeyboard.detachInput()
+      showCodeKeyboard()
+    } else {
+      // Desktop without touch: hide everything
+      codeKeyboard.hide()
+      desktopImeToggleBtn.style.display = 'none'
+      restoreNativeKB(getMonacoTextarea())
+    }
+
     window.dispatchEvent(new Event('resize'))
   }
 
@@ -359,6 +501,13 @@ export function createAppLayout(
   // Connect tab bar to panel switching
   mobileTabBar.onTabChange((tab) => {
     activateMobilePanel(tab)
+    // Show/hide code keyboard based on active tab
+    if (tab === 'code') {
+      showCodeKeyboard()
+    } else {
+      codeKeyboard.hide()
+      imeToggleBtn.style.display = 'none'
+    }
   })
 
   // Handle mode changes
@@ -374,9 +523,15 @@ export function createAppLayout(
   if (layoutManager.getMode() === 'mobile') {
     // Defer to after all initialization is complete
     requestAnimationFrame(() => switchToMobile())
+  } else if (layoutManager.isTouchDevice()) {
+    // Desktop-touch: show code keyboard in right column on initial load
+    requestAnimationFrame(() => {
+      rightColumn.insertBefore(codeKeyboard.getElement(), desktopImeToggleBtn)
+      showCodeKeyboard()
+    })
   }
 
-  return { blocklyPanel, monacoPanel, consolePanel, variablePanel, bottomPanel, quickAccessBar, layoutManager, mobileTabBar, mobileMenu }
+  return { blocklyPanel, monacoPanel, consolePanel, variablePanel, bottomPanel, quickAccessBar, layoutManager, mobileTabBar, mobileMenu, codeKeyboard }
 }
 
 export function setupSelectors(

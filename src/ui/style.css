@@ -1318,6 +1318,100 @@ html, body {
   flex: 1;
 }
 
+/* ─── Code Keyboard ─── */
+
+.code-keyboard {
+  background: #1b1b1b;
+  border-top: 1px solid #3c3c3c;
+  padding: 4px 2px;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.code-kb-row {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  margin-bottom: 3px;
+}
+
+.code-kb-row:last-child {
+  margin-bottom: 0;
+}
+
+.code-kb-key {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  border: none;
+  border-radius: 5px;
+  background: #3a3a3a;
+  color: #e0e0e0;
+  font-size: 15px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.code-kb-key:active {
+  background: #555;
+}
+
+.code-kb-key.code-kb-active {
+  background: #007acc;
+  color: #fff;
+}
+
+/* Termux-style shortcut row */
+.code-kb-shortcuts {
+  border-bottom: 1px solid #333;
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+}
+
+.code-kb-shortcut-key {
+  height: 30px !important;
+  font-size: 12px !important;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
+  background: #2a2a2a !important;
+  border-radius: 3px !important;
+}
+
+.code-kb-shortcut-key:active {
+  background: #555 !important;
+}
+
+/* IME toggle button (floating) */
+.ime-toggle-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: #007acc;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 200;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ime-toggle-btn:active {
+  background: #0098ff;
+}
+
 /* ─── Responsive: Mobile (≤768px) ─── */
 
 @media (max-width: 768px) {
@@ -1369,7 +1463,11 @@ html, body {
     width: 100% !important;
   }
 
-  /* Blockly flyout no longer needs padding — mobile-panel-container stops above tab bar */
+  /* Shrink Blockly panel slightly so trash/zoom controls aren't clipped */
+  #mobile-blocks #blockly-panel {
+    flex: 1;
+    max-height: calc(100% - 10px);
+  }
 
   .blocklyToolbox {
     max-height: calc(100vh - 36px - 48px - 27px) !important;
@@ -1416,4 +1514,5 @@ html, body {
     top: 38px;
     font-size: 11px;
   }
+
 }

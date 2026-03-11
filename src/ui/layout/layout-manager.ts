@@ -33,6 +33,11 @@ export class LayoutManager {
     this.callbacks.push(callback)
   }
 
+  /** Detect touch-capable device (tablets, touchscreens) */
+  isTouchDevice(): boolean {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0
+  }
+
   destroy(): void {
     this.mql.removeEventListener('change', this.handleChange)
     this.callbacks = []
