@@ -1,6 +1,4 @@
 import type { BlockSpecRegistry } from '../../core/block-spec-registry'
-import type { CognitiveLevel } from '../../core/types'
-import { isBlockAvailable } from '../../core/cognitive-levels'
 import type { ToolboxCategoryDef } from '../../core/types'
 
 /**
@@ -25,7 +23,7 @@ export const cppCategoryDefs: ToolboxCategoryDef[] = [
     extraTypes: [
       { type: 'u_if' },
       { type: 'u_if', extraState: { hasElse: true } },
-      { type: 'u_if', extraState: { elseifCount: 1, hasElse: true }, level: 1 },
+      { type: 'u_if', extraState: { elseifCount: 1, hasElse: true } },
       'u_while_loop', 'u_count_loop', 'u_break', 'u_continue',
     ],
   },
@@ -80,20 +78,20 @@ export const cppCategoryDefs: ToolboxCategoryDef[] = [
  */
 export function buildIoCategoryContents(
   blockSpecRegistry: BlockSpecRegistry,
-  level: CognitiveLevel,
+  visibleConcepts: Set<string>,
   ioPreference: 'iostream' | 'cstdio',
 ): { kind: string; type: string }[] {
   const ioSpecs = [
-    ...blockSpecRegistry.listByCategory('io', level),
-    ...blockSpecRegistry.listByCategory('cpp_io', level),
+    ...blockSpecRegistry.listByCategory('io', visibleConcepts),
+    ...blockSpecRegistry.listByCategory('cpp_io', visibleConcepts),
   ]
   const ioTypes = ioSpecs
     .map(s => (s.blockDef as Record<string, unknown>)?.type as string)
-    .filter(t => t && isBlockAvailable(t, level))
+    .filter(t => t && blockSpecRegistry.isBlockVisible(t, visibleConcepts))
 
   const ensureTypes = ['u_print', 'u_input', 'u_input_expr', 'u_endl', 'c_printf', 'c_scanf']
   for (const t of ensureTypes) {
-    if (!ioTypes.includes(t) && isBlockAvailable(t, level)) {
+    if (!ioTypes.includes(t) && blockSpecRegistry.isBlockVisible(t, visibleConcepts)) {
       ioTypes.push(t)
     }
   }

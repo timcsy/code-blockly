@@ -151,37 +151,79 @@ html, body {
   border-color: #007acc;
 }
 
-/* ─── Level selector ─── */
+/* ─── Topic selector ─── */
 
-.level-selector {
+.topic-selector {
   display: inline-flex;
-  gap: 1px;
-  background: #3c3c3c;
-  border-radius: 4px;
-  overflow: hidden;
+  align-items: center;
+  gap: 2px;
 }
 
-.level-btn {
-  padding: 2px 8px !important;
-  border: none !important;
-  border-radius: 0 !important;
-  background: #3c3c3c !important;
-  color: #999 !important;
-  cursor: pointer;
+.topic-dropdown {
+  max-width: 140px;
+}
+
+.topic-tree-btn {
+  padding: 2px 6px !important;
   font-size: 11px !important;
-  font-weight: 500;
   line-height: 18px !important;
-  transition: background 0.15s, color 0.15s;
-}
-
-.level-btn:hover {
-  background: #505050 !important;
+  min-width: 22px;
+  background: #3c3c3c !important;
+  border: 1px solid #555 !important;
+  border-radius: 3px !important;
   color: #ccc !important;
+  cursor: pointer;
+  transition: background 0.15s;
 }
 
-.level-btn.active {
-  background: #007acc !important;
+.topic-tree-btn:hover {
+  background: #505050 !important;
   color: #fff !important;
+}
+
+/* ─── Level tree popover ─── */
+
+.topic-tree-popover {
+  z-index: 10000;
+  background: #2d2d2d;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 6px 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  min-width: 200px;
+  max-width: 320px;
+  font-size: 12px;
+}
+
+.topic-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px;
+  cursor: pointer;
+  color: #ccc;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.topic-tree-row:hover {
+  background: #3c3c3c;
+}
+
+.topic-tree-row input[type="checkbox"] {
+  margin: 0;
+  accent-color: #007acc;
+  cursor: pointer;
+}
+
+.topic-tree-row input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.topic-tree-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ─── Main editor area ─── */

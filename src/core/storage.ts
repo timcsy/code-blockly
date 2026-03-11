@@ -1,4 +1,4 @@
-import type { SemanticNode, CognitiveLevel } from './types'
+import type { SemanticNode } from './types'
 
 const STORAGE_KEY = 'semorphe-state'
 const MAX_SIZE = 5 * 1024 * 1024 // 5MB limit
@@ -10,7 +10,8 @@ export interface SavedState {
   code: string
   language: string
   styleId: string
-  level: CognitiveLevel
+  topicId?: string
+  enabledBranches?: string[]
   lastModified: string
   blockStyleId?: string
   locale?: string
@@ -34,7 +35,8 @@ export class StorageService {
         code: state.code ?? existing?.code ?? '',
         language: state.language ?? existing?.language ?? this.defaultLanguage,
         styleId: state.styleId ?? existing?.styleId ?? 'apcs',
-        level: state.level ?? existing?.level ?? 1,
+        topicId: state.topicId ?? existing?.topicId,
+        enabledBranches: state.enabledBranches ?? existing?.enabledBranches,
         lastModified: new Date().toISOString(),
       }
       const json = JSON.stringify(merged)

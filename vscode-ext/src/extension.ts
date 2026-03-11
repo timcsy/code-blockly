@@ -73,13 +73,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })
   )
 
-  // Watch configuration changes for cognitive level and coding style
+  // Watch configuration changes for topic and coding style
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration('semorphe.cognitiveLevel')) {
-        const level = getCognitiveLevel()
+      if (event.affectsConfiguration('semorphe.topicId')) {
+        const topicId = getTopicId()
         if (bridge && webviewReady) {
-          bridge.send('config:level', { level })
+          bridge.send('config:topic', { topicId })
         }
       }
       if (event.affectsConfiguration('semorphe.codingStyle')) {
@@ -108,8 +108,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   console.log('Semorphe extension activated')
 }
 
-function getCognitiveLevel(): number {
-  return vscode.workspace.getConfiguration('semorphe').get<number>('cognitiveLevel', 1)
+function getTopicId(): string {
+  return vscode.workspace.getConfiguration('semorphe').get<string>('topicId', 'cpp-beginner')
 }
 
 function getCodingStyle(): StylePreset {
@@ -126,7 +126,7 @@ function setupPanelBridge(panel: vscode.WebviewPanel, context: vscode.ExtensionC
     switch (message.command) {
       case 'webview:ready':
         webviewReady = true
-        bridge?.send('config:level', { level: getCognitiveLevel() })
+        bridge?.send('config:topic', { topicId: getTopicId() })
         bridge?.send('config:style', { style: getCodingStyle() })
         await pushTrackedDocument()
         break
@@ -135,9 +135,9 @@ function setupPanelBridge(panel: vscode.WebviewPanel, context: vscode.ExtensionC
         await handleBlocksEdit(message.data as { semanticTree: SemanticNode; blocklyState: object })
         break
 
-      case 'config:level:change': {
-        const levelData = message.data as { level: number }
-        await vscode.workspace.getConfiguration('semorphe').update('cognitiveLevel', levelData.level, vscode.ConfigurationTarget.Global)
+      case 'config:topic:change': {
+        const topicData = message.data as { topicId: string }
+        await vscode.workspace.getConfiguration('semorphe').update('topicId', topicData.topicId, vscode.ConfigurationTarget.Global)
         break
       }
 

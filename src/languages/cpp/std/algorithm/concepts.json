@@ -2,7 +2,6 @@
   {
     "conceptId": "cpp_sort",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "sort",
     "properties": [],
     "children": {
@@ -14,7 +13,6 @@
   {
     "conceptId": "cpp:sort",
     "layer": "lang-library",
-    "level": 2,
     "abstractConcept": "container_sort",
     "properties": [],
     "children": {},
@@ -23,7 +21,6 @@
   {
     "conceptId": "cpp:find",
     "layer": "lang-library",
-    "level": 2,
     "abstractConcept": "container_find",
     "properties": [],
     "children": {},

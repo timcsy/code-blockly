@@ -4,7 +4,6 @@
     "conceptId": "cpp_strlen",
     "language": "cpp",
     "category": "strings",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_strlen",
@@ -50,7 +49,6 @@
     "conceptId": "cpp_strcmp",
     "language": "cpp",
     "category": "strings",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_strcmp",
@@ -106,7 +104,6 @@
     "conceptId": "cpp_strcpy",
     "language": "cpp",
     "category": "strings",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_strcpy",

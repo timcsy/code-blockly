@@ -33,16 +33,13 @@ describe('ConceptRegistry.loadFromJSON', () => {
     expect(varDecl!.childNames).toContain('init')
   })
 
-  it('should filter by level correctly', () => {
+  it('should list all concepts by layer', () => {
     const registry = new ConceptRegistry()
     registry.loadFromJSON(loadConcepts())
-    const l0 = registry.listByLevel(0)
+    const universal = registry.listByLayer('universal')
     const all = registry.listAll()
-    expect(l0.length).toBeGreaterThan(0)
-    expect(l0.length).toBeLessThanOrEqual(all.length)
-    for (const c of l0) {
-      expect(c.level).toBeLessThanOrEqual(0)
-    }
+    expect(universal.length).toBeGreaterThan(0)
+    expect(universal.length).toBeLessThanOrEqual(all.length)
   })
 
   it('concept-registry.ts should not import blockly (static analysis)', () => {

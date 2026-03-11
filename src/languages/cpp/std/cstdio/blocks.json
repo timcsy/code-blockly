@@ -4,7 +4,6 @@
     "conceptId": "cpp_printf",
     "language": "cpp",
     "category": "io",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_printf",
@@ -54,7 +53,6 @@
     "conceptId": "cpp_scanf",
     "language": "cpp",
     "category": "io",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_scanf",
@@ -105,7 +103,6 @@
     "conceptId": "cpp_scanf_expr",
     "language": "cpp",
     "category": "io",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_scanf_expr"

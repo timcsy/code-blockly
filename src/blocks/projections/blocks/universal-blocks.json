@@ -4,7 +4,6 @@
     "conceptId": "var_declare",
     "language": "universal",
     "category": "data",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_var_declare",
@@ -26,7 +25,6 @@
     "conceptId": "var_assign",
     "language": "universal",
     "category": "data",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_var_assign",
@@ -55,7 +53,6 @@
     "conceptId": "var_ref",
     "language": "universal",
     "category": "data",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_var_ref",
@@ -77,7 +74,6 @@
     "conceptId": "number_literal",
     "language": "universal",
     "category": "data",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_number",
@@ -99,7 +95,6 @@
     "conceptId": "string_literal",
     "language": "universal",
     "category": "data",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_string",
@@ -121,7 +116,6 @@
     "conceptId": "arithmetic",
     "language": "universal",
     "category": "operators",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_arithmetic",
@@ -175,7 +169,6 @@
     "conceptId": "compare",
     "language": "universal",
     "category": "operators",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_compare",
@@ -233,7 +226,6 @@
     "conceptId": "logic",
     "language": "universal",
     "category": "operators",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_logic",
@@ -275,7 +267,6 @@
     "conceptId": "logic_not",
     "language": "universal",
     "category": "operators",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_logic_not",
@@ -298,7 +289,6 @@
     "conceptId": "negate",
     "language": "universal",
     "category": "operators",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_negate",
@@ -335,7 +325,6 @@
     "conceptId": "if",
     "language": "universal",
     "category": "control",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_if",
@@ -372,7 +361,6 @@
     "conceptId": "if_else",
     "language": "universal",
     "category": "control",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_if_else",
@@ -412,7 +400,6 @@
     "conceptId": "count_loop",
     "language": "universal",
     "category": "control",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_count_loop",
@@ -468,7 +455,6 @@
     "conceptId": "while_loop",
     "language": "universal",
     "category": "control",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_while_loop",
@@ -499,7 +485,6 @@
     "conceptId": "break",
     "language": "universal",
     "category": "control",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_break",
@@ -515,7 +500,6 @@
     "conceptId": "continue",
     "language": "universal",
     "category": "control",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_continue",
@@ -531,7 +515,6 @@
     "conceptId": "func_def",
     "language": "universal",
     "category": "functions",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_func_def",
@@ -611,7 +594,6 @@
     "conceptId": "func_call",
     "language": "universal",
     "category": "functions",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_func_call",
@@ -645,7 +627,6 @@
     "conceptId": "func_call_expr",
     "language": "universal",
     "category": "functions",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_func_call_expr"
@@ -662,7 +643,6 @@
     "conceptId": "return",
     "language": "universal",
     "category": "functions",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_return",
@@ -685,7 +665,6 @@
     "conceptId": "print",
     "language": "universal",
     "category": "io",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_print",
@@ -715,7 +694,6 @@
     "conceptId": "endl",
     "language": "universal",
     "category": "io",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_endl",
@@ -730,7 +708,6 @@
     "conceptId": "input",
     "language": "universal",
     "category": "io",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_input",
@@ -760,7 +737,6 @@
     "conceptId": "array_declare",
     "language": "universal",
     "category": "arrays",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_array_declare",
@@ -815,7 +791,6 @@
     "conceptId": "array_access",
     "language": "universal",
     "category": "arrays",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_array_access",
@@ -848,7 +823,6 @@
     "conceptId": "array_assign",
     "language": "universal",
     "category": "arrays",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "u_array_assign",

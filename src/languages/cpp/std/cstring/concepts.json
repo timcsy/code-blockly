@@ -2,7 +2,6 @@
   {
     "conceptId": "cpp_strlen",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "strlen",
     "properties": [],
     "children": {
@@ -13,7 +12,6 @@
   {
     "conceptId": "cpp_strcmp",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "strcmp",
     "properties": [],
     "children": {
@@ -25,7 +23,6 @@
   {
     "conceptId": "cpp_strcpy",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "strcpy",
     "properties": [],
     "children": {

@@ -1,0 +1,92 @@
+{
+  "id": "cpp-beginner",
+  "language": "cpp",
+  "name": "初學 C++",
+  "default": true,
+  "description": "適合初學者的漸進式 C++ 概念層級樹，從基礎 I/O 到進階資料結構",
+  "levelTree": {
+    "id": "L0",
+    "level": 0,
+    "label": "L0: 基礎",
+    "concepts": [
+      "print", "endl", "input", "var_declare", "var_assign", "var_ref",
+      "number_literal", "string_literal", "arithmetic", "compare",
+      "if", "if_else", "while_loop",
+      "builtin_constant", "cpp_include", "cpp_using_namespace"
+    ],
+    "children": [
+      {
+        "id": "L1a",
+        "level": 1,
+        "label": "L1a: 函式與迴圈",
+        "concepts": [
+          "func_def", "func_call", "func_call_expr", "return",
+          "count_loop", "cpp_for_loop", "break", "continue",
+          "logic", "logic_not", "negate",
+          "cpp_char_literal", "cpp_increment", "cpp_increment_expr",
+          "cpp_compound_assign", "cpp_compound_assign_expr",
+          "var_declare_expr", "array_assign"
+        ],
+        "children": [
+          {
+            "id": "L2a",
+            "level": 2,
+            "label": "L2a: 陣列與字串",
+            "concepts": [
+              "array_declare", "array_access",
+              "cpp_string_declare",
+              "cpp_strlen", "cpp_strcmp", "cpp_strcpy",
+              "comment", "doc_comment", "block_comment",
+              "cpp_raw_code", "cpp_raw_expression"
+            ],
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "L1b",
+        "level": 1,
+        "label": "L1b: 控制流進階",
+        "concepts": [
+          "cpp_switch", "cpp_case", "cpp_default",
+          "cpp_do_while", "cpp_ternary", "cpp_cast",
+          "bitwise_not",
+          "cpp_printf", "cpp_scanf", "cpp_scanf_expr"
+        ],
+        "children": [
+          {
+            "id": "L2b",
+            "level": 2,
+            "label": "L2b: 指標與記憶體",
+            "concepts": [
+              "cpp_pointer_declare", "cpp_pointer_deref",
+              "cpp_pointer_assign", "cpp_address_of",
+              "cpp_malloc", "cpp_free",
+              "cpp_include_local", "cpp_define",
+              "cpp_ifdef", "cpp_ifndef", "forward_decl"
+            ],
+            "children": []
+          },
+          {
+            "id": "L2c",
+            "level": 2,
+            "label": "L2c: 結構與容器",
+            "concepts": [
+              "cpp_struct_declare", "cpp_struct_member_access",
+              "cpp_struct_pointer_access",
+              "cpp_class_def", "cpp_new", "cpp_delete",
+              "cpp_template_function",
+              "cpp_method_call", "cpp_method_call_expr",
+              "cpp_vector_declare", "cpp_vector_push_back", "cpp_vector_size",
+              "cpp:vector_push_back", "cpp:vector_size",
+              "cpp_map_declare", "cpp_set_declare",
+              "cpp_stack_declare", "cpp_queue_declare",
+              "cpp_sort", "cpp:sort", "cpp:find"
+            ],
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 // ─── ProgramScaffold: Language-agnostic boilerplate management ───
 
-import type { CognitiveLevel, SemanticNode } from './types'
+import type { SemanticNode } from './types'
 
 export type ScaffoldVisibility = 'hidden' | 'ghost' | 'editable'
 
@@ -22,7 +22,8 @@ export interface ScaffoldResult {
 }
 
 export interface ScaffoldConfig {
-  cognitiveLevel: CognitiveLevel
+  /** Max enabled tree depth: 0=hidden, 1=ghost, 2+=editable */
+  scaffoldDepth: number
   manualImports?: string[]
   pinnedItems?: string[]
 }
@@ -32,14 +33,15 @@ export interface ProgramScaffold {
 }
 
 /**
- * Determine visibility based on cognitive level and pin state.
+ * Determine visibility based on scaffold depth and pin state.
+ * scaffoldDepth 0 = hidden (like old L0), 1 = ghost (like old L1), 2+ = editable (like old L2)
  */
 export function resolveVisibility(
-  level: CognitiveLevel,
+  scaffoldDepth: number,
   pinned: boolean,
 ): ScaffoldVisibility {
   if (pinned) return 'editable'
-  if (level === 0) return 'hidden'
-  if (level === 1) return 'ghost'
+  if (scaffoldDepth === 0) return 'hidden'
+  if (scaffoldDepth === 1) return 'ghost'
   return 'editable'
 }

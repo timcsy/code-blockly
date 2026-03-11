@@ -31,7 +31,7 @@ function emptyTree() {
 describe('CppScaffold', () => {
   describe('ScaffoldResult structure', () => {
     it('should return all four sections', () => {
-      const result = scaffold.resolve(coutTree(), { cognitiveLevel: 1 })
+      const result = scaffold.resolve(coutTree(), { scaffoldDepth: 1 })
       expect(result).toHaveProperty('imports')
       expect(result).toHaveProperty('preamble')
       expect(result).toHaveProperty('entryPoint')
@@ -41,7 +41,7 @@ describe('CppScaffold', () => {
 
   describe('L0 (hidden)', () => {
     it('should mark all items as hidden', () => {
-      const result = scaffold.resolve(coutTree(), { cognitiveLevel: 0 })
+      const result = scaffold.resolve(coutTree(), { scaffoldDepth: 0 })
       const allItems = [...result.imports, ...result.preamble, ...result.entryPoint, ...result.epilogue]
       for (const item of allItems) {
         expect(item.visibility).toBe('hidden')
@@ -51,7 +51,7 @@ describe('CppScaffold', () => {
 
   describe('L1 (ghost)', () => {
     it('should mark all items as ghost', () => {
-      const result = scaffold.resolve(coutTree(), { cognitiveLevel: 1 })
+      const result = scaffold.resolve(coutTree(), { scaffoldDepth: 1 })
       const allItems = [...result.imports, ...result.preamble, ...result.entryPoint, ...result.epilogue]
       for (const item of allItems) {
         expect(item.visibility).toBe('ghost')
@@ -59,7 +59,7 @@ describe('CppScaffold', () => {
     })
 
     it('should include reason for ghost items', () => {
-      const result = scaffold.resolve(coutTree(), { cognitiveLevel: 1 })
+      const result = scaffold.resolve(coutTree(), { scaffoldDepth: 1 })
       for (const item of result.imports) {
         expect(item.reason).toBeTruthy()
       }
@@ -71,13 +71,13 @@ describe('CppScaffold', () => {
     })
 
     it('should include iostream for cout usage', () => {
-      const result = scaffold.resolve(coutTree(), { cognitiveLevel: 1 })
+      const result = scaffold.resolve(coutTree(), { scaffoldDepth: 1 })
       const importCodes = result.imports.map(i => i.code)
       expect(importCodes).toContain('#include <iostream>')
     })
 
     it('should include iostream and vector for mixed usage', () => {
-      const result = scaffold.resolve(coutVectorTree(), { cognitiveLevel: 1 })
+      const result = scaffold.resolve(coutVectorTree(), { scaffoldDepth: 1 })
       const importCodes = result.imports.map(i => i.code)
       expect(importCodes).toContain('#include <iostream>')
       expect(importCodes).toContain('#include <vector>')
@@ -86,7 +86,7 @@ describe('CppScaffold', () => {
 
   describe('L2 (editable)', () => {
     it('should mark all items as editable', () => {
-      const result = scaffold.resolve(coutTree(), { cognitiveLevel: 2 })
+      const result = scaffold.resolve(coutTree(), { scaffoldDepth: 2 })
       const allItems = [...result.imports, ...result.preamble, ...result.entryPoint, ...result.epilogue]
       for (const item of allItems) {
         expect(item.visibility).toBe('editable')
@@ -97,7 +97,7 @@ describe('CppScaffold', () => {
   describe('manualImports deduplication', () => {
     it('should exclude manually imported headers from scaffold', () => {
       const result = scaffold.resolve(coutTree(), {
-        cognitiveLevel: 1,
+        scaffoldDepth: 1,
         manualImports: ['<iostream>'],
       })
       const importCodes = result.imports.map(i => i.code)
@@ -109,7 +109,7 @@ describe('CppScaffold', () => {
         createNode('cpp_printf', { format: '%d\\n' }, { args: [createNode('var_ref', { name: 'x' })] }),
       ])
       const result = scaffold.resolve(tree, {
-        cognitiveLevel: 1,
+        scaffoldDepth: 1,
         manualImports: ['<stdio.h>'],
       })
       const importCodes = result.imports.map(i => i.code)
@@ -120,7 +120,7 @@ describe('CppScaffold', () => {
   describe('pinned items', () => {
     it('should keep pinned items editable even at L0', () => {
       const result = scaffold.resolve(coutTree(), {
-        cognitiveLevel: 0,
+        scaffoldDepth: 0,
         pinnedItems: ['#include <iostream>'],
       })
       const pinnedImport = result.imports.find(i => i.code === '#include <iostream>')
@@ -132,7 +132,7 @@ describe('CppScaffold', () => {
 
   describe('empty tree', () => {
     it('should still produce preamble, entryPoint, and epilogue', () => {
-      const result = scaffold.resolve(emptyTree(), { cognitiveLevel: 1 })
+      const result = scaffold.resolve(emptyTree(), { scaffoldDepth: 1 })
       expect(result.imports).toHaveLength(0)
       expect(result.preamble).toHaveLength(1)
       expect(result.entryPoint).toHaveLength(1)
@@ -142,17 +142,17 @@ describe('CppScaffold', () => {
 
   describe('scaffold content', () => {
     it('preamble should be using namespace std', () => {
-      const result = scaffold.resolve(emptyTree(), { cognitiveLevel: 2 })
+      const result = scaffold.resolve(emptyTree(), { scaffoldDepth: 2 })
       expect(result.preamble[0].code).toBe('using namespace std;')
     })
 
     it('entryPoint should be int main() {', () => {
-      const result = scaffold.resolve(emptyTree(), { cognitiveLevel: 2 })
+      const result = scaffold.resolve(emptyTree(), { scaffoldDepth: 2 })
       expect(result.entryPoint[0].code).toBe('int main() {')
     })
 
     it('epilogue should contain return 0; and }', () => {
-      const result = scaffold.resolve(emptyTree(), { cognitiveLevel: 2 })
+      const result = scaffold.resolve(emptyTree(), { scaffoldDepth: 2 })
       expect(result.epilogue[0].code).toContain('return 0;')
       expect(result.epilogue[1].code).toBe('}')
     })

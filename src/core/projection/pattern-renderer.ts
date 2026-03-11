@@ -1,4 +1,5 @@
-import type { SemanticNode, BlockSpec, RenderMapping } from '../types'
+import type { SemanticNode, BlockSpec, RenderMapping, Topic } from '../types'
+import { applyBlockOverride } from '../block-override'
 import type { RenderStrategyRegistry, RenderContext } from '../registry/render-strategy-registry'
 import { FIELD_COMMON_MAPPINGS, INPUT_COMMON_MAPPINGS } from './common-mappings'
 
@@ -74,6 +75,26 @@ export class PatternRenderer {
         this.statementOnlyBlockTypes.add(blockType)
       }
     }
+  }
+
+  /** Reload block specs with Topic overrides applied */
+  loadBlockSpecsWithTopic(specs: BlockSpec[], topic?: Topic): void {
+    this.renderSpecs.clear()
+    this.expressionOnlyBlockTypes.clear()
+    this.statementOnlyBlockTypes.clear()
+    if (!topic?.blockOverrides || Object.keys(topic.blockOverrides).length === 0) {
+      this.loadBlockSpecs(specs)
+      return
+    }
+    const overrides = topic.blockOverrides
+    const overriddenSpecs = specs.map(spec => {
+      const conceptId = spec.concept?.conceptId
+      if (!conceptId) return spec
+      const override = overrides[conceptId]
+      if (!override) return spec
+      return applyBlockOverride(spec, override)
+    })
+    this.loadBlockSpecs(overriddenSpecs)
   }
 
   /** Render a SemanticNode to a BlockState. Returns null if no render spec found. */

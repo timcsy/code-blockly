@@ -4,7 +4,6 @@
     "conceptId": "cpp_vector_declare",
     "language": "cpp",
     "category": "containers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_vector_declare",
@@ -85,7 +84,6 @@
     "conceptId": "cpp_vector_push_back",
     "language": "cpp",
     "category": "containers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_vector_push_back",
@@ -141,7 +139,6 @@
     "conceptId": "cpp_vector_size",
     "language": "cpp",
     "category": "containers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_vector_size",

@@ -34,10 +34,7 @@ code --install-extension semorphe-vscode-0.1.0.vsix
 
 ## 設定
 
-- `semorphe.cognitiveLevel`：控制工具箱顯示的積木層級
-  - `0`：初學（基本 I/O、變數、簡單控制流）
-  - `1`：進階（邏輯運算、函式、迴圈）
-  - `2`：完整（陣列、指標、語言特定）
+- `semorphe.topicId`：目前使用的 Topic ID（控制積木工具箱的概念層級樹）
 
 ## 已知限制
 

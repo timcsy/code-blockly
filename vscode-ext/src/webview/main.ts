@@ -1,5 +1,5 @@
 import * as Blockly from 'blockly'
-import type { CognitiveLevel, ConceptDefJSON, BlockProjectionJSON, StylePreset } from '../../../src/core/types'
+import type { ConceptDefJSON, BlockProjectionJSON, StylePreset, Topic } from '../../../src/core/types'
 import type { SemanticNode } from '../../../src/core/types'
 import { BlockSpecRegistry } from '../../../src/core/block-spec-registry'
 import { BlocklyPanel } from '../../../src/ui/panels/blockly-panel'
@@ -14,7 +14,12 @@ import { renderToBlocklyState } from '../../../src/core/projection/block-rendere
 import { RenderStrategyRegistry } from '../../../src/core/registry/render-strategy-registry'
 import { registerCppRenderStrategies } from '../../../src/languages/cpp/renderers/strategies'
 import { LocaleLoader } from '../../../src/i18n/loader'
-import { LevelSelector } from '../../../src/ui/toolbar/level-selector'
+import { TopicSelector } from '../../../src/ui/toolbar/topic-selector'
+import { TopicRegistry } from '../../../src/core/topic-registry'
+import { getVisibleConcepts, flattenLevelTree } from '../../../src/core/level-tree'
+import { cppCategoryDefs } from '../../../src/languages/cpp/toolbox-categories'
+import cppBeginnerTopic from '../../../src/languages/cpp/topics/cpp-beginner.json'
+import cppCompetitiveTopic from '../../../src/languages/cpp/topics/cpp-competitive.json'
 import { StyleSelector } from '../../../src/ui/toolbar/style-selector'
 import { BlockStyleSelector } from '../../../src/ui/toolbar/block-style-selector'
 import type { BlockStylePreset } from '../../../src/languages/style'
@@ -49,29 +54,33 @@ const STYLE_PRESETS: StylePreset[] = [
 let blocklyPanel: BlocklyPanel | null = null
 let blockSpecRegistry: BlockSpecRegistry | null = null
 let blockRegistrar: BlockRegistrar | null = null
-let levelSelector: LevelSelector | null = null
+let topicSelector: TopicSelector | null = null
 let styleSelector: StyleSelector | null = null
 let _isUpdatingFromHost = false
 let autoSync = true
-let currentLevel: CognitiveLevel = 1
+let topicRegistry: TopicRegistry | null = null
+let currentTopic: Topic = cppBeginnerTopic as Topic
+let enabledBranches: Set<string> = new Set()
 let currentIoPreference: 'iostream' | 'cstdio' = 'iostream'
 let currentStyle: StylePreset = apcsPreset as StylePreset
 let currentBlockStyleId: string = 'scratch'
 
-function callBuildToolbox(level?: CognitiveLevel, ioPref?: 'iostream' | 'cstdio'): object {
+function callBuildToolbox(): object {
+  const visibleConcepts = getVisibleConcepts(currentTopic, enabledBranches)
   return buildToolbox({
     blockSpecRegistry: blockSpecRegistry!,
-    level: level ?? currentLevel,
-    ioPreference: ioPref ?? currentIoPreference,
+    visibleConcepts,
+    ioPreference: currentIoPreference,
     msgs: Blockly.Msg as Record<string, string>,
     categoryColors: CATEGORY_COLORS,
+    categoryDefs: cppCategoryDefs,
   })
 }
 
 function updateToolbox(): void {
   const ws = blocklyPanel?.getWorkspace()
   if (!ws) return
-  const newToolbox = callBuildToolbox(currentLevel, currentIoPreference)
+  const newToolbox = callBuildToolbox()
   ws.updateToolbox(newToolbox as any)
 }
 
@@ -80,7 +89,7 @@ function updateStatusBar(): void {
   if (!statusBar) return
   const styleName = currentStyle.name['zh-TW'] || currentStyle.name['en'] || currentStyle.id
   const blockStyleLabel = (Blockly.Msg as Record<string, string>)[`BLOCK_STYLE_${currentBlockStyleId.toUpperCase()}`] || currentBlockStyleId
-  statusBar.innerHTML = `<span>C++ | ${styleName} | ${blockStyleLabel} | L${currentLevel}</span>`
+  statusBar.innerHTML = `<span>C++ | ${styleName} | ${blockStyleLabel} | ${currentTopic.name}</span>`
 }
 
 function init(): void {
@@ -93,6 +102,13 @@ function init(): void {
   const mediaPath = (window as any).__blocklyMediaPath || './media/'
 
   try {
+    // 0. Register topics
+    topicRegistry = new TopicRegistry()
+    topicRegistry.register(cppBeginnerTopic as Topic)
+    topicRegistry.register(cppCompetitiveTopic as Topic)
+    currentTopic = topicRegistry.getDefault('cpp')!
+    enabledBranches = new Set(flattenLevelTree(currentTopic.levelTree).map(n => n.id))
+
     // 1. Load block specs
     blockSpecRegistry = new BlockSpecRegistry()
     const allConcepts = [
@@ -167,8 +183,8 @@ function init(): void {
         case 'semantic:update':
           handleSemanticUpdate(message.data as { tree: SemanticNode; source: string })
           break
-        case 'config:level':
-          handleConfigLevel(message.data as { level: CognitiveLevel })
+        case 'config:topic':
+          handleConfigTopic(message.data as { topicId: string })
           break
         case 'config:style':
           handleConfigStyle(message.data as { style: StylePreset })
@@ -191,17 +207,22 @@ function init(): void {
 }
 
 function setupToolbar(): void {
-  // Level selector
-  const levelMount = document.getElementById('level-selector-mount')
-  if (levelMount) {
-    levelSelector = new LevelSelector(levelMount)
-    levelSelector.setLevel(currentLevel)
-    levelSelector.onChange((level) => {
-      currentLevel = level
+  // Topic selector
+  const topicMount = document.getElementById('level-selector-mount')
+  if (topicMount && topicRegistry) {
+    const topics = topicRegistry.listForLanguage(currentTopic.language)
+    topicSelector = new TopicSelector(topicMount, topics, currentTopic, enabledBranches)
+    topicSelector.onTopicChange((topic, branches) => {
+      currentTopic = topic
+      enabledBranches = branches
       updateToolbox()
       updateStatusBar()
-      // Notify Extension Host so it persists the setting
-      send('config:level:change', { level })
+      send('config:topic:change', { topicId: topic.id })
+    })
+    topicSelector.onBranchesChange((branches) => {
+      enabledBranches = branches
+      updateToolbox()
+      updateStatusBar()
     })
   }
 
@@ -287,10 +308,13 @@ function handleSemanticUpdate(data: { tree: SemanticNode; source: string }): voi
   }
 }
 
-function handleConfigLevel(data: { level: CognitiveLevel }): void {
-  if (!blocklyPanel || !blockSpecRegistry) return
-  currentLevel = data.level
-  levelSelector?.setLevel(data.level)
+function handleConfigTopic(data: { topicId: string }): void {
+  if (!blocklyPanel || !blockSpecRegistry || !topicRegistry) return
+  const topic = topicRegistry.get(data.topicId)
+  if (!topic) return
+  currentTopic = topic
+  enabledBranches = new Set(flattenLevelTree(topic.levelTree).map(n => n.id))
+  topicSelector?.setTopic(topic, enabledBranches)
   updateToolbox()
   updateStatusBar()
 }

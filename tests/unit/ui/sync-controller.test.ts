@@ -265,9 +265,9 @@ describe('SyncController (bus-based)', () => {
     })
   })
 
-  describe('resyncForLevel (level change)', () => {
+  describe('resyncForTopic (topic change)', () => {
     it('should emit resync event with both code and blockState', () => {
-      controller.setCognitiveLevel(0 as import('../../../src/core/types').CognitiveLevel)
+      controller.setTopic({ id: 'basics', language: 'cpp', name: 'Basics', description: '', levelTree: { id: 'root', level: 0, label: 'root', children: [] } }, new Set())
 
       const handler = vi.fn()
       bus.on('semantic:update', handler)
@@ -284,7 +284,7 @@ describe('SyncController (bus-based)', () => {
         ],
       })
 
-      controller.resyncForLevel(fullTree, '')
+      controller.resyncForTopic(fullTree, '')
 
       expect(handler).toHaveBeenCalled()
       const data = handler.mock.calls[0][0]
@@ -293,20 +293,20 @@ describe('SyncController (bus-based)', () => {
       expect(data.blockState).toBeDefined()
     })
 
-    it('should produce complete code even with body-only tree (L0)', () => {
-      controller.setCognitiveLevel(0 as import('../../../src/core/types').CognitiveLevel)
+    it('should produce complete code even with body-only tree', () => {
+      controller.setTopic({ id: 'basics', language: 'cpp', name: 'Basics', description: '', levelTree: { id: 'root', level: 0, label: 'root', children: [] } }, new Set())
 
       const handler = vi.fn()
       bus.on('semantic:update', handler)
 
-      // Body-only tree (no scaffold nodes) — as extracted from L0 blocks
+      // Body-only tree (no scaffold nodes) — as extracted from blocks
       const bodyTree = createNode('program', {}, {
         body: [
           createNode('var_declare', { name: 'x', type: 'int' }, { initializer: [] }),
         ],
       })
 
-      controller.resyncForLevel(bodyTree, '')
+      controller.resyncForTopic(bodyTree, '')
 
       const data = handler.mock.calls[0][0]
       // Code should be complete (scaffold wraps the body)

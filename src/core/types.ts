@@ -87,12 +87,10 @@ export interface SemanticModel {
 // ─── Concept System ───
 
 export type ConceptLayer = 'universal' | 'lang-core' | 'lang-library'
-export type CognitiveLevel = 0 | 1 | 2
 
 export interface ConceptDef {
   id: string
   layer: ConceptLayer
-  level: CognitiveLevel
   abstractConcept?: string
   propertyNames: string[]
   childNames: string[]
@@ -112,7 +110,6 @@ export interface BlockSpec {
   id: string
   language: string
   category: string
-  level: CognitiveLevel
   version: string
   concept: ConceptMapping
   blockDef: Record<string, unknown>
@@ -230,7 +227,6 @@ export interface DynamicInputDef {
 export interface ConceptDefJSON {
   conceptId: string
   layer: ConceptLayer
-  level: CognitiveLevel
   abstractConcept?: string | null
   properties: string[]
   children: Record<string, string>
@@ -244,7 +240,6 @@ export interface BlockProjectionJSON {
   conceptId: string
   language: string
   category: string
-  level: CognitiveLevel
   version: string
   blockDef: Record<string, unknown>
   codeTemplate?: CodeTemplate
@@ -342,7 +337,8 @@ export interface WorkspaceState {
   language: string
   style: string
   locale: string
-  level: CognitiveLevel
+  topicId: string
+  enabledBranches: string[]
 }
 
 // ─── Lift Result ───
@@ -361,7 +357,7 @@ export interface LiftResult {
 
 // ─── Toolbox ───
 
-type ExtraBlockDef = string | { type: string; extraState?: Record<string, unknown>; level?: CognitiveLevel }
+type ExtraBlockDef = string | { type: string; extraState?: Record<string, unknown> }
 
 export interface ToolboxCategoryDef {
   key: string
@@ -374,5 +370,45 @@ export interface ToolboxCategoryDef {
   /** If true, this category uses the I/O builder (iostream/cstdio sorting) */
   isIoCategory?: boolean
   /** Custom content builder for special categories */
-  buildContents?: (registry: import('./block-spec-registry').BlockSpecRegistry, level: CognitiveLevel, ioPreference: 'iostream' | 'cstdio') => { kind: string; type: string }[]
+  buildContents?: (registry: import('./block-spec-registry').BlockSpecRegistry, visibleConcepts: Set<string>, ioPreference: 'iostream' | 'cstdio') => { kind: string; type: string }[]
+}
+
+// ─── Topic System ───
+
+/** Topic 代表一個使用情境的投影組態 */
+export interface Topic {
+  id: string
+  language: string
+  name: string
+  default?: boolean
+  description?: string
+  levelTree: LevelNode
+  blockOverrides?: Record<string, BlockOverride>
+}
+
+/** 層級樹中的一個節點 */
+export interface LevelNode {
+  id: string
+  level: number
+  label: string
+  concepts: string[]
+  children: LevelNode[]
+}
+
+/** Topic 對特定概念的積木呈現覆蓋 */
+export interface BlockOverride {
+  message?: string
+  tooltip?: string
+  args?: BlockArgOverride[]
+  renderMapping?: Partial<RenderMapping>
+}
+
+/** BlockOverride 中的 arg 覆蓋項目 */
+export interface BlockArgOverride {
+  name: string
+  type?: string
+  options?: Array<[string, string]>
+  _remove?: boolean
+  _insert?: string
+  [key: string]: unknown
 }

@@ -1,4 +1,4 @@
-import type { ConceptDef, ConceptDefJSON, CognitiveLevel } from './types'
+import type { ConceptDef, ConceptDefJSON } from './types'
 
 export class ConceptRegistry {
   private concepts = new Map<string, ConceptDef>()
@@ -16,10 +16,6 @@ export class ConceptRegistry {
 
   listByLayer(layer: string): ConceptDef[] {
     return [...this.concepts.values()].filter(c => c.layer === layer)
-  }
-
-  listByLevel(level: CognitiveLevel): ConceptDef[] {
-    return [...this.concepts.values()].filter(c => c.level <= level)
   }
 
   findAbstract(concreteId: string): ConceptDef | undefined {
@@ -43,7 +39,6 @@ export class ConceptRegistry {
       this.registerOrUpdate({
         id: c.conceptId,
         layer: c.layer,
-        level: c.level,
         abstractConcept: c.abstractConcept ?? undefined,
         propertyNames: c.properties,
         childNames: Object.keys(c.children),

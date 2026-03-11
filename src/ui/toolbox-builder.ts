@@ -1,12 +1,11 @@
 import type { BlockSpecRegistry } from '../core/block-spec-registry'
-import type { CognitiveLevel, ToolboxCategoryDef } from '../core/types'
-import { isBlockAvailable, getBlockLevel } from '../core/cognitive-levels'
+import type { ToolboxCategoryDef } from '../core/types'
 
 export type { ToolboxCategoryDef }
 
 export interface ToolboxBuildConfig {
   blockSpecRegistry: BlockSpecRegistry
-  level: CognitiveLevel
+  visibleConcepts: Set<string>
   ioPreference: 'iostream' | 'cstdio'
   msgs: Record<string, string>
   categoryColors: Record<string, string>
@@ -17,33 +16,36 @@ export interface ToolboxBuildConfig {
 type ToolboxEntry = { kind: string; type: string; extraState?: Record<string, unknown> }
 
 export function buildToolbox(config: ToolboxBuildConfig): object {
-  const { blockSpecRegistry, level: lv, ioPreference: ioPref, msgs, categoryColors, categoryDefs = [] } = config
+  const { blockSpecRegistry, visibleConcepts, ioPreference: ioPref, msgs, categoryColors, categoryDefs = [] } = config
+
+  const isVisible = (blockType: string): boolean =>
+    blockSpecRegistry.isBlockVisible(blockType, visibleConcepts)
 
   const registryBlocks = (category: string): { kind: string; type: string }[] => {
-    const specs = blockSpecRegistry.listByCategory(category, lv)
+    const specs = blockSpecRegistry.listByCategory(category, visibleConcepts)
     return specs
       .filter(s => {
         const blockType = (s.blockDef as Record<string, unknown>)?.type as string | undefined
-        return blockType && isBlockAvailable(blockType, lv)
+        return blockType && isVisible(blockType)
       })
       .map(s => ({ kind: 'block', type: (s.blockDef as Record<string, unknown>).type as string }))
   }
 
   const buildIoContents = (def: ToolboxCategoryDef): ToolboxEntry[] => {
     if (def.buildContents) {
-      return def.buildContents(blockSpecRegistry, lv, ioPref)
+      return def.buildContents(blockSpecRegistry, visibleConcepts, ioPref)
     }
     // Default I/O category builder
     const ioSpecs = def.registryCategories.flatMap(cat =>
-      blockSpecRegistry.listByCategory(cat, lv)
+      blockSpecRegistry.listByCategory(cat, visibleConcepts)
     )
     const ioTypes = ioSpecs
       .map(s => (s.blockDef as Record<string, unknown>)?.type as string)
-      .filter(t => t && isBlockAvailable(t, lv))
+      .filter(t => t && isVisible(t))
 
     const ensureTypes = ['u_print', 'u_input', 'u_input_expr', 'u_endl', 'c_printf', 'c_scanf']
     for (const t of ensureTypes) {
-      if (!ioTypes.includes(t) && isBlockAvailable(t, lv)) {
+      if (!ioTypes.includes(t) && isVisible(t)) {
         ioTypes.push(t)
       }
     }
@@ -80,12 +82,11 @@ export function buildToolbox(config: ToolboxBuildConfig): object {
     if (def.extraTypes) {
       for (const t of def.extraTypes) {
         if (typeof t === 'string') {
-          if (!isBlockAvailable(t, lv)) continue
+          if (!isVisible(t)) continue
           if (!blockSet.has(t)) extraAppend.push({ kind: 'block', type: t })
           blockSet.add(t)
         } else {
-          const effectiveLevel = t.level ?? getBlockLevel(t.type)
-          if (effectiveLevel > lv) continue
+          if (!isVisible(t.type)) continue
           if (!extraReplacements.has(t.type)) extraReplacements.set(t.type, [])
           extraReplacements.get(t.type)!.push({ kind: 'block', type: t.type, ...(t.extraState ? { extraState: t.extraState } : {}) })
         }

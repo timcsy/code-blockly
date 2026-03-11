@@ -1,4 +1,5 @@
-import type { BlockSpec, AstConstraint, CognitiveLevel, ConceptDefJSON, BlockProjectionJSON } from './types'
+import type { BlockSpec, AstConstraint, ConceptDefJSON, BlockProjectionJSON, Topic } from './types'
+import { applyBlockOverride } from './block-override'
 
 export class BlockSpecRegistry {
   private specs = new Map<string, BlockSpec>()
@@ -16,7 +17,6 @@ export class BlockSpecRegistry {
         id: proj.id,
         language: proj.language,
         category: proj.category,
-        level: proj.level,
         version: proj.version,
         concept: {
           conceptId: proj.conceptId,
@@ -90,20 +90,36 @@ export class BlockSpecRegistry {
     )
   }
 
-  listByCategory(category: string, level: CognitiveLevel): BlockSpec[] {
-    return [...this.specs.values()].filter(
-      spec => spec.category === category && spec.level <= level
-    )
+  listByCategory(category: string, visibleConcepts?: Set<string>): BlockSpec[] {
+    return [...this.specs.values()].filter(spec => {
+      if (spec.category !== category) return false
+      if (!visibleConcepts) return true
+      if (!spec.concept?.conceptId) return true
+      return visibleConcepts.has(spec.concept.conceptId)
+    })
   }
 
   getAll(): BlockSpec[] {
     return [...this.specs.values()]
   }
 
-  /** Get the cognitive level for a block type. Unknown blocks default to L2. */
-  getLevel(blockType: string): CognitiveLevel {
+  /** Check if a block type is visible given a set of visible concepts */
+  isBlockVisible(blockType: string, visibleConcepts?: Set<string>): boolean {
+    if (!visibleConcepts) return true
     const spec = this.byBlockType.get(blockType)
-    return spec?.level ?? 2
+    if (!spec) return true
+    if (!spec.concept?.conceptId) return true
+    return visibleConcepts.has(spec.concept.conceptId)
+  }
+
+  /** Get a BlockSpec with Topic override applied (if any) */
+  getWithOverride(conceptId: string, topic?: Topic): BlockSpec | undefined {
+    const spec = this.byConceptId.get(conceptId)
+    if (!spec) return undefined
+    if (!topic?.blockOverrides) return spec
+    const override = topic.blockOverrides[conceptId]
+    if (!override) return spec
+    return applyBlockOverride(spec, override)
   }
 
   /** 取得所有不重複的類別名稱 */

@@ -1,4 +1,5 @@
-import type { SemanticNode, StylePreset, CognitiveLevel } from '../core/types'
+import type { SemanticNode, StylePreset, Topic } from '../core/types'
+import { flattenLevelTree } from '../core/level-tree'
 import type { ProgramScaffold, ScaffoldResult } from '../core/program-scaffold'
 import type { CodingStyle } from '../languages/style'
 import {
@@ -53,7 +54,8 @@ export class SyncController {
   private onIoConformanceCallback: ((result: IoConformanceResult) => void) | null = null
   private codingStyle: CodingStyle | null = null
   private programScaffold: ProgramScaffold | null = null
-  private cognitiveLevel: CognitiveLevel = 1
+  private currentTopic: Topic | null = null
+  private enabledBranches: Set<string> = new Set()
   private codePatcherFn: ((code: string, tree: SemanticNode) => string | null) | null = null
   private scaffoldNodeFilter: ScaffoldNodeFilter = identityFilter
 
@@ -98,13 +100,31 @@ export class SyncController {
     this.programScaffold = scaffold
   }
 
-  setCognitiveLevel(level: CognitiveLevel): void {
-    this.cognitiveLevel = level
+  setTopic(topic: Topic, enabledBranches: Set<string>): void {
+    this.currentTopic = topic
+    this.enabledBranches = enabledBranches
   }
 
-  /** Whether scaffold nodes should be stripped for display (L0 mode). */
+  setBranches(enabledBranches: Set<string>): void {
+    this.enabledBranches = enabledBranches
+  }
+
+  /** Get the max enabled tree depth (for scaffold visibility). */
+  private getScaffoldDepth(): number {
+    if (!this.currentTopic) return 2
+    const allNodes = flattenLevelTree(this.currentTopic.levelTree)
+    let maxLevel = 0
+    for (const node of allNodes) {
+      if (this.enabledBranches.has(node.id)) {
+        maxLevel = Math.max(maxLevel, node.level)
+      }
+    }
+    return maxLevel
+  }
+
+  /** Whether scaffold nodes should be stripped for display (depth 0 = only root enabled). */
   private shouldStripScaffold(): boolean {
-    return this.cognitiveLevel === 0
+    return this.getScaffoldDepth() === 0
   }
 
   /** Set the scaffold node filter for L0 display (strip scaffold from blocks) */
@@ -150,7 +170,7 @@ export class SyncController {
       let scaffoldResult: ScaffoldResult | undefined
       if (this.programScaffold) {
         scaffoldResult = this.programScaffold.resolve(tree, {
-          cognitiveLevel: this.cognitiveLevel,
+          scaffoldDepth: this.getScaffoldDepth(),
         })
       }
 
@@ -244,12 +264,12 @@ export class SyncController {
   }
 
   /**
-   * Resync both panels after a cognitive level change.
-   * - L0: blocks show body-only (scaffold stripped), code shows full (scaffold-wrapped)
-   * - L1/L2: blocks show full tree, code shows full
-   * When switching FROM L0 TO L1/L2, re-lifts from code to recover full tree.
+   * Resync both panels after a topic/branch change.
+   * - depth 0: blocks show body-only (scaffold stripped), code shows full (scaffold-wrapped)
+   * - depth 1+: blocks show full tree, code shows full
+   * When switching FROM depth 0 TO deeper, re-lifts from code to recover full tree.
    */
-  resyncForLevel(extractedTree: SemanticNode, currentCode: string): void {
+  resyncForTopic(extractedTree: SemanticNode, currentCode: string): void {
     if (this.syncing) return
     this.syncing = true
     try {
@@ -260,7 +280,7 @@ export class SyncController {
       const hasMainFunc = (extractedTree.children.body ?? []).some(
         n => n.concept === 'func_def' && n.properties.name === 'main'
       )
-      if (this.cognitiveLevel > 0 && !hasMainFunc && this.lifter && this.parser) {
+      if (this.getScaffoldDepth() > 0 && !hasMainFunc && this.lifter && this.parser) {
         const parseResult = this.parser.parse(currentCode)
         const rootNode = parseResult.rootNode as import('../core/lift/types').AstNode
         if (rootNode) {
@@ -279,7 +299,7 @@ export class SyncController {
       let scaffoldResult: ScaffoldResult | undefined
       if (this.programScaffold) {
         scaffoldResult = this.programScaffold.resolve(fullTree, {
-          cognitiveLevel: this.cognitiveLevel,
+          scaffoldDepth: this.getScaffoldDepth(),
         })
       }
 

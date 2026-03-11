@@ -14,7 +14,6 @@ describe('ConceptRegistry', () => {
       const def: ConceptDef = {
         id: 'var_declare',
         layer: 'universal',
-        level: 0,
         propertyNames: ['name', 'type'],
         childNames: ['initializer'],
       }
@@ -26,7 +25,6 @@ describe('ConceptRegistry', () => {
       const def: ConceptDef = {
         id: 'var_declare',
         layer: 'universal',
-        level: 0,
         propertyNames: ['name'],
         childNames: [],
       }
@@ -42,15 +40,15 @@ describe('ConceptRegistry', () => {
   describe('listByLayer', () => {
     it('should list concepts by layer', () => {
       registry.register({
-        id: 'var_declare', layer: 'universal', level: 0,
+        id: 'var_declare', layer: 'universal',
         propertyNames: [], childNames: [],
       })
       registry.register({
-        id: 'cpp:pointer_deref', layer: 'lang-core', level: 1,
+        id: 'cpp:pointer_deref', layer: 'lang-core',
         propertyNames: [], childNames: ['operand'],
       })
       registry.register({
-        id: 'cpp:stdlib:sort', layer: 'lang-library', level: 2,
+        id: 'cpp:stdlib:sort', layer: 'lang-library',
         abstractConcept: 'collection_sort',
         propertyNames: [], childNames: ['begin', 'end'],
       })
@@ -61,41 +59,14 @@ describe('ConceptRegistry', () => {
     })
   })
 
-  describe('listByLevel', () => {
-    it('should list concepts at or below given level', () => {
-      registry.register({
-        id: 'var_declare', layer: 'universal', level: 0,
-        propertyNames: [], childNames: [],
-      })
-      registry.register({
-        id: 'cpp:switch', layer: 'lang-core', level: 1,
-        propertyNames: [], childNames: [],
-      })
-      registry.register({
-        id: 'cpp:stdlib:sort', layer: 'lang-library', level: 2,
-        propertyNames: [], childNames: [],
-      })
-
-      const l0 = registry.listByLevel(0)
-      expect(l0).toHaveLength(1)
-      expect(l0[0].id).toBe('var_declare')
-
-      const l1 = registry.listByLevel(1)
-      expect(l1).toHaveLength(2)
-
-      const l2 = registry.listByLevel(2)
-      expect(l2).toHaveLength(3)
-    })
-  })
-
   describe('findAbstract', () => {
     it('should find the abstract concept for a concrete concept', () => {
       registry.register({
-        id: 'collection_sort', layer: 'universal', level: 0,
+        id: 'collection_sort', layer: 'universal',
         propertyNames: [], childNames: [],
       })
       registry.register({
-        id: 'cpp:stdlib:sort', layer: 'lang-library', level: 2,
+        id: 'cpp:stdlib:sort', layer: 'lang-library',
         abstractConcept: 'collection_sort',
         propertyNames: [], childNames: [],
       })
@@ -107,7 +78,7 @@ describe('ConceptRegistry', () => {
 
     it('should return undefined if no abstract mapping', () => {
       registry.register({
-        id: 'var_declare', layer: 'universal', level: 0,
+        id: 'var_declare', layer: 'universal',
         propertyNames: [], childNames: [],
       })
       expect(registry.findAbstract('var_declare')).toBeUndefined()
@@ -117,7 +88,7 @@ describe('ConceptRegistry', () => {
   describe('annotations', () => {
     it('should return annotation value for registered concept', () => {
       registry.register({
-        id: 'for_loop', layer: 'universal', level: 1,
+        id: 'for_loop', layer: 'universal',
         propertyNames: [], childNames: ['body'],
         annotations: { control_flow: 'loop', introduces_scope: true, cognitive_level: 1 },
       })
@@ -128,7 +99,7 @@ describe('ConceptRegistry', () => {
 
     it('should return undefined for missing annotation key', () => {
       registry.register({
-        id: 'if', layer: 'universal', level: 0,
+        id: 'if', layer: 'universal',
         propertyNames: [], childNames: [],
         annotations: { control_flow: 'branch' },
       })
@@ -141,7 +112,7 @@ describe('ConceptRegistry', () => {
 
     it('should return undefined when concept has no annotations', () => {
       registry.register({
-        id: 'var_ref', layer: 'universal', level: 0,
+        id: 'var_ref', layer: 'universal',
         propertyNames: ['name'], childNames: [],
       })
       expect(registry.getAnnotation('var_ref', 'control_flow')).toBeUndefined()
@@ -150,7 +121,7 @@ describe('ConceptRegistry', () => {
     it('should use latest annotations when concept is re-registered', () => {
       // First registration
       registry.register({
-        id: 'test_concept', layer: 'universal', level: 0,
+        id: 'test_concept', layer: 'universal',
         propertyNames: [], childNames: [],
         annotations: { old_key: 'old_value' },
       })
@@ -158,7 +129,7 @@ describe('ConceptRegistry', () => {
 
       // Re-register with different annotations (using registerOrUpdate)
       registry.registerOrUpdate({
-        id: 'test_concept', layer: 'universal', level: 0,
+        id: 'test_concept', layer: 'universal',
         propertyNames: [], childNames: [],
         annotations: { new_key: 'new_value' },
       })

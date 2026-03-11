@@ -6,7 +6,6 @@ const sampleSpec: BlockSpec = {
   id: 'u_var_declare',
   language: 'universal',
   category: 'variables',
-  level: 0,
   version: '1.0.0',
   concept: { conceptId: 'var_declare' },
   blockDef: { type: 'u_var_declare', message0: 'declare %1 %2', colour: '#FF8C1A' },
@@ -18,7 +17,6 @@ const sortSpec: BlockSpec = {
   id: 'cpp:stdlib:sort',
   language: 'cpp',
   category: 'algorithms',
-  level: 2,
   version: '1.0.0',
   concept: { conceptId: 'cpp:stdlib:sort', abstractConcept: 'collection_sort' },
   blockDef: { type: 'cpp_sort', message0: 'sort %1 to %2', colour: '#4C97FF' },
@@ -81,17 +79,17 @@ describe('BlockSpecRegistry', () => {
   })
 
   describe('listByCategory', () => {
-    it('should list specs by category and level', () => {
+    it('should list specs by category with visibleConcepts filter', () => {
       registry.loadFromJSON([sampleSpec, sortSpec])
 
-      const l0vars = registry.listByCategory('variables', 0)
-      expect(l0vars).toHaveLength(1)
+      const allVars = registry.listByCategory('variables')
+      expect(allVars).toHaveLength(1)
 
-      const l0algos = registry.listByCategory('algorithms', 0)
-      expect(l0algos).toHaveLength(0)
+      const filteredAlgos = registry.listByCategory('algorithms', new Set(['var_declare']))
+      expect(filteredAlgos).toHaveLength(0)
 
-      const l2algos = registry.listByCategory('algorithms', 2)
-      expect(l2algos).toHaveLength(1)
+      const visibleAlgos = registry.listByCategory('algorithms', new Set(['cpp:stdlib:sort']))
+      expect(visibleAlgos).toHaveLength(1)
     })
   })
 })

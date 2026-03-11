@@ -2,7 +2,6 @@
   {
     "conceptId": "cpp_char_literal",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "char_literal",
     "properties": [
       "char"
@@ -13,7 +12,6 @@
   {
     "conceptId": "cpp_increment",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "increment",
     "properties": [
       "name",
@@ -25,7 +23,6 @@
   {
     "conceptId": "cpp_compound_assign",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "compound_assign",
     "properties": [
       "name",
@@ -39,7 +36,6 @@
   {
     "conceptId": "cpp_switch",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "switch",
     "properties": [],
     "children": {
@@ -51,7 +47,6 @@
   {
     "conceptId": "cpp_case",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "case",
     "properties": [],
     "children": {
@@ -63,7 +58,6 @@
   {
     "conceptId": "cpp_default",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "default",
     "properties": [],
     "children": {
@@ -74,7 +68,6 @@
   {
     "conceptId": "cpp_ternary",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "ternary",
     "properties": [],
     "children": {
@@ -87,7 +80,6 @@
   {
     "conceptId": "cpp_cast",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "cast",
     "properties": [
       "target_type"
@@ -100,7 +92,6 @@
   {
     "conceptId": "bitwise_not",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "bitwise_not",
     "properties": [],
     "children": {
@@ -111,7 +102,6 @@
   {
     "conceptId": "cpp_pointer_assign",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "pointer_assign",
     "properties": [
       "ptr_name"
@@ -124,7 +114,6 @@
   {
     "conceptId": "cpp_for_loop",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "for_loop",
     "properties": [],
     "children": {
@@ -138,7 +127,6 @@
   {
     "conceptId": "cpp_do_while",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "do_while",
     "properties": [],
     "children": {
@@ -150,7 +138,6 @@
   {
     "conceptId": "cpp_pointer_declare",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "pointer_declare",
     "properties": [
       "type",
@@ -162,7 +149,6 @@
   {
     "conceptId": "cpp_pointer_deref",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "pointer_deref",
     "properties": [],
     "children": {
@@ -173,7 +159,6 @@
   {
     "conceptId": "cpp_address_of",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "address_of",
     "properties": [],
     "children": {
@@ -184,7 +169,6 @@
   {
     "conceptId": "cpp_malloc",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "malloc",
     "properties": [
       "type",
@@ -198,7 +182,6 @@
   {
     "conceptId": "cpp_free",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "free",
     "properties": [],
     "children": {
@@ -209,7 +192,6 @@
   {
     "conceptId": "cpp_struct_declare",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "struct_declare",
     "properties": [
       "name"
@@ -222,7 +204,6 @@
   {
     "conceptId": "cpp_struct_member_access",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "struct_member_access",
     "properties": [
       "obj",
@@ -234,7 +215,6 @@
   {
     "conceptId": "cpp_struct_pointer_access",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "struct_pointer_access",
     "properties": [
       "ptr",
@@ -246,7 +226,6 @@
   {
     "conceptId": "cpp_class_def",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "class_def",
     "properties": [
       "name"
@@ -260,7 +239,6 @@
   {
     "conceptId": "cpp_new",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "new",
     "properties": [
       "type",
@@ -272,7 +250,6 @@
   {
     "conceptId": "cpp_delete",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "delete",
     "properties": [],
     "children": {
@@ -283,7 +260,6 @@
   {
     "conceptId": "cpp_template_function",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "template_function",
     "properties": [
       "t",
@@ -300,7 +276,6 @@
   {
     "conceptId": "cpp_method_call",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "method_call",
     "properties": [
       "obj",
@@ -313,7 +288,6 @@
   {
     "conceptId": "cpp_method_call_expr",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "method_call_expr",
     "properties": [
       "obj",
@@ -326,7 +300,6 @@
   {
     "conceptId": "cpp_raw_code",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "raw_code",
     "properties": [
       "code"
@@ -337,7 +310,6 @@
   {
     "conceptId": "cpp_raw_expression",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "raw_expression",
     "properties": [
       "code"
@@ -348,7 +320,6 @@
   {
     "conceptId": "forward_decl",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "forward_decl",
     "properties": [
       "return_type",
@@ -361,7 +332,6 @@
   {
     "conceptId": "builtin_constant",
     "layer": "lang-core",
-    "level": 0,
     "abstractConcept": "builtin_constant",
     "properties": [
       "value"
@@ -372,7 +342,6 @@
   {
     "conceptId": "cpp_include",
     "layer": "lang-core",
-    "level": 0,
     "abstractConcept": "include",
     "properties": [
       "header"
@@ -383,7 +352,6 @@
   {
     "conceptId": "cpp_include_local",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "include_local",
     "properties": [
       "header"
@@ -394,7 +362,6 @@
   {
     "conceptId": "cpp_define",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "define",
     "properties": [
       "name",
@@ -406,7 +373,6 @@
   {
     "conceptId": "cpp_ifdef",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "ifdef",
     "properties": [
       "condition"
@@ -421,7 +387,6 @@
   {
     "conceptId": "cpp_ifndef",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "ifndef",
     "properties": [
       "condition"
@@ -436,7 +401,6 @@
   {
     "conceptId": "comment",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "comment",
     "properties": [
       "text"
@@ -447,7 +411,6 @@
   {
     "conceptId": "doc_comment",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "doc_comment",
     "properties": [
       "brief"
@@ -458,7 +421,6 @@
   {
     "conceptId": "block_comment",
     "layer": "lang-core",
-    "level": 2,
     "abstractConcept": "block_comment",
     "properties": [
       "text"
@@ -469,7 +431,6 @@
   {
     "conceptId": "cpp_using_namespace",
     "layer": "lang-core",
-    "level": 0,
     "abstractConcept": "using_namespace",
     "properties": [
       "ns"
@@ -480,7 +441,6 @@
   {
     "conceptId": "cpp_increment_expr",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "increment_expr",
     "properties": [
       "name",
@@ -493,7 +453,6 @@
   {
     "conceptId": "cpp_compound_assign_expr",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "compound_assign_expr",
     "properties": [
       "name",
@@ -507,7 +466,6 @@
   {
     "conceptId": "var_declare_expr",
     "layer": "lang-core",
-    "level": 1,
     "abstractConcept": "var_declare_expr",
     "properties": [
       "name",

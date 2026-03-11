@@ -475,6 +475,26 @@ export class BlocklyPanel implements ViewHost {
     }
   }
 
+  /** Mark blocks whose concept is not in visibleConcepts as semi-transparent */
+  markOutOfScopeBlocks(visibleConcepts: Set<string>): void {
+    if (!this.workspace || !this.blockSpecRegistry) return
+    const allBlocks = this.workspace.getAllBlocks(false)
+    for (const block of allBlocks) {
+      const svgRoot = (block as Blockly.BlockSvg).getSvgRoot?.()
+      if (!svgRoot) continue
+      const spec = this.blockSpecRegistry.getAll().find(s => s.blockDef?.type === block.type)
+      const conceptId = spec?.concept?.conceptId
+      // If block has no concept (unknown/custom), treat as visible
+      if (!conceptId || visibleConcepts.has(conceptId)) {
+        svgRoot.style.opacity = ''
+        svgRoot.classList.remove('out-of-scope-block')
+      } else {
+        svgRoot.style.opacity = '0.35'
+        svgRoot.classList.add('out-of-scope-block')
+      }
+    }
+  }
+
   /** 取得目前使用的 renderer 名稱 */
   getRenderer(): string {
     return this.currentRenderer

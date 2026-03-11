@@ -4,7 +4,6 @@
     "conceptId": "cpp_string_declare",
     "language": "cpp",
     "category": "containers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_string_declare",

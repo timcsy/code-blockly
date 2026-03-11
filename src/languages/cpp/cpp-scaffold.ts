@@ -12,7 +12,7 @@ export class CppScaffold implements ProgramScaffold {
   }
 
   resolve(tree: SemanticNode, config: ScaffoldConfig): ScaffoldResult {
-    const { cognitiveLevel, manualImports = [], pinnedItems = [] } = config
+    const { scaffoldDepth, manualImports = [], pinnedItems = [] } = config
     const manualSet = expandHeaderAliases(new Set(manualImports))
 
     // Collect concepts from semantic tree
@@ -27,7 +27,7 @@ export class CppScaffold implements ProgramScaffold {
     const imports: ScaffoldItem[] = filteredEdges.map(edge => {
       const code = edge.directive
       const pinned = pinnedItems.includes(code)
-      const visibility = resolveVisibility(cognitiveLevel, pinned)
+      const visibility = resolveVisibility(scaffoldDepth, pinned)
       return {
         code,
         visibility,
@@ -41,8 +41,8 @@ export class CppScaffold implements ProgramScaffold {
     const preamblePinned = pinnedItems.includes(preambleCode)
     const preamble: ScaffoldItem[] = [{
       code: preambleCode,
-      visibility: resolveVisibility(cognitiveLevel, preamblePinned),
-      reason: resolveVisibility(cognitiveLevel, preamblePinned) === 'ghost' ? '標準函式庫需要' : undefined,
+      visibility: resolveVisibility(scaffoldDepth, preamblePinned),
+      reason: resolveVisibility(scaffoldDepth, preamblePinned) === 'ghost' ? '標準函式庫需要' : undefined,
       section: 'preamble',
       pinned: preamblePinned || undefined,
     }]
@@ -51,8 +51,8 @@ export class CppScaffold implements ProgramScaffold {
     const entryPinned = pinnedItems.includes(entryCode)
     const entryPoint: ScaffoldItem[] = [{
       code: entryCode,
-      visibility: resolveVisibility(cognitiveLevel, entryPinned),
-      reason: resolveVisibility(cognitiveLevel, entryPinned) === 'ghost' ? '程式進入點' : undefined,
+      visibility: resolveVisibility(scaffoldDepth, entryPinned),
+      reason: resolveVisibility(scaffoldDepth, entryPinned) === 'ghost' ? '程式進入點' : undefined,
       section: 'entryPoint',
       pinned: entryPinned || undefined,
     }]
@@ -64,15 +64,15 @@ export class CppScaffold implements ProgramScaffold {
     const epilogue: ScaffoldItem[] = [
       {
         code: returnCode,
-        visibility: resolveVisibility(cognitiveLevel, returnPinned),
-        reason: resolveVisibility(cognitiveLevel, returnPinned) === 'ghost' ? '程式正常結束' : undefined,
+        visibility: resolveVisibility(scaffoldDepth, returnPinned),
+        reason: resolveVisibility(scaffoldDepth, returnPinned) === 'ghost' ? '程式正常結束' : undefined,
         section: 'epilogue',
         pinned: returnPinned || undefined,
       },
       {
         code: closeCode,
-        visibility: resolveVisibility(cognitiveLevel, closePinned),
-        reason: resolveVisibility(cognitiveLevel, closePinned) === 'ghost' ? 'main 函式結尾' : undefined,
+        visibility: resolveVisibility(scaffoldDepth, closePinned),
+        reason: resolveVisibility(scaffoldDepth, closePinned) === 'ghost' ? 'main 函式結尾' : undefined,
         section: 'epilogue',
         pinned: closePinned || undefined,
       },

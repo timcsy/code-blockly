@@ -2,7 +2,6 @@
   {
     "conceptId": "cpp_map_declare",
     "layer": "lang-library",
-    "level": 2,
     "abstractConcept": "map_declare",
     "properties": [
       "key_type",

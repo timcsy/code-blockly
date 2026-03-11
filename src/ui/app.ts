@@ -11,7 +11,11 @@ import type { DiagnosticBlock } from '../core/diagnostics'
 import { cppDiagnosticRules } from '../languages/cpp/diagnostics'
 import { registerCppLanguage } from '../languages/cpp/generators'
 import { setDependencyResolver, setProgramScaffold, setScaffoldConfig } from '../core/projection/code-generator'
-import { setBlockSpecRegistry } from '../core/cognitive-levels'
+import { TopicRegistry } from '../core/topic-registry'
+import { getVisibleConcepts, flattenLevelTree } from '../core/level-tree'
+import type { Topic } from '../core/types'
+import cppBeginnerTopic from '../languages/cpp/topics/cpp-beginner.json'
+import cppCompetitiveTopic from '../languages/cpp/topics/cpp-competitive.json'
 import { createPopulatedRegistry } from '../languages/cpp/std'
 import { CppScaffold } from '../languages/cpp/cpp-scaffold'
 import { cppStripScaffoldNodes } from '../languages/cpp/cpp-scaffold-filter'
@@ -29,9 +33,8 @@ import { BlockSpecRegistry } from '../core/block-spec-registry'
 import { StorageService } from '../core/storage'
 import type { SavedState } from '../core/storage'
 import { LocaleLoader } from '../i18n/loader'
-import type { LevelSelector } from './toolbar/level-selector'
 import type { StyleSelector } from './toolbar/style-selector'
-import type { StylePreset, CognitiveLevel, ConceptDefJSON, BlockProjectionJSON } from '../core/types'
+import type { StylePreset, ConceptDefJSON, BlockProjectionJSON } from '../core/types'
 import { CATEGORY_COLORS } from './theme/category-colors'
 import { buildToolbox } from './toolbox-builder'
 import { cppCategoryDefs } from '../languages/cpp/toolbox-categories'
@@ -67,13 +70,14 @@ export class App {
   private blockRegistrar: BlockRegistrar
   private localeLoader: LocaleLoader
   private storageService: StorageService
-  private levelSelector: LevelSelector | null = null
+  private topicRegistry: TopicRegistry
   private executionController: ExecutionController | null = null
   private blocksDirty = false
   private codeDirty = false
   private autoSync = true
   private codeToBlocksTimer: ReturnType<typeof setTimeout> | null = null
-  private currentLevel: CognitiveLevel = 1
+  private currentTopic: Topic
+  private enabledBranches: Set<string>
   private currentIoPreference: 'iostream' | 'cstdio' = 'iostream'
   private _codeToBlocksInProgress = false
   private _restoringState = false
@@ -83,6 +87,7 @@ export class App {
   private currentLocale: string = 'zh-TW'
   private cppParser: CppParser | null = null
   private codeParserCache: { _lastTree: unknown } | null = null
+  private patternRenderer: PatternRenderer | null = null
 
   constructor() {
     this.bus = new SemanticBus()
@@ -90,6 +95,15 @@ export class App {
     this.blockRegistrar = new BlockRegistrar(this.blockSpecRegistry)
     this.localeLoader = new LocaleLoader()
     this.storageService = new StorageService()
+    this.topicRegistry = new TopicRegistry()
+
+    // Register topics
+    this.topicRegistry.register(cppBeginnerTopic as Topic)
+    this.topicRegistry.register(cppCompetitiveTopic as Topic)
+
+    // Default topic and branches (root enabled)
+    this.currentTopic = this.topicRegistry.getDefault('cpp')!
+    this.enabledBranches = new Set(flattenLevelTree(this.currentTopic.levelTree).map(n => n.id))
   }
 
   async init(): Promise<void> {
@@ -98,7 +112,7 @@ export class App {
     const registry = createPopulatedRegistry()
     setDependencyResolver(registry)
     setProgramScaffold(new CppScaffold(registry))
-    setScaffoldConfig({ cognitiveLevel: this.currentLevel })
+    setScaffoldConfig({ scaffoldDepth: this.getScaffoldDepth() })
     this.localeLoader.setBlocklyMsg(Blockly.Msg as Record<string, string>)
     await this.localeLoader.load('zh-TW')
 
@@ -114,9 +128,6 @@ export class App {
       ...allStdModules.flatMap(m => m.blocks),
     ]
     this.blockSpecRegistry.loadFromSplit(allConcepts, allProjections)
-
-    // 4a. Set global BlockSpecRegistry for cognitive level lookups
-    setBlockSpecRegistry(this.blockSpecRegistry)
 
     // 4. Register all blocks with Blockly
     this.blockRegistrar.registerAll({
@@ -136,8 +147,8 @@ export class App {
     this.syncController.setProgramScaffold(new CppScaffold(registry))
     this.syncController.setScaffoldNodeFilter(cppStripScaffoldNodes)
     const cppPatcher = createCppCodePatcher(registry)
-    this.syncController.setCodePatcher((code, tree) => cppPatcher(code, tree, this.currentStylePreset.namespace_style, this.currentLevel))
-    this.syncController.setCognitiveLevel(this.currentLevel)
+    this.syncController.setCodePatcher((code, tree) => cppPatcher(code, tree, this.currentStylePreset.namespace_style, this.getScaffoldDepth()))
+    this.syncController.setTopic(this.currentTopic, this.enabledBranches)
     this.bus.on('semantic:update', (data) => {
       // Update Monaco: blocks→code and resync both produce code
       if ((data.source === 'blocks' || data.source === 'resync') && data.code !== undefined) {
@@ -207,19 +218,47 @@ export class App {
       },
       onUploadCustomBlocks: (blocks: object[]) => {
         for (const blockDef of blocks) Blockly.common.defineBlocksWithJsonArray([blockDef])
-        this.updateToolboxForLevel(this.currentLevel)
+        this.updateToolbox()
         showToast(Blockly.Msg['TOAST_UPLOAD_SUCCESS'] || `Uploaded ${blocks.length} custom blocks`, 'success')
       },
     })
 
-    const selectors = setupSelectors(STYLE_PRESETS, this.currentLevel, {
-      onLevelChange: (level) => {
-        this.currentLevel = level
-        setScaffoldConfig({ cognitiveLevel: level })
-        this.syncController?.setCognitiveLevel(level)
-        this.updateToolboxForLevel(level)
+    const selectors = setupSelectors(STYLE_PRESETS, this.topicRegistry, this.currentTopic, this.enabledBranches, {
+      onTopicChange: (topic, branches) => {
+        const prevDepth = this.getScaffoldDepth()
+        this.currentTopic = topic
+        this.enabledBranches = branches
+        const newDepth = this.getScaffoldDepth()
+        setScaffoldConfig({ scaffoldDepth: newDepth })
+        this.syncController?.setTopic(topic, branches)
+        this.reloadBlockSpecsForTopic()
+        this.updateToolbox()
+        this.markOutOfScopeBlocks()
         if (!this._restoringState) {
-          this.resyncAfterLevelChange()
+          // Full resync only when scaffold depth crosses the 0 boundary
+          // (blocks need scaffold wrapping/unwrapping). Otherwise just regen code.
+          if ((prevDepth === 0) !== (newDepth === 0)) {
+            this.resyncAfterTopicChange()
+          } else {
+            this.syncBlocksToCodeWithMappings()
+          }
+        }
+        this.refreshStatusBar()
+      },
+      onBranchesChange: (branches) => {
+        const prevDepth = this.getScaffoldDepth()
+        this.enabledBranches = branches
+        const newDepth = this.getScaffoldDepth()
+        setScaffoldConfig({ scaffoldDepth: newDepth })
+        this.syncController?.setBranches(branches)
+        this.updateToolbox()
+        this.markOutOfScopeBlocks()
+        if (!this._restoringState) {
+          if ((prevDepth === 0) !== (newDepth === 0)) {
+            this.resyncAfterTopicChange()
+          } else {
+            this.syncBlocksToCodeWithMappings()
+          }
         }
         this.refreshStatusBar()
       },
@@ -232,13 +271,13 @@ export class App {
         const ioPref = style.io_style === 'printf' ? 'cstdio' : 'iostream'
         if (ioPref !== this.currentIoPreference) {
           this.currentIoPreference = ioPref
-          this.updateToolboxForLevel(this.currentLevel)
+          this.updateToolbox()
         }
       },
       onBlockStyleChange: (preset) => {
         if (!this.blocklyPanel) return
         if (preset.renderer !== this.blocklyPanel.getRenderer()) {
-          this.blocklyPanel.reinitWithPreset(this.callBuildToolbox(this.currentLevel, this.currentIoPreference), preset)
+          this.blocklyPanel.reinitWithPreset(this.callBuildToolbox(), preset)
           this.wireBlocklyChangeHandler()
         }
         this.currentBlockStyleId = preset.id
@@ -247,12 +286,11 @@ export class App {
       onLocaleChange: async (locale) => {
         await this.localeLoader.load(locale)
         this.currentLocale = locale
-        this.updateToolboxForLevel(this.currentLevel)
+        this.updateToolbox()
         this.syncBlocksToCodeWithMappings()
         this.refreshStatusBar()
       },
     })
-    this.levelSelector = selectors.levelSelector
     this.styleSelector = selectors.styleSelector
 
     // 12. Setup bidirectional highlighting
@@ -278,8 +316,9 @@ export class App {
     lifter.setPatternLifter(pl)
     const pr = new PatternRenderer()
     pr.setRenderStrategyRegistry(renderStrategyRegistry)
-    pr.loadBlockSpecs(allSpecs)
+    pr.loadBlockSpecsWithTopic(allSpecs, this.currentTopic)
     setPatternRenderer(pr)
+    this.patternRenderer = pr
     registerCppLifters(lifter, { transformRegistry, liftStrategyRegistry, renderStrategyRegistry })
     const parser = new CppParser()
     await parser.init()
@@ -351,37 +390,63 @@ export class App {
     this.styleSelector?.setValue(preset.id)
     this.refreshStatusBar()
     const ioPref = preset.io_style === 'printf' ? 'cstdio' : 'iostream'
-    if (ioPref !== this.currentIoPreference) { this.currentIoPreference = ioPref; this.updateToolboxForLevel(this.currentLevel) }
+    if (ioPref !== this.currentIoPreference) { this.currentIoPreference = ioPref; this.updateToolbox() }
     this.syncBlocksToCodeWithMappings()
   }
 
-  private callBuildToolbox(level?: CognitiveLevel, ioPreference?: 'iostream' | 'cstdio'): object {
+  private getVisibleConcepts(): Set<string> {
+    return getVisibleConcepts(this.currentTopic, this.enabledBranches)
+  }
+
+  private getScaffoldDepth(): number {
+    const allNodes = flattenLevelTree(this.currentTopic.levelTree)
+    let maxLevel = 0
+    for (const node of allNodes) {
+      if (this.enabledBranches.has(node.id)) {
+        maxLevel = Math.max(maxLevel, node.level)
+      }
+    }
+    return maxLevel
+  }
+
+  private markOutOfScopeBlocks(): void {
+    this.blocklyPanel?.markOutOfScopeBlocks(this.getVisibleConcepts())
+  }
+
+  private reloadBlockSpecsForTopic(): void {
+    if (!this.patternRenderer) return
+    const allSpecs = this.blockSpecRegistry.getAll()
+    this.patternRenderer.loadBlockSpecsWithTopic(allSpecs, this.currentTopic)
+  }
+
+  private callBuildToolbox(): object {
     return buildToolbox({
       blockSpecRegistry: this.blockSpecRegistry,
-      level: level ?? this.currentLevel,
-      ioPreference: ioPreference ?? this.currentIoPreference,
+      visibleConcepts: this.getVisibleConcepts(),
+      ioPreference: this.currentIoPreference,
       msgs: Blockly.Msg as Record<string, string>,
       categoryColors: CATEGORY_COLORS,
       categoryDefs: cppCategoryDefs,
     })
   }
 
-  /** Resync blocks/code after cognitive level change; async-parses if needed for L0→L1/L2 */
-  private resyncAfterLevelChange(): void {
+  /** Resync blocks/code after topic/branch change; async-parses if needed for depth 0→1+ */
+  private resyncAfterTopicChange(): void {
     const tree = this.blocklyPanel?.extractSemanticTree()
     if (!tree) return
     const code = this.monacoPanel?.getCode() ?? ''
-    const needsRelift = this.currentLevel > 0 && !(tree.children.body ?? []).some(
+    const depth = this.getScaffoldDepth()
+    const needsRelift = depth > 0 && !(tree.children.body ?? []).some(
       (n: { concept: string; properties: Record<string, unknown> }) =>
         n.concept === 'func_def' && n.properties.name === 'main'
     )
     if (needsRelift && this.cppParser && code.trim()) {
       this.cppParser.parse(code).then(parsed => {
         if (this.codeParserCache) this.codeParserCache._lastTree = parsed.rootNode
-        this.syncController?.resyncForLevel(tree, code)
-      }).catch(() => this.syncController?.resyncForLevel(tree, code))
+        this.syncController?.resyncForTopic(tree, code)
+      }).catch(() => this.syncController?.resyncForTopic(tree, code))
     } else {
-      this.syncController?.resyncForLevel(tree, code)
+      this.syncController?.resyncForTopic(tree, code)
     }
   }
 
@@ -392,10 +457,10 @@ export class App {
     this.syncController?.syncBlocksToCode(tree, blockMappings)
   }
 
-  private updateToolboxForLevel(level: CognitiveLevel): void {
+  private updateToolbox(): void {
     const ws = this.blocklyPanel?.getWorkspace()
     if (!ws) return
-    ws.updateToolbox(this.callBuildToolbox(level, this.currentIoPreference) as Blockly.utils.toolbox.ToolboxDefinition)
+    ws.updateToolbox(this.callBuildToolbox() as Blockly.utils.toolbox.ToolboxDefinition)
   }
 
   private wireBlocklyChangeHandler(): void {
@@ -413,7 +478,7 @@ export class App {
   }
 
   private refreshStatusBar(): void {
-    updateStatusBar(this.currentStylePreset, this.currentLocale, this.currentBlockStyleId, this.currentLevel)
+    updateStatusBar(this.currentStylePreset, this.currentLocale, this.currentBlockStyleId, this.currentTopic.name)
   }
 
   private setupBidirectionalHighlight(): void {
@@ -437,7 +502,8 @@ export class App {
   private buildSaveState(): SavedState {
     return { version: 1, tree: this.syncController?.getCurrentTree() ?? null,
       blocklyState: this.blocklyPanel?.getState() ?? {}, code: this.monacoPanel?.getCode() ?? '',
-      language: 'cpp', styleId: this.currentStylePreset.id, level: this.currentLevel,
+      language: 'cpp', styleId: this.currentStylePreset.id,
+      topicId: this.currentTopic.id, enabledBranches: [...this.enabledBranches],
       lastModified: new Date().toISOString(), blockStyleId: this.currentBlockStyleId, locale: this.currentLocale }
   }
 
@@ -454,21 +520,25 @@ export class App {
       this.blocklyPanel?.setState(state.blocklyState)
     }
 
-    // 2. Set level WITHOUT triggering resyncAfterLevelChange
-    //    (use _restoringState flag to skip the resync in onLevelChange)
-    if (state.level !== undefined) {
-      this._restoringState = true
-      this.currentLevel = state.level as CognitiveLevel
-      setScaffoldConfig({ cognitiveLevel: this.currentLevel })
-      this.syncController?.setCognitiveLevel(this.currentLevel)
-      this.levelSelector?.setLevel(this.currentLevel)
-      this.updateToolboxForLevel(this.currentLevel)
-      this._restoringState = false
+    // 2. Restore topic and branches WITHOUT triggering resyncAfterTopicChange
+    this._restoringState = true
+    if (state.topicId) {
+      const topic = this.topicRegistry.get(state.topicId)
+      if (topic) {
+        this.currentTopic = topic
+        this.enabledBranches = state.enabledBranches
+          ? new Set(state.enabledBranches)
+          : new Set(flattenLevelTree(topic.levelTree).map(n => n.id))
+      }
     }
+    setScaffoldConfig({ scaffoldDepth: this.getScaffoldDepth() })
+    this.syncController?.setTopic(this.currentTopic, this.enabledBranches)
+    this.updateToolbox()
+    this._restoringState = false
 
-    // 3. Generate code from restored blocks, then resync for the restored level
+    // 3. Generate code from restored blocks, then resync for the restored topic
     this.syncBlocksToCodeWithMappings()
-    this.resyncAfterLevelChange()
+    this.resyncAfterTopicChange()
   }
 
   private updateSyncHints(): void {

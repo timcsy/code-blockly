@@ -2,7 +2,6 @@
   {
     "conceptId": "var_declare",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "var_declare",
     "properties": [
       "type",
@@ -16,7 +15,6 @@
   {
     "conceptId": "var_assign",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "var_assign",
     "properties": [
       "name"
@@ -29,7 +27,6 @@
   {
     "conceptId": "var_ref",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "var_ref",
     "properties": [
       "name"
@@ -40,7 +37,6 @@
   {
     "conceptId": "number_literal",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "number_literal",
     "properties": [
       "value"
@@ -51,7 +47,6 @@
   {
     "conceptId": "string_literal",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "string_literal",
     "properties": [
       "value"
@@ -62,7 +57,6 @@
   {
     "conceptId": "arithmetic",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "arithmetic",
     "properties": [
       "operator"
@@ -76,7 +70,6 @@
   {
     "conceptId": "compare",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "compare",
     "properties": [
       "operator"
@@ -90,7 +83,6 @@
   {
     "conceptId": "logic",
     "layer": "universal",
-    "level": 1,
     "abstractConcept": "logic",
     "properties": [
       "operator"
@@ -104,7 +96,6 @@
   {
     "conceptId": "logic_not",
     "layer": "universal",
-    "level": 1,
     "abstractConcept": "logic_not",
     "properties": [],
     "children": {
@@ -115,7 +106,6 @@
   {
     "conceptId": "negate",
     "layer": "universal",
-    "level": 1,
     "abstractConcept": "negate",
     "properties": [],
     "children": {
@@ -126,7 +116,6 @@
   {
     "conceptId": "if",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "if",
     "properties": [],
     "children": {
@@ -143,7 +132,6 @@
   {
     "conceptId": "if_else",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "if_else",
     "properties": [],
     "children": {
@@ -156,7 +144,6 @@
   {
     "conceptId": "count_loop",
     "layer": "universal",
-    "level": 1,
     "abstractConcept": "count_loop",
     "properties": [
       "var_name",
@@ -177,7 +164,6 @@
   {
     "conceptId": "while_loop",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "while_loop",
     "properties": [],
     "children": {
@@ -189,7 +175,6 @@
   {
     "conceptId": "break",
     "layer": "universal",
-    "level": 1,
     "abstractConcept": "break",
     "properties": [],
     "children": {},
@@ -198,7 +183,6 @@
   {
     "conceptId": "continue",
     "layer": "universal",
-    "level": 1,
     "abstractConcept": "continue",
     "properties": [],
     "children": {},
@@ -207,7 +191,6 @@
   {
     "conceptId": "func_def",
     "layer": "universal",
-    "level": 1,
     "abstractConcept": "func_def",
     "properties": [
       "name",
@@ -227,7 +210,6 @@
   {
     "conceptId": "func_call",
     "layer": "universal",
-    "level": 1,
     "abstractConcept": "func_call",
     "properties": [
       "name",
@@ -239,7 +221,6 @@
   {
     "conceptId": "func_call_expr",
     "layer": "universal",
-    "level": 1,
     "abstractConcept": "func_call_expr",
     "properties": [
       "name",
@@ -251,7 +232,6 @@
   {
     "conceptId": "return",
     "layer": "universal",
-    "level": 1,
     "abstractConcept": "return",
     "properties": [],
     "children": {
@@ -262,7 +242,6 @@
   {
     "conceptId": "print",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "print",
     "properties": [],
     "children": {
@@ -273,7 +252,6 @@
   {
     "conceptId": "endl",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "endl",
     "properties": [],
     "children": {},
@@ -282,7 +260,6 @@
   {
     "conceptId": "input",
     "layer": "universal",
-    "level": 0,
     "abstractConcept": "input",
     "properties": [
       "name"
@@ -293,7 +270,6 @@
   {
     "conceptId": "array_declare",
     "layer": "universal",
-    "level": 2,
     "abstractConcept": "array_declare",
     "properties": [
       "type",
@@ -307,7 +283,6 @@
   {
     "conceptId": "array_access",
     "layer": "universal",
-    "level": 2,
     "abstractConcept": "array_access",
     "properties": [
       "name"
@@ -320,7 +295,6 @@
   {
     "conceptId": "array_assign",
     "layer": "universal",
-    "level": 1,
     "abstractConcept": "array_assign",
     "properties": [
       "name"

@@ -6,14 +6,15 @@ import { VariablePanel } from './panels/variable-panel'
 import { BlocklyPanel } from './panels/blockly-panel'
 import { MonacoPanel } from './panels/monaco-panel'
 import { QuickAccessBar } from './toolbar/quick-access-bar'
-import { LevelSelector } from './toolbar/level-selector'
+import { TopicSelector } from './toolbar/topic-selector'
 import { StyleSelector } from './toolbar/style-selector'
 import { BlockStyleSelector } from './toolbar/block-style-selector'
 import { LocaleSelector } from './toolbar/locale-selector'
 import { StorageService } from '../core/storage'
 import type { SavedState } from '../core/storage'
 import type { BlockSpecRegistry } from '../core/block-spec-registry'
-import type { StylePreset, CognitiveLevel } from '../core/types'
+import type { StylePreset, Topic } from '../core/types'
+import type { TopicRegistry } from '../core/topic-registry'
 import type { BlockStylePreset } from '../languages/style'
 import { showToast } from './toolbar/toast'
 
@@ -27,7 +28,8 @@ export interface AppShellElements {
 }
 
 export interface AppShellCallbacks {
-  onLevelChange: (level: CognitiveLevel) => void
+  onTopicChange: (topic: Topic, enabledBranches: Set<string>) => void
+  onBranchesChange: (enabledBranches: Set<string>) => void
   onStyleChange: (style: StylePreset) => void
   onBlockStyleChange: (preset: BlockStylePreset, toolbox: object) => void
   onLocaleChange: (locale: string) => void
@@ -138,17 +140,20 @@ export function createAppLayout(
 
 export function setupSelectors(
   stylePresets: StylePreset[],
-  currentLevel: CognitiveLevel,
-  callbacks: Pick<AppShellCallbacks, 'onLevelChange' | 'onStyleChange' | 'onBlockStyleChange' | 'onLocaleChange'>,
-): { levelSelector: LevelSelector | null; styleSelector: StyleSelector | null } {
-  let levelSelector: LevelSelector | null = null
+  topicRegistry: TopicRegistry,
+  currentTopic: Topic,
+  currentBranches: Set<string>,
+  callbacks: Pick<AppShellCallbacks, 'onTopicChange' | 'onBranchesChange' | 'onStyleChange' | 'onBlockStyleChange' | 'onLocaleChange'>,
+): { topicSelector: TopicSelector | null; styleSelector: StyleSelector | null } {
+  let topicSelector: TopicSelector | null = null
   let styleSelector: StyleSelector | null = null
 
-  const levelMount = document.getElementById('level-selector-mount')
-  if (levelMount) {
-    levelSelector = new LevelSelector(levelMount)
-    levelSelector.setLevel(currentLevel)
-    levelSelector.onChange(callbacks.onLevelChange)
+  const topicMount = document.getElementById('level-selector-mount')
+  if (topicMount) {
+    const topics = topicRegistry.listForLanguage(currentTopic.language)
+    topicSelector = new TopicSelector(topicMount, topics, currentTopic, currentBranches)
+    topicSelector.onTopicChange((topic, branches) => callbacks.onTopicChange(topic, branches))
+    topicSelector.onBranchesChange((branches) => callbacks.onBranchesChange(branches))
   }
 
   const styleMount = document.getElementById('style-selector-mount')
@@ -173,7 +178,7 @@ export function setupSelectors(
     })
   }
 
-  return { levelSelector, styleSelector }
+  return { topicSelector, styleSelector }
 }
 
 export function setupToolbarButtons(callbacks: Pick<AppShellCallbacks, 'onSyncBlocks' | 'onSyncCode' | 'onToggleAutoSync' | 'onUndo' | 'onRedo' | 'onClear'>): void {
@@ -283,12 +288,11 @@ export function updateStatusBar(
   currentStylePreset: StylePreset,
   currentLocale: string,
   currentBlockStyleId: string,
-  currentLevel: CognitiveLevel,
+  topicName: string,
 ): void {
   const statusBar = document.getElementById('status-bar')
   if (!statusBar) return
   const styleName = currentStylePreset.name[currentLocale] || currentStylePreset.name['zh-TW'] || currentStylePreset.id
   const blockStyleLabel = (Blockly.Msg as Record<string, string>)[`BLOCK_STYLE_${currentBlockStyleId.toUpperCase()}`] || currentBlockStyleId
-  const levelLabel = `L${currentLevel}`
-  statusBar.innerHTML = `<span>C++ | ${styleName} | ${blockStyleLabel} | ${levelLabel} | ${currentLocale}</span>`
+  statusBar.innerHTML = `<span>C++ | ${styleName} | ${blockStyleLabel} | ${topicName} | ${currentLocale}</span>`
 }

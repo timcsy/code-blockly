@@ -1,20 +1,20 @@
 /**
- * TDD tests for Phase C Item 3: CATEGORY_DEFS → language module
- *
- * After refactoring, category definitions should come from a language module
- * rather than being hardcoded in toolbox-builder.ts.
+ * TDD tests for C++ toolbox categories (language module)
  */
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { cppCategoryDefs, buildIoCategoryContents } from '../../../src/languages/cpp/toolbox-categories'
-import { buildToolbox, type ToolboxCategoryDef } from '../../../src/ui/toolbox-builder'
+import { buildToolbox } from '../../../src/ui/toolbox-builder'
 import { BlockSpecRegistry } from '../../../src/core/block-spec-registry'
 import { CATEGORY_COLORS } from '../../../src/ui/theme/category-colors'
-import type { CognitiveLevel, ConceptDefJSON, BlockProjectionJSON } from '../../../src/core/types'
+import type { ConceptDefJSON, BlockProjectionJSON, Topic } from '../../../src/core/types'
+import { getVisibleConcepts } from '../../../src/core/level-tree'
 import universalConcepts from '../../../src/blocks/semantics/universal-concepts.json'
 import universalBlocks from '../../../src/blocks/projections/blocks/universal-blocks.json'
 import { coreConcepts, coreBlocks } from '../../../src/languages/cpp/core'
 import { allStdModules } from '../../../src/languages/cpp/std'
-import { setBlockSpecRegistry } from '../../../src/core/cognitive-levels'
+import cppBeginnerTopic from '../../../src/languages/cpp/topics/cpp-beginner.json'
+
+const topic = cppBeginnerTopic as Topic
 
 function createRegistry(): BlockSpecRegistry {
   const reg = new BlockSpecRegistry()
@@ -25,7 +25,6 @@ function createRegistry(): BlockSpecRegistry {
     ...allStdModules.flatMap(m => m.blocks),
   ]
   reg.loadFromSplit(allConcepts, allProjections)
-  setBlockSpecRegistry(reg)
   return reg
 }
 
@@ -54,7 +53,8 @@ describe('C++ toolbox categories (language module)', () => {
 
   it('buildIoCategoryContents sorts iostream first for iostream pref', () => {
     const reg = createRegistry()
-    const contents = buildIoCategoryContents(reg, 2 as CognitiveLevel, 'iostream')
+    const allConcepts = getVisibleConcepts(topic, new Set(['L0', 'L1a', 'L1b', 'L2a', 'L2b', 'L2c']))
+    const contents = buildIoCategoryContents(reg, allConcepts, 'iostream')
     const types = contents.map(c => c.type)
     // iostream types (u_*) should come before cstdio types (c_*)
     const firstCIdx = types.findIndex(t => t.startsWith('c_'))
@@ -66,9 +66,10 @@ describe('C++ toolbox categories (language module)', () => {
 
   it('buildToolbox accepts external categoryDefs', () => {
     const reg = createRegistry()
+    const allConcepts = getVisibleConcepts(topic, new Set(['L0', 'L1a', 'L1b', 'L2a', 'L2b', 'L2c']))
     const result = buildToolbox({
       blockSpecRegistry: reg,
-      level: 2 as CognitiveLevel,
+      visibleConcepts: allConcepts,
       ioPreference: 'iostream',
       msgs: {},
       categoryColors: CATEGORY_COLORS,

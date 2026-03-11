@@ -4,7 +4,6 @@
     "conceptId": "cpp_char_literal",
     "language": "cpp",
     "category": "values",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_char_literal",
@@ -42,7 +41,6 @@
     "conceptId": "cpp_increment",
     "language": "cpp",
     "category": "operators",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_increment",
@@ -112,7 +110,6 @@
     "conceptId": "cpp_compound_assign",
     "language": "cpp",
     "category": "operators",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_compound_assign",
@@ -195,7 +192,6 @@
     "conceptId": "cpp_switch",
     "language": "cpp",
     "category": "conditions",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_switch",
@@ -247,7 +243,6 @@
     "conceptId": "cpp_case",
     "language": "cpp",
     "category": "conditions",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_case",
@@ -287,7 +282,6 @@
     "conceptId": "cpp_default",
     "language": "cpp",
     "category": "conditions",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_default",
@@ -320,7 +314,6 @@
     "conceptId": "cpp_ternary",
     "language": "cpp",
     "category": "operators",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_ternary",
@@ -379,7 +372,6 @@
     "conceptId": "cpp_cast",
     "language": "cpp",
     "category": "operators",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_cast",
@@ -449,7 +441,6 @@
     "conceptId": "bitwise_not",
     "language": "cpp",
     "category": "operators",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_bitwise_not",
@@ -493,7 +484,6 @@
     "conceptId": "cpp_pointer_assign",
     "language": "cpp",
     "category": "pointers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_pointer_assign",
@@ -543,7 +533,6 @@
     "conceptId": "cpp_for_loop",
     "language": "cpp",
     "category": "loops",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_for_loop",
@@ -615,7 +604,6 @@
     "conceptId": "cpp_do_while",
     "language": "cpp",
     "category": "loops",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_do_while",
@@ -667,7 +655,6 @@
     "conceptId": "cpp_raw_code",
     "language": "cpp",
     "category": "special",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_raw_code",
@@ -699,7 +686,6 @@
     "conceptId": "cpp_raw_expression",
     "language": "cpp",
     "category": "special",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_raw_expression",
@@ -730,7 +716,6 @@
     "conceptId": "forward_decl",
     "language": "cpp",
     "category": "functions",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_forward_decl"
@@ -747,7 +732,6 @@
     "conceptId": "builtin_constant",
     "language": "cpp",
     "category": "data",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_builtin_constant",
@@ -797,7 +781,6 @@
     "conceptId": "cpp_include",
     "language": "cpp",
     "category": "preprocessor",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_include",
@@ -910,7 +893,6 @@
     "conceptId": "cpp_include_local",
     "language": "cpp",
     "category": "preprocessor",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_include_local",
@@ -947,7 +929,6 @@
     "conceptId": "cpp_define",
     "language": "cpp",
     "category": "preprocessor",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_define",
@@ -984,7 +965,6 @@
     "conceptId": "cpp_ifdef",
     "language": "cpp",
     "category": "preprocessor",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_ifdef",
@@ -1025,7 +1005,6 @@
     "conceptId": "cpp_ifndef",
     "language": "cpp",
     "category": "preprocessor",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_ifndef",
@@ -1066,7 +1045,6 @@
     "conceptId": "comment",
     "language": "cpp",
     "category": "special",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_comment_line",
@@ -1098,7 +1076,6 @@
     "conceptId": "doc_comment",
     "language": "cpp",
     "category": "special",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_comment_doc",
@@ -1129,7 +1106,6 @@
     "conceptId": "block_comment",
     "language": "cpp",
     "category": "special",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_comment_block",
@@ -1157,7 +1133,6 @@
     "conceptId": "cpp_using_namespace",
     "language": "cpp",
     "category": "preprocessor",
-    "level": 0,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_using_namespace",
@@ -1189,7 +1164,6 @@
     "conceptId": "cpp_increment_expr",
     "language": "cpp",
     "category": "operators",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_increment_expr"
@@ -1200,7 +1174,6 @@
     "conceptId": "cpp_compound_assign_expr",
     "language": "cpp",
     "category": "operators",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_compound_assign_expr"
@@ -1211,7 +1184,6 @@
     "conceptId": "var_declare_expr",
     "language": "cpp",
     "category": "variables",
-    "level": 1,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_var_declare_expr"
@@ -1222,7 +1194,6 @@
     "conceptId": "cpp_pointer_declare",
     "language": "cpp",
     "category": "pointers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_pointer_declare",
@@ -1297,7 +1268,6 @@
     "conceptId": "cpp_pointer_deref",
     "language": "cpp",
     "category": "pointers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_pointer_deref",
@@ -1341,7 +1311,6 @@
     "conceptId": "cpp_address_of",
     "language": "cpp",
     "category": "pointers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_address_of",
@@ -1385,7 +1354,6 @@
     "conceptId": "cpp_malloc",
     "language": "cpp",
     "category": "pointers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_malloc",
@@ -1480,7 +1448,6 @@
     "conceptId": "cpp_free",
     "language": "cpp",
     "category": "pointers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_free",
@@ -1526,7 +1493,6 @@
     "conceptId": "cpp_struct_declare",
     "language": "cpp",
     "category": "structures",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_struct_declare",
@@ -1576,7 +1542,6 @@
     "conceptId": "cpp_struct_member_access",
     "language": "cpp",
     "category": "structures",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_struct_member_access",
@@ -1630,7 +1595,6 @@
     "conceptId": "cpp_struct_pointer_access",
     "language": "cpp",
     "category": "structures",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "c_struct_pointer_access",
@@ -1684,7 +1648,6 @@
     "conceptId": "cpp_class_def",
     "language": "cpp",
     "category": "oop",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_class_def",
@@ -1747,7 +1710,6 @@
     "conceptId": "cpp_new",
     "language": "cpp",
     "category": "oop",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_new",
@@ -1796,7 +1758,6 @@
     "conceptId": "cpp_delete",
     "language": "cpp",
     "category": "oop",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_delete",
@@ -1835,7 +1796,6 @@
     "conceptId": "cpp_template_function",
     "language": "cpp",
     "category": "templates",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_template_function",
@@ -1928,7 +1888,6 @@
     "conceptId": "cpp_method_call",
     "language": "cpp",
     "category": "containers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_method_call",
@@ -1992,7 +1951,6 @@
     "conceptId": "cpp_method_call_expr",
     "language": "cpp",
     "category": "containers",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_method_call_expr",

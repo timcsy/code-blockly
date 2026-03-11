@@ -4,7 +4,6 @@
     "conceptId": "cpp_sort",
     "language": "cpp",
     "category": "algorithms",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_sort",
@@ -60,7 +59,6 @@
     "conceptId": "cpp:find",
     "language": "cpp",
     "category": "stdlib",
-    "level": 2,
     "version": "1.0.0",
     "blockDef": {
       "type": "cpp_find",

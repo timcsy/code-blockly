@@ -26,20 +26,10 @@
     "configuration": {
       "title": "Semorphe",
       "properties": {
-        "semorphe.cognitiveLevel": {
-          "type": "number",
-          "default": 1,
-          "enum": [
-            0,
-            1,
-            2
-          ],
-          "enumDescriptions": [
-            "初學（基本 I/O、變數、簡單控制流）",
-            "進階（邏輯運算、函式、迴圈）",
-            "完整（陣列、指標、語言特定）"
-          ],
-          "description": "控制積木工具箱顯示的認知層級",
+        "semorphe.topicId": {
+          "type": "string",
+          "default": "cpp-beginner",
+          "description": "目前使用的 Topic ID（控制積木工具箱的概念層級樹）",
           "scope": "window"
         },
         "semorphe.codingStyle": {
