@@ -30,7 +30,7 @@ $ARGUMENTS
 閱讀以下檔案以理解目前的管線：
 
 - `src/core/types.ts` — SemanticNode、ConceptId、所有型別定義
-- `src/languages/{lang}/blocks/` — 所有 block spec JSON 檔案（了解支援的概念）
+- `src/languages/{lang}/core/blocks.json` 和 `src/languages/{lang}/std/*/blocks.json` — 所有 block spec JSON 檔案（了解支援的概念）
 - `src/languages/{lang}/core/generators/` — 程式碼產生器（了解輸出格式）
 - `src/languages/{lang}/core/lifters/` — 提升器（了解輸入處理）
 - `src/core/projection/code-generator.ts` — 主要的產生入口點
@@ -114,7 +114,13 @@ diff /tmp/semorphe-roundtrip/test_{id}_expected.txt /tmp/semorphe-roundtrip/test
 - 驗證未啟用分支的概念不會出現在輸出中（鷹架正確隱藏）
 - 比較各分支組合的 stdout 輸出（應該相同或等價）
 
-**層級四 — 程式碼結構比較**（僅供參考）：
+**層級四 — 層級轉換穩定性（§2.4）**：
+- 驗證 L₁ 可見概念在 L₂ 的呈現不變——只增不改
+
+**層級五 — 積木-程式碼一致性（§1.4 Sc4）**：
+- 積木行為和生成的程式碼一致——BlockSpec message 與 generator 輸出語義一致
+
+**層級六 — 程式碼結構比較**（僅供參考）：
 - 比較原始和產生的程式碼結構（不是精確文字 — 格式可能不同）
 - 記錄任何顯著的結構差異
 
@@ -136,7 +142,7 @@ diff /tmp/semorphe-roundtrip/test_{id}_expected.txt /tmp/semorphe-roundtrip/test
 
 ### 步驟七：輸出報告
 
-將報告儲存到 `tests/roundtrip-reports/roundtrip-{lang}-{concept|difficulty}-{timestamp}.md`，同時印出摘要表格：
+將報告儲存到 `tests/reports/roundtrip-{lang}-{concept|difficulty}-{timestamp}.md`（目錄不存在時自行建立），同時印出摘要表格：
 
 ```
 ## Round-Trip 測試結果（{language}）
@@ -153,7 +159,7 @@ diff /tmp/semorphe-roundtrip/test_{id}_expected.txt /tmp/semorphe-roundtrip/test
 
 ### 步驟八：產生回歸測試（如果找到 bug）
 
-對每個 ❌ 結果，在 `tests/integration/roundtrip/` 建立回歸測試。
+對每個 ❌ 結果，在 `tests/integration/` 建立回歸測試（扁平結構，檔名加 `roundtrip-` 前綴）。
 
 ## 快速模式
 

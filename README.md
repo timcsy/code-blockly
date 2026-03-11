@@ -58,6 +58,70 @@ src/
 
 核心原則：語義樹（Semantic Tree）是唯一的真實來源。積木（Blockly）和程式碼（Monaco）都是語義樹的投影。所有轉換都透過語義層進行，不直接在兩種視覺表示之間映射。
 
+## 概念管線（Concept Pipeline）
+
+Semorphe 提供一套 Claude Code skill，用於系統化地新增語言概念支援。從研究語言特性到完整整合，全程由 AI 輔助完成。
+
+### 概覽
+
+```
+/concept.discover  →  /concept.generate  →  /concept.roundtrip  →  /concept.fuzz  →  /concept.integrate
+    研究 & 分類         產生實作產出物          目標性 round-trip        資訊隔離盲測          最終關卡 & 註冊
+```
+
+或直接使用端到端管線一次完成：
+
+```
+/concept.pipeline cpp <algorithm>
+```
+
+### 各 Skill 說明
+
+| Skill | 指令 | 用途 |
+|-------|------|------|
+| **概念探索** | `/concept.discover {lang} {target}` | 研究函式庫/語言特性，萃取概念、按 Topic 層級樹分類、提出命名 |
+| **概念產生** | `/concept.generate {lang} {concept}` | 產生 BlockSpec JSON、generator、lifter、渲染映射、測試 |
+| **Round-Trip 測試** | `/concept.roundtrip {lang} {concept}` | 對特定程式執行 lift → generate → 比較 stdout 的驗證 |
+| **模糊測試** | `/concept.fuzz {lang} {difficulty} {scope} {count}` | 雙代理架構：Agent A（不知實作）出題，Agent B 驗證正確性 |
+| **整合** | `/concept.integrate {lang} {concept}` | 執行所有驗證（tsc、test、round-trip），通過後完成註冊 |
+| **端到端管線** | `/concept.pipeline {lang} {target}` | 串接上述 5 個 skill，一個指令從研究到整合 |
+
+### 使用範例
+
+```bash
+# 探索 C++ <algorithm> 標頭檔的概念
+/concept.discover cpp <algorithm>
+
+# 為特定概念產生實作
+/concept.generate cpp sort_range
+
+# 驗證 round-trip 正確性
+/concept.roundtrip cpp sort_range
+
+# 用盲測找出邊界案例
+/concept.fuzz cpp medium loops 20
+
+# 完整管線：從研究到整合
+/concept.pipeline cpp <algorithm>
+
+# 快速管線（跳過模糊測試）
+/concept.pipeline python list comprehension --skip-fuzz
+
+# 只處理特定概念
+/concept.pipeline java Stream API --concepts=stream_map,stream_filter
+```
+
+### 檔案存放位置
+
+概念的實作檔案依層級存放：
+
+| 層級 | blocks.json | concepts.json | generators | lifters |
+|------|-------------|---------------|------------|---------|
+| **核心語法** | `src/languages/{lang}/core/blocks.json` | `src/languages/{lang}/core/concepts.json` | `src/languages/{lang}/core/generators/` | `src/languages/{lang}/core/lifters/` |
+| **標準庫模組** | `src/languages/{lang}/std/{module}/blocks.json` | `src/languages/{lang}/std/{module}/concepts.json` | `src/languages/{lang}/std/{module}/generators.ts` | `src/languages/{lang}/std/{module}/lifters.ts` |
+
+詳細的 skill 定義在 `.claude/skills/concept-*/SKILL.md`。
+
 ## VSCode 延伸模組
 
 ```bash

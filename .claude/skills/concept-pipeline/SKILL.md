@@ -52,7 +52,7 @@ $ARGUMENTS
 
 **調用**：`/concept.discover {lang} $ARGUMENTS`
 
-**關卡**：探索報告已在 `specs/concepts/{lang}-{topic}.md` 產生
+**關卡**：探索報告已產生（路徑由 `/concept.discover` 決定，通常在 `specs/` 目錄下）
 
 **決策點**：探索後，向使用者呈現概念目錄：
 
@@ -151,7 +151,7 @@ $ARGUMENTS
 ## 錯誤恢復
 
 管線被中斷時，所有中間產出物都會保留。可以透過個別 skill 從任何階段恢復：
-- `/concept.generate specs/concepts/{lang}-{topic}.md`
+- `/concept.generate specs/{lang}-{topic}.md`
 - `/concept.roundtrip {lang} {concept_name}`
 - `/concept.integrate {lang} {concept_name}`
 

@@ -23,6 +23,7 @@ $ARGUMENTS
 - `java functions 15` — Java 函式範疇 15 題
 
 難度等級：`easy`、`medium`、`hard`、`all`
+難度對應 Topic 層級樹深度：easy = depth 0、medium = depth 1、hard = depth 2+（同 `/concept.pipeline` 階段四）
 範疇（scope）範例：`loops`、`functions`、`arrays`、`pointers`、`strings`、`classes`
 
 ## 架構：雙代理資訊隔離
@@ -158,6 +159,8 @@ Agent A 回傳程式後：
 
 ### 步驟四：分類結果
 
+結果分類基礎定義見 `/concept.roundtrip` 步驟六。本 skill 額外加入 `EXPECTED_DEGRADATION`。
+
 對每個程式，分類結果：
 
 | 結果 | 意義 | 行動 |
@@ -171,9 +174,11 @@ Agent A 回傳程式後：
 | **ROUNDTRIP_DRIFT** | 二次 round-trip 語義樹結構不同 | **BUG** — P1 可逆性違規 |
 | **TIMEOUT** | 產生的程式碼掛住 | **BUG** — 可能有無窮迴圈 |
 
+**層級轉換穩定性**：驗證 L₁ 可見概念在 L₂ 的呈現不變——只增不改（§2.4 層級轉換穩定性）。
+
 ### 步驟五：產生報告和測試
 
-在 `tests/fuzz-reports/fuzz-{lang}-{timestamp}.md` 建立模糊測試報告：
+在 `tests/reports/fuzz-{lang}-{timestamp}.md`（目錄不存在時自行建立）建立模糊測試報告：
 
 ```markdown
 # 模糊測試報告 — {language} — {date}
@@ -205,7 +210,7 @@ Agent A 回傳程式後：
 {建立的測試檔案列表}
 ```
 
-對每個 **BUG**，在 `tests/integration/fuzz/` 產生回歸測試。
+對每個 **BUG**，在 `tests/integration/` 產生回歸測試（扁平結構，檔名加 `fuzz-` 前綴）。
 
 ### 步驟六：向使用者總結
 

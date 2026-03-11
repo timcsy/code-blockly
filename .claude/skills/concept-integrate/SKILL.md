@@ -31,12 +31,12 @@ $ARGUMENTS
 
 在執行整合之前，驗證目標概念的這些檔案是否存在：
 
-- [ ] Block spec JSON 條目在 `src/languages/{lang}/blocks/*.json`
+- [ ] Block spec JSON 條目在核心 `src/languages/{lang}/core/blocks.json` 或 STD `src/languages/{lang}/std/{module}/blocks.json`
 - [ ] 程式碼產生器在 `src/languages/{lang}/core/generators/*.ts`
 - [ ] 提升器在 `src/languages/{lang}/core/lifters/*.ts`
 - [ ] 渲染映射在 block spec JSON 中（或顯式 renderStrategy）
 - [ ] 單元測試在 `tests/`
-- [ ] 概念在 `src/languages/{lang}/concepts.json` 中註冊
+- [ ] 概念在核心 `src/languages/{lang}/core/concepts.json` 或 STD `src/languages/{lang}/std/{module}/concepts.json` 中註冊
 
 如果是通用概念，額外檢查：
 - [ ] `src/core/types.ts` 中的 `UniversalConcept` 型別已更新
@@ -103,16 +103,16 @@ npm test
 3. 如果有重疊，驗證 priority 排序是否正確（更具體的 pattern 應有更高 priority）
 4. 確認不會出現「新概念搶走已有概念的 AST 節點」的情況
 
-如果偵測到衝突，報告哪些 pattern 重疊並建議調整 priority。
+如果偵測到衝突，報告哪些 pattern 重疊並建議調整 priority。見 §2.3 Pattern 歧義偵測與仲裁。
 
 ### 步驟七：註冊驗證
 
 檢查概念在所有必要位置都有正確註冊：
 
-1. **概念註冊表**（`src/languages/{lang}/concepts.json`）
-2. **Block spec 註冊表**（block JSON 檔案）
+1. **概念註冊表**（核心 `src/languages/{lang}/core/concepts.json` 或 STD `src/languages/{lang}/std/{module}/concepts.json`）
+2. **Block spec 註冊表**（核心 `src/languages/{lang}/core/blocks.json` 或 STD `src/languages/{lang}/std/{module}/blocks.json`）
 3. **工具箱分類**（`src/languages/{lang}/toolbox-categories.ts`）
-4. **Lift patterns**（lifter 註冊或 lift-patterns.json）
+4. **Lift patterns**（lifter 註冊或 `src/languages/{lang}/lift-patterns.json`）
 5. **如果是通用概念**：所有已支援語言都有實作
 
 ### 步驟八：整合決策
@@ -139,10 +139,10 @@ npm test
 ## 整合完成：{concept_name}（{language}）
 
 ### 整合的產出物
-- Block spec：`src/languages/{lang}/blocks/{file}.json` — {block_type}
-- Generator：`src/languages/{lang}/core/generators/{file}.ts`
-- Lifter：`src/languages/{lang}/core/lifters/{file}.ts`
-- Concept def：`src/languages/{lang}/concepts.json`
+- Block spec：核心 `src/languages/{lang}/core/blocks.json` 或 STD `src/languages/{lang}/std/{module}/blocks.json` — {block_type}
+- Generator：核心 `src/languages/{lang}/core/generators/{file}.ts` 或 STD `src/languages/{lang}/std/{module}/generators.ts`
+- Lifter：核心 `src/languages/{lang}/core/lifters/{file}.ts` 或 STD `src/languages/{lang}/std/{module}/lifters.ts`
+- Concept def：核心 `src/languages/{lang}/core/concepts.json` 或 STD `src/languages/{lang}/std/{module}/concepts.json`
 - 測試：`tests/unit/languages/{lang}/{concept}.test.ts`
 
 ### 測試結果

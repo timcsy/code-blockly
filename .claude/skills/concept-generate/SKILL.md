@@ -35,7 +35,8 @@ $ARGUMENTS
 - `docs/first-principles.md` — P2（概念代數）的屬性結構規則
 
 然後閱讀目標語言的既有實作：
-- `src/languages/{lang}/blocks/*.json` — 現有 BlockSpec 範例
+- 核心概念：`src/languages/{lang}/core/blocks.json` — 現有 BlockSpec 範例
+- STD 模組：`src/languages/{lang}/std/{module}/blocks.json` — 標準庫 BlockSpec
 - `src/languages/{lang}/core/generators/` — 現有 generator 模式
 - `src/languages/{lang}/core/lifters/` — 現有 lifter 模式
 - `src/core/projection/pattern-renderer.ts` — 渲染映射如何運作
@@ -46,8 +47,8 @@ $ARGUMENTS
 
 ### 步驟一：解析概念定義
 
-從探索報告或使用者輸入中，為每個概念提取：
-- 概念名稱（snake_case）
+從探索報告或使用者輸入中，為每個概念提取（命名慣例見 `/concept.discover` 階段四）：
+- 概念名稱
 - 概念類型：通用（universal）還是語言特定（`{lang}:concept`）
 - 建議歸屬的 Topic 層級樹節點
 - 目標語言的語法模式
@@ -57,7 +58,7 @@ $ARGUMENTS
 
 ### 步驟二：產生 BlockSpec JSON
 
-建立或附加到適當的 block JSON 檔案（`src/languages/{lang}/blocks/`）。
+概念所屬層級決定檔案存放位置：核心概念放 `src/languages/{lang}/core/blocks.json`，STD 模組概念放 `src/languages/{lang}/std/{module}/blocks.json`。
 
 ```json
 {
@@ -88,7 +89,8 @@ $ARGUMENTS
 - 最小化 args 數量 — 認知負載原則
 - 語句積木：設定 `previousStatement`/`nextStatement`
 - 表達式積木：設定 `output`（型別或 null 代表任意）
-- 如果概念同時有語句和表達式形式，用 `expressionCounterpart` 產生兩者
+- 如果概念同時有語句和表達式形式，用 `expressionCounterpart` 產生兩者。對應 P2 概念角色語境依賴（§2.2）——statement/expression 版本的 extraState 格式必須完全相同
+- 如果此概念在不同 Topic 下需不同積木形狀，在 Topic JSON 加 `blockOverrides`（§2.4）
 
 ### 步驟三：產生程式碼產生器
 
@@ -127,6 +129,10 @@ lifter.register('{tree_sitter_node_type}', (node, context) => {
   })
 })
 ```
+
+**Layer 引導**：Layer 1 純 JSON（astPattern）、Layer 2 JSON + transform（TransformRegistry）、Layer 3 JSON + strategy（LiftStrategyRegistry）。見 §2.3。
+
+**Confidence 引導**：composite pattern 必須先過語義驗證才能設 `high`（§2.1）；推測性對應設 `inferred`；無法結構化則降級為 `raw_code`。
 
 規則：
 - 第一個參數是 **tree-sitter 節點類型**（不是概念名稱）— 每個語言的 tree-sitter grammar 不同
@@ -180,6 +186,9 @@ describe('{concept_name}', () => {
 - 適當的 Topic JSON 檔案（`src/languages/{lang}/topics/*.json`）中的 `levelTree` 節點，將概念 ID 加入對應節點的 `concepts[]`
 - concept registry 中的概念定義
 - 如果是通用概念，更新 `src/core/types.ts` 的 `UniversalConcept` 型別
+- STD 模組概念需更新 DependencyResolver 映射（§2.3）
+
+**STD 模組結構**：STD 模組使用扁平結構——每個模組目錄下直接放 `generators.ts`、`lifters.ts`、`blocks.json`、`concepts.json`，不再有子目錄。
 
 ### 步驟八：輸出摘要
 
@@ -188,9 +197,9 @@ describe('{concept_name}', () => {
 ```
 ## {concept_name} 的產出物（{language}）
 
-- [ ] BlockSpec：`src/languages/{lang}/blocks/{file}.json`
-- [ ] Generator：`src/languages/{lang}/core/generators/{file}.ts`
-- [ ] Lifter：`src/languages/{lang}/core/lifters/{file}.ts`
+- [ ] BlockSpec：核心 `src/languages/{lang}/core/blocks.json` 或 STD `src/languages/{lang}/std/{module}/blocks.json`
+- [ ] Generator：核心 `src/languages/{lang}/core/generators/{file}.ts` 或 STD `src/languages/{lang}/std/{module}/generators.ts`
+- [ ] Lifter：核心 `src/languages/{lang}/core/lifters/{file}.ts` 或 STD `src/languages/{lang}/std/{module}/lifters.ts`
 - [ ] 渲染映射：嵌入在 BlockSpec 中
 - [ ] 測試：`tests/unit/languages/{lang}/{concept_name}.test.ts`
 - [ ] 註冊：{加在哪裡}
