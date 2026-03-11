@@ -189,10 +189,12 @@ export class SyncController {
       const parseResult = this.parser.parse(code)
       const rootNode = parseResult.rootNode as import('../core/lift/types').AstNode
 
-      // Check for parse errors
+      // Check for parse errors — skip block sync when AST has errors to avoid
+      // intermediate typing states corrupting blocks (e.g., `cout << ` swallowing `return`)
       const errors = this.findErrors(rootNode)
       if (errors.length > 0) {
         this.onErrorCallback?.(errors)
+        return
       }
 
       // Code-level I/O conformance check (before lift — 借音/轉調 detection)
