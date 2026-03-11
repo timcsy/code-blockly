@@ -235,6 +235,11 @@ export function createAppLayout(
   }
 
   codeKeyboard.onNativeIME(() => showNativeIME())
+  codeKeyboard.onCollapse(() => {
+    // Show IME toggle so user can bring keyboard back
+    imeToggleBtn.style.display = ''
+    desktopImeToggleBtn.style.display = ''
+  })
   imeToggleBtn.addEventListener('click', () => showCodeKeyboard())
   desktopImeToggleBtn.addEventListener('click', () => showCodeKeyboard())
 
@@ -260,6 +265,9 @@ export function createAppLayout(
   }
 
   consoleKeyboard.onNativeIME(() => showConsoleNativeIME())
+  consoleKeyboard.onCollapse(() => {
+    consoleImeToggleBtn.style.display = ''
+  })
   consoleImeToggleBtn.addEventListener('click', () => showConsoleKeyboard())
 
   // ── Console input ↔ virtual keyboard wiring ──

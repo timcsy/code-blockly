@@ -4,6 +4,7 @@ type KeyDef = string | { label: string; action: string; wide?: number }
 
 // Termux-style shortcut row: Tab, Ctrl, common symbols, arrows
 const SHORTCUT_ROW: KeyDef[] = [
+  { label: '▼', action: 'collapse' },
   { label: 'Esc', action: 'esc' },
   { label: 'Tab', action: 'tab' },
   { label: 'Ctrl', action: 'ctrl' },
@@ -54,6 +55,7 @@ export class CodeKeyboard {
   private ctrlActive = false
   private backspaceTimer: ReturnType<typeof setInterval> | null = null
   private onNativeIMECallback: (() => void) | null = null
+  private onCollapseCallback: (() => void) | null = null
 
   constructor(parent: HTMLElement) {
     this.container = document.createElement('div')
@@ -79,6 +81,10 @@ export class CodeKeyboard {
 
   onNativeIME(callback: () => void): void {
     this.onNativeIMECallback = callback
+  }
+
+  onCollapse(callback: () => void): void {
+    this.onCollapseCallback = callback
   }
 
   show(): void {
@@ -173,6 +179,11 @@ export class CodeKeyboard {
   }
 
   private handleKey(action: string, char?: string): void {
+    if (action === 'collapse') {
+      this.hide()
+      this.onCollapseCallback?.()
+      return
+    }
     // Route to input mode or editor mode
     if (this.isInputMode) {
       this.handleInputKey(action, char)
