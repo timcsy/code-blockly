@@ -16,6 +16,11 @@ export function registerLiteralExecutors(register: (concept: string, executor: C
     return { type: 'string', value: unescapeC(String(node.properties.value)) }
   })
 
+  register('cpp_char_literal', async (node) => {
+    const ch = String(node.properties.char ?? '')
+    return { type: 'char', value: ch.charCodeAt(0) || 0 }
+  })
+
   register('builtin_constant', async (node) => {
     const value = String(node.properties.value)
     const builtin = CPP_BUILTIN_CONSTANTS[value]
