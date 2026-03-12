@@ -2008,5 +2008,253 @@
         }
       ]
     }
+  },
+  {
+    "id": "c_constructor",
+    "conceptId": "cpp_constructor",
+    "language": "cpp",
+    "category": "oop",
+    "version": "1.0.0",
+    "blockDef": {
+      "type": "c_constructor",
+      "message0": "%{BKY_C_CONSTRUCTOR_MSG0}",
+      "args0": [
+        {
+          "type": "field_input",
+          "name": "CLASS_NAME",
+          "text": "MyClass"
+        },
+        {
+          "type": "field_input",
+          "name": "PARAMS",
+          "text": ""
+        }
+      ],
+      "message1": "%{BKY_C_CONSTRUCTOR_MSG1}",
+      "args1": [
+        {
+          "type": "field_input",
+          "name": "INIT_LIST",
+          "text": ""
+        }
+      ],
+      "message2": "%{BKY_C_CONSTRUCTOR_MSG2}",
+      "args2": [
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
+      ],
+      "inputsInline": false,
+      "previousStatement": "Statement",
+      "nextStatement": "Statement",
+      "colour": "#9966FF",
+      "tooltip": "%{BKY_C_CONSTRUCTOR_TOOLTIP}"
+    }
+  },
+  {
+    "id": "c_destructor",
+    "conceptId": "cpp_destructor",
+    "language": "cpp",
+    "category": "oop",
+    "version": "1.0.0",
+    "blockDef": {
+      "type": "c_destructor",
+      "message0": "%{BKY_C_DESTRUCTOR_MSG0}",
+      "args0": [
+        {
+          "type": "field_input",
+          "name": "CLASS_NAME",
+          "text": "MyClass"
+        },
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
+      ],
+      "inputsInline": false,
+      "previousStatement": "Statement",
+      "nextStatement": "Statement",
+      "colour": "#9966FF",
+      "tooltip": "%{BKY_C_DESTRUCTOR_TOOLTIP}"
+    }
+  },
+  {
+    "id": "c_virtual_method",
+    "conceptId": "cpp_virtual_method",
+    "language": "cpp",
+    "category": "oop",
+    "version": "1.0.0",
+    "blockDef": {
+      "type": "c_virtual_method",
+      "message0": "%{BKY_C_VIRTUAL_METHOD_MSG0}",
+      "args0": [
+        {
+          "type": "field_input",
+          "name": "RETURN_TYPE",
+          "text": "void"
+        },
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "method"
+        },
+        {
+          "type": "field_input",
+          "name": "PARAMS",
+          "text": ""
+        }
+      ],
+      "message1": "%1",
+      "args1": [
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
+      ],
+      "inputsInline": true,
+      "previousStatement": "Statement",
+      "nextStatement": "Statement",
+      "colour": "#9966FF",
+      "tooltip": "%{BKY_C_VIRTUAL_METHOD_TOOLTIP}"
+    }
+  },
+  {
+    "id": "c_pure_virtual",
+    "conceptId": "cpp_pure_virtual",
+    "language": "cpp",
+    "category": "oop",
+    "version": "1.0.0",
+    "blockDef": {
+      "type": "c_pure_virtual",
+      "message0": "%{BKY_C_PURE_VIRTUAL_MSG0}",
+      "args0": [
+        {
+          "type": "field_input",
+          "name": "RETURN_TYPE",
+          "text": "void"
+        },
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "method"
+        },
+        {
+          "type": "field_input",
+          "name": "PARAMS",
+          "text": ""
+        }
+      ],
+      "inputsInline": true,
+      "previousStatement": "Statement",
+      "nextStatement": "Statement",
+      "colour": "#9966FF",
+      "tooltip": "%{BKY_C_PURE_VIRTUAL_TOOLTIP}"
+    },
+    "codeTemplate": {
+      "pattern": "virtual ${RETURN_TYPE} ${NAME}(${PARAMS}) = 0;",
+      "imports": [],
+      "order": 0
+    }
+  },
+  {
+    "id": "c_override_method",
+    "conceptId": "cpp_override_method",
+    "language": "cpp",
+    "category": "oop",
+    "version": "1.0.0",
+    "blockDef": {
+      "type": "c_override_method",
+      "message0": "%{BKY_C_OVERRIDE_METHOD_MSG0}",
+      "args0": [
+        {
+          "type": "field_input",
+          "name": "RETURN_TYPE",
+          "text": "void"
+        },
+        {
+          "type": "field_input",
+          "name": "NAME",
+          "text": "method"
+        },
+        {
+          "type": "field_input",
+          "name": "PARAMS",
+          "text": ""
+        }
+      ],
+      "message1": "%1",
+      "args1": [
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
+      ],
+      "inputsInline": true,
+      "previousStatement": "Statement",
+      "nextStatement": "Statement",
+      "colour": "#9966FF",
+      "tooltip": "%{BKY_C_OVERRIDE_METHOD_TOOLTIP}"
+    }
+  },
+  {
+    "id": "c_operator_overload",
+    "conceptId": "cpp_operator_overload",
+    "language": "cpp",
+    "category": "oop",
+    "version": "1.0.0",
+    "blockDef": {
+      "type": "c_operator_overload",
+      "message0": "%{BKY_C_OPERATOR_OVERLOAD_MSG0}",
+      "args0": [
+        {
+          "type": "field_input",
+          "name": "RETURN_TYPE",
+          "text": "MyClass"
+        },
+        {
+          "type": "field_dropdown",
+          "name": "OP",
+          "options": [
+            ["+", "+"],
+            ["-", "-"],
+            ["*", "*"],
+            ["==", "=="],
+            ["!=", "!="],
+            ["<", "<"],
+            [">", ">"],
+            ["<<", "<<"],
+            [">>", ">>"]
+          ]
+        },
+        {
+          "type": "field_input",
+          "name": "PARAM_TYPE",
+          "text": "const MyClass&"
+        },
+        {
+          "type": "field_input",
+          "name": "PARAM_NAME",
+          "text": "other"
+        }
+      ],
+      "message1": "%1",
+      "args1": [
+        {
+          "type": "input_statement",
+          "name": "BODY",
+          "check": "Statement"
+        }
+      ],
+      "inputsInline": true,
+      "previousStatement": "Statement",
+      "nextStatement": "Statement",
+      "colour": "#9966FF",
+      "tooltip": "%{BKY_C_OPERATOR_OVERLOAD_TOOLTIP}"
+    }
   }
 ]

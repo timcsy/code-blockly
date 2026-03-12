@@ -382,5 +382,13 @@
       { "semantic": "ptr", "ast": "$namedChildren[0]", "extract": "lift" }
     ],
     "priority": 5
+  },
+  {
+    "id": "cpp_class_specifier",
+    "astNodeType": "class_specifier",
+    "concept": { "conceptId": "cpp_class_def" },
+    "liftStrategy": "cpp:liftClassDef",
+    "fieldMappings": [],
+    "priority": 10
   }
 ]
