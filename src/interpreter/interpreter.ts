@@ -66,6 +66,8 @@ export class SemanticInterpreter implements ExecutionContext {
       'cpp_class_def', 'cpp_struct_declare', 'cpp_constructor', 'cpp_destructor',
       'cpp_virtual_method', 'cpp_pure_virtual', 'cpp_override_method',
       'cpp_operator_overload',
+      'cpp_namespace_def', 'cpp_lambda',
+      'cpp_static_cast', 'cpp_dynamic_cast', 'cpp_reinterpret_cast', 'cpp_const_cast',
     ]) {
       reg(c, noop)
     }

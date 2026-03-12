@@ -53,7 +53,9 @@
           "cpp_do_while", "cpp_ternary", "cpp_cast",
           "bitwise_not",
           "cpp_printf", "cpp_scanf", "cpp_scanf_expr",
-          "cpp_try_catch", "cpp_throw"
+          "cpp_lambda", "cpp_namespace_def",
+          "cpp_static_cast", "cpp_dynamic_cast",
+          "cpp_reinterpret_cast", "cpp_const_cast"
         ],
         "children": [
           {
@@ -77,9 +79,6 @@
               "cpp_struct_declare", "cpp_struct_member_access",
               "cpp_struct_pointer_access",
               "cpp_class_def", "cpp_new", "cpp_delete",
-              "cpp_constructor", "cpp_destructor",
-              "cpp_virtual_method", "cpp_pure_virtual",
-              "cpp_override_method", "cpp_operator_overload",
               "cpp_template_function",
               "cpp_method_call", "cpp_method_call_expr",
               "cpp_vector_declare", "cpp_vector_push_back", "cpp_vector_size",
