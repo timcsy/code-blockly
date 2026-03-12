@@ -38,7 +38,7 @@ export function registerVariableExecutors(register: (concept: string, executor: 
       const val = await ctx.evaluate(init[0])
       ctx.scope.declare(name, val)
     } else {
-      ctx.scope.declare(name, 0)
+      ctx.scope.declare(name, { type: 'int', value: 0 })
     }
   })
 

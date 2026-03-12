@@ -57,6 +57,11 @@ export function registerExpressionGenerators(g: Map<string, NodeGenerator>): voi
     return `"${node.properties.value ?? ''}"`
   })
 
+  g.set('cpp_char_literal', (node, _ctx) => {
+    const ch = node.properties.char ?? 'a'
+    return `'${ch}'`
+  })
+
   g.set('builtin_constant', (node, _ctx) => {
     return String(node.properties.value ?? 'NULL')
   })
@@ -96,7 +101,12 @@ export function registerExpressionGenerators(g: Map<string, NodeGenerator>): voi
 
   g.set('negate', (node, ctx) => {
     const op = (node.properties.operator as string) ?? '-'
-    const val = genChild((node.children.value ?? node.children.operand ?? [])[0], precedence(node), ctx)
+    const childNode = (node.children.value ?? node.children.operand ?? [])[0]
+    const val = genChild(childNode, precedence(node), ctx)
+    // Prevent --x (pre-decrement) or ++x when nesting unary operators
+    if (childNode && (childNode.concept === 'negate' || childNode.concept === 'cpp_pointer_deref' || childNode.concept === 'cpp_address_of')) {
+      return `${op}(${val})`
+    }
     return `${op}${val}`
   })
 
