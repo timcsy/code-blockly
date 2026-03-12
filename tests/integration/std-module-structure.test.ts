@@ -76,12 +76,13 @@ describe('Std module structure consistency', () => {
     expect(registry.getHeaderForConcept('endl')).toBe('<iostream>')
   })
 
-  it('should have 13 std modules', () => {
-    expect(allStdModules).toHaveLength(13)
+  it('should have 17 std modules', () => {
+    expect(allStdModules).toHaveLength(17)
     const headers = allStdModules.map(m => m.header).sort()
     expect(headers).toEqual([
-      '<algorithm>', '<cctype>', '<cmath>', '<cstdio>', '<cstdlib>', '<cstring>', '<iostream>',
-      '<map>', '<queue>', '<set>', '<stack>', '<string>', '<vector>',
+      '<algorithm>', '<cctype>', '<cmath>', '<cstdio>', '<cstdlib>', '<cstring>',
+      '<fstream>', '<iostream>', '<map>', '<numeric>', '<queue>', '<set>',
+      '<sstream>', '<stack>', '<string>', '<utility>', '<vector>',
     ])
   })
 })

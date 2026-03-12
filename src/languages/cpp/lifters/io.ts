@@ -237,6 +237,28 @@ export function registerIOLifters(lifter: Lifter): void {
       return createNode('cpp_swap', { a, b })
     }
 
+    // std::accumulate / accumulate
+    if (funcName === 'accumulate' || funcName === 'std::accumulate') {
+      const accumArgs = argsNode ? argsNode.namedChildren : []
+      const beginText = accumArgs[0]?.text ?? 'v.begin()'
+      const endText = accumArgs[1]?.text ?? 'v.end()'
+      const initChild = accumArgs[2] ? ctx.lift(accumArgs[2]) : null
+      return createNode('cpp_accumulate', { begin: beginText, end: endText }, {
+        init: initChild ? [initChild] : [],
+      })
+    }
+
+    // std::make_pair / make_pair
+    if (funcName === 'make_pair' || funcName === 'std::make_pair') {
+      const pairArgs = argsNode ? argsNode.namedChildren : []
+      const firstChild = pairArgs[0] ? ctx.lift(pairArgs[0]) : null
+      const secondChild = pairArgs[1] ? ctx.lift(pairArgs[1]) : null
+      return createNode('cpp_make_pair', {}, {
+        first: firstChild ? [firstChild] : [],
+        second: secondChild ? [secondChild] : [],
+      })
+    }
+
     // General function call
     const args = argsNode
       ? argsNode.namedChildren.map(a => ctx.lift(a)).filter((n): n is NonNullable<typeof n> => n !== null)
