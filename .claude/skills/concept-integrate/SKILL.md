@@ -132,8 +132,12 @@ npm test
 
 如果所有檢查通過：
 
-1. **驗證 git 狀態是乾淨的**
-2. **再執行一次完整測試套件**
+1. **再執行一次完整測試套件**
+2. **Git commit**（如果有未 commit 的變更）：
+   - Stage 所有概念相關的變更檔案（blocks.json、generators、lifters、concepts.json、lift-patterns.json、toolbox-categories.ts、topics/*.json、tests 等）
+   - 不用 `git add -A`，逐檔 stage 避免加入無關檔案
+   - Commit message 格式：`feat({lang}): add {concept_name} concept`
+   - 如果是由 `/concept.pipeline` 批次調用，跳過 commit（由 pipeline 統一 commit）
 3. **建立摘要**
 
 輸出：

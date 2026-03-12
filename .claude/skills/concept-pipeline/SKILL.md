@@ -50,6 +50,22 @@ $ARGUMENTS
 
 ## 工作流程
 
+### 階段零：Feature Branch 建立
+
+在開始任何概念工作之前，建立獨立的 feature branch：
+
+1. **偵測當前分支**：如果已經在 `{NNN}-{lang}-{topic}` 格式的 feature branch 上，跳過建立
+2. **自動編號**：掃描所有本地分支和 `specs/` 目錄，找到最大編號 N，使用 N+1
+3. **命名規則**：`{NNN}-{lang}-{short_name}`，例如 `024-cpp-string-ops`、`025-cpp-const-ref`
+   - `short_name` 從使用者輸入推導（標頭檔名、特性名、概念群組名）
+   - 相關概念群組用一個 branch（如同一標頭檔的多個函式）
+4. **建立並切換**：
+   ```bash
+   git checkout -b {NNN}-{lang}-{short_name}
+   ```
+
+**關卡**：已在正確的 feature branch 上。
+
 ### 階段一：探索
 
 **調用**：`/concept.discover {lang} $ARGUMENTS`
@@ -139,16 +155,21 @@ $ARGUMENTS
 3. 執行 `/concept.fuzz {lang} all 20` 進行更廣泛的回歸測試
 ```
 
-### Git Commit
+### Git Commit & PR
 
-如果有概念成功整合，提議 commit：
+如果有概念成功整合：
 
-```
-{N} 個 {language} 概念已整合。要建立 commit 嗎？
-
-建議的訊息：
-  feat({lang}): add {topic} concepts ({concept_list})
-```
+1. **Stage 所有變更的檔案**（僅概念相關檔案，不用 `git add -A`）
+2. **建立 commit**：
+   ```
+   feat({lang}): add {topic} concepts ({concept_list})
+   ```
+3. **詢問使用者是否要建立 PR**：
+   ```
+   {N} 個 {language} 概念已整合到 branch {branch_name}。
+   要推送並建立 PR 嗎？(yes/no)
+   ```
+4. 如果使用者同意，推送並用 `gh pr create` 建立 PR，body 包含概念清單和測試結果摘要
 
 ## 錯誤恢復
 

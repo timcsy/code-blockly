@@ -37,6 +37,19 @@ $ARGUMENTS
 
 ## 工作流程
 
+### 階段零：Feature Branch（獨立使用時）
+
+如果**不是**由 `/concept.pipeline` 調用，且目前不在概念 feature branch 上：
+
+1. **偵測當前分支**：檢查是否已在 `{NNN}-{lang}-{topic}` 格式的 feature branch 上
+2. **如果不在**：詢問使用者是否要建立 feature branch
+3. **如果要建立**：
+   - 掃描所有本地分支和 `specs/` 目錄，找到最大編號 N，使用 N+1
+   - 命名規則：`{NNN}-{lang}-{short_name}`（如 `024-cpp-string-ops`）
+   - `short_name` 從使用者輸入推導（標頭檔名、特性名、概念群組名）
+   - 執行 `git checkout -b {NNN}-{lang}-{short_name}`
+4. **如果不要**：在當前分支上繼續（使用者自行管理 branch）
+
 ### 階段一：研究
 
 1. **網路搜尋** 目標函式庫/特性：
