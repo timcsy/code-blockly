@@ -535,5 +535,15 @@
     ],
     "children": {},
     "role": "statement"
+  },
+  {
+    "conceptId": "cpp_sizeof",
+    "layer": "lang-core",
+    "abstractConcept": "sizeof",
+    "properties": [
+      "target"
+    ],
+    "children": {},
+    "role": "expression"
   }
 ]

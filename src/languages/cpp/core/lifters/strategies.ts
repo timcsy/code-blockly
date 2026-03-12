@@ -139,6 +139,21 @@ export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void 
     return createNode('cpp_using_alias', { alias, orig_type: origType })
   })
 
+  // sizeof_expression: sizeof(int) or sizeof(x)
+  registry.register('cpp:liftSizeof', (node) => {
+    const child = node.namedChildren[0]
+    if (child) {
+      if (child.type === 'type_descriptor') {
+        return createNode('cpp_sizeof', { target: child.text })
+      }
+      if (child.type === 'parenthesized_expression') {
+        return createNode('cpp_sizeof', { target: child.namedChildren[0]?.text ?? child.text })
+      }
+      return createNode('cpp_sizeof', { target: child.text })
+    }
+    return createNode('cpp_sizeof', { target: 'int' })
+  })
+
   // declaration: multi-variable + array declarations
   registry.register('cpp:liftDeclaration', (node, ctx) => {
     // Detect type qualifiers: const, constexpr
