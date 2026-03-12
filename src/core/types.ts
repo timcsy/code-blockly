@@ -144,6 +144,7 @@ export interface AstPattern {
   unwrapChild?: number | string
   contextTransform?: ContextTransformDef
   multiResult?: MultiResultDef
+  liftStrategy?: string
 }
 
 export interface AstConstraint {

@@ -403,6 +403,165 @@ int main() {
   })
 })
 
+// --- oop_new1: struct with constructor and member functions (fuzz 2026-03-13) ---
+
+describe('fuzz: struct with constructor and member functions', () => {
+  const code = `#include <iostream>
+#include <string>
+using namespace std;
+struct Student {
+    string name;
+    int score;
+    Student(string n, int s) : name(n), score(s) {
+    }
+    void addBonus(int b) {
+        score += b;
+    }
+    void print() {
+        cout << name << ": " << score << endl;
+    }
+};
+int main() {
+    Student s("Alice", 85);
+    s.print();
+    return 0;
+}`
+
+  it('struct constructors preserve name and params', () => {
+    const gen = roundTrip(code)
+    expect(gen).toContain('struct Student')
+    expect(gen).toContain('Student(string n, int s)')
+    expect(gen).toContain('void addBonus(int b)')
+  })
+
+  it('roundtrip is stable', () => {
+    const gen1 = roundTrip(code)
+    const gen2 = roundTrip(gen1)
+    expect(gen1).toBe(gen2)
+  })
+})
+
+// --- oop_new2: class with operator+, multi-var fields (fuzz 2026-03-13) ---
+
+describe('fuzz: class with operator+ and multi-var private fields', () => {
+  const code = `#include <iostream>
+using namespace std;
+class Vec2 {
+public:
+    Vec2(double x, double y) : x(x), y(y) {
+    }
+    Vec2 operator+(Vec2 other) {
+        return Vec2(x + other.x, y + other.y);
+    }
+    void print() {
+        cout << "(" << x << ", " << y << ")" << endl;
+    }
+private:
+    double x;
+    double y;
+};
+int main() {
+    Vec2 a(1.0, 2.0);
+    Vec2 b(3.0, 4.0);
+    Vec2 c = a + b;
+    c.print();
+    return 0;
+}`
+
+  it('operator+ and both private fields preserved', () => {
+    const gen = roundTrip(code)
+    expect(gen).toContain('class Vec2')
+    expect(gen).toContain('operator+')
+    expect(gen).toContain('double x;')
+    expect(gen).toContain('double y;')
+  })
+
+  it('roundtrip is stable', () => {
+    const gen1 = roundTrip(code)
+    const gen2 = roundTrip(gen1)
+    expect(gen1).toBe(gen2)
+  })
+})
+
+// --- oop_new3: inheritance with protected members (fuzz 2026-03-13) ---
+
+describe('fuzz: inheritance with protected access specifier', () => {
+  const code = `#include <iostream>
+#include <string>
+using namespace std;
+class Entity {
+public:
+    Entity(string id) : id(id) {
+    }
+    virtual void info() {
+        cout << "Entity: " << id << endl;
+    }
+    ~Entity() {
+    }
+protected:
+    string id;
+};
+int main() {
+    Entity e("test");
+    e.info();
+    return 0;
+}`
+
+  it('protected access section preserved', () => {
+    const gen = roundTrip(code)
+    expect(gen).toContain('class Entity')
+    expect(gen).toContain('protected:')
+    expect(gen).toContain('string id;')
+  })
+
+  it('roundtrip is stable', () => {
+    const gen1 = roundTrip(code)
+    const gen2 = roundTrip(gen1)
+    expect(gen1).toBe(gen2)
+  })
+})
+
+// --- oop_new4: struct with multiple constructors (fuzz 2026-03-13) ---
+
+describe('fuzz: struct with multiple constructors', () => {
+  const code = `#include <iostream>
+using namespace std;
+struct Point {
+    int x;
+    int y;
+    Point() : x(0), y(0) {
+    }
+    Point(int x, int y) : x(x), y(y) {
+    }
+};
+int main() {
+    Point origin;
+    Point a(3, 4);
+    return 0;
+}`
+
+  it('both constructors preserved in struct', () => {
+    const gen = roundTrip(code)
+    expect(gen).toContain('struct Point')
+    expect(gen).toContain('Point()')
+    expect(gen).toContain('Point(int x, int y)')
+  })
+
+  it('roundtrip is stable', () => {
+    const gen1 = roundTrip(code)
+    const gen2 = roundTrip(gen1)
+    expect(gen1).toBe(gen2)
+  })
+})
+
+// --- Known limitations (EXPECTED_DEGRADATION, fuzz 2026-03-13) ---
+// fuzz_3, fuzz_4: ptr->method() via pointer array generates as .method()
+it.todo('fuzz: pointer array dispatch animals[i]->describe() (needs ptr->method support)')
+// fuzz_5: inner block { } scope flattened, destructor order wrong
+it.todo('fuzz: nested block scope for destructor ordering (needs standalone block concept)')
+// fuzz_10: static int count; and int Widget::count = 0; not supported
+it.todo('fuzz: class with static member and out-of-class definition (needs static member concept)')
+
 // --- oop_010: two classes with constructors/destructors, destruction order ---
 
 describe('fuzz: two classes with constructors/destructors, destruction order', () => {

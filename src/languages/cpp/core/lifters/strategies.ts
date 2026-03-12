@@ -74,6 +74,15 @@ function liftSingleDeclarator(decl: AstNode, type: string, ctx: LiftContext): Se
 
   const valueNode = decl.childForFieldName('value')
   if (valueNode) {
+    // Constructor-style initialization: Type name(args) — value is argument_list
+    if (valueNode.type === 'argument_list') {
+      const args = valueNode.namedChildren
+        .map(a => ctx.lift(a))
+        .filter((n): n is NonNullable<typeof n> => n !== null)
+      return createNode('var_declare', { name, type, init_style: 'constructor' }, {
+        initializer: args,
+      })
+    }
     const value = ctx.lift(valueNode)
     return createNode('var_declare', { name, type }, {
       initializer: value ? [value] : [],
@@ -127,18 +136,26 @@ function liftClassMember(node: AstNode, className: string, ctx: LiftContext): Se
       return createNode('cpp_operator_overload', { return_type: returnType, operator: op, param_type: paramType, param_name: paramName }, { body })
     }
 
+    // Check for override keyword (via virtual_specifier node in declarator)
+    const hasOverride = declNode?.namedChildren.some(c => c.type === 'virtual_specifier' && c.text === 'override') ?? false
+
+    // Override method (with or without virtual keyword)
+    if (hasOverride) {
+      const methodName = nameNode?.text ?? 'method'
+      const returnType = typeNode?.text ?? 'void'
+      const paramList = declNode?.childForFieldName('parameters') ?? null
+      const params = liftParamList(paramList, ctx)
+      const body = extractBody(bodyNode, ctx)
+      return createNode('cpp_override_method', { return_type: returnType, name: methodName }, { params, body })
+    }
+
     // Virtual method with body
     if (isVirtual) {
       const methodName = nameNode?.text ?? 'method'
       const returnType = typeNode?.text ?? 'void'
       const paramList = declNode?.childForFieldName('parameters') ?? null
       const params = liftParamList(paramList, ctx)
-      // Check for override keyword
-      const hasOverride = node.text.includes('override')
       const body = extractBody(bodyNode, ctx)
-      if (hasOverride) {
-        return createNode('cpp_override_method', { return_type: returnType, name: methodName }, { params, body })
-      }
       return createNode('cpp_virtual_method', { return_type: returnType, name: methodName }, { params, body })
     }
 
@@ -160,10 +177,23 @@ function liftClassMember(node: AstNode, className: string, ctx: LiftContext): Se
       return createNode('cpp_pure_virtual', { return_type: returnType, name: methodName }, { params })
     }
 
-    // Regular field declaration: type name; → var_declare
+    // Regular field declaration: type name; or type x, y;
     const typeNode = node.childForFieldName('type')
-    const declNode = node.childForFieldName('declarator')
     const type = typeNode?.text ?? 'int'
+    // Check for multi-variable declarations (e.g., double x, y;)
+    const declarators = node.namedChildren.filter(c =>
+      c.type === 'identifier' || c.type === 'field_identifier' ||
+      c.type === 'pointer_declarator' || c.type === 'reference_declarator'
+    ).filter(c => c !== typeNode) // exclude the type node itself
+    if (declarators.length > 1) {
+      // Multi-variable: create individual var_declare nodes wrapped in a container
+      const nodes = declarators.map(d => createNode('var_declare', { type, name: d.text }))
+      // Return first and add rest — use a wrapper approach
+      // Actually, we need to return multiple nodes. Use the fact that struct/class member lifting
+      // collects all children. Return a compound node that generateBody will flatten.
+      return createNode('_multi_field', {}, { fields: nodes })
+    }
+    const declNode = node.childForFieldName('declarator')
     const name = declNode?.text ?? 'x'
     return createNode('var_declare', { type, name })
   }
@@ -187,32 +217,75 @@ function liftParamList(paramList: AstNode | null, _ctx: LiftContext): SemanticNo
 }
 
 export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void {
-  // class_specifier: class Name { public: ... private: ... };
+  // struct_specifier: struct Name { members };
+  registry.register('cpp:liftStructDef', (node, ctx) => {
+    const nameNode = node.childForFieldName('name')
+    const structName = nameNode?.text ?? 'MyStruct'
+    const bodyNode = node.childForFieldName('body')
+    const members: SemanticNode[] = []
+
+    if (bodyNode) {
+      for (const child of bodyNode.namedChildren) {
+        if (child.type === 'access_specifier') continue
+        const lifted = liftClassMember(child, structName, ctx)
+        if (lifted) members.push(lifted)
+      }
+    }
+
+    return createNode('cpp_struct_declare', { name: structName }, { members })
+  })
+
+  // class_specifier: class Name : public Base { public: ... private: ... protected: ... };
   registry.register('cpp:liftClassDef', (node, ctx) => {
     const nameNode = node.childForFieldName('name')
     const className = nameNode?.text ?? 'MyClass'
     const bodyNode = node.childForFieldName('body')
 
+    // Extract base class from base_class_clause
+    const baseClause = node.namedChildren.find(c => c.type === 'base_class_clause')
+    let baseClass = ''
+    let baseAccess = 'public'
+    if (baseClause) {
+      // base_class_clause contains access_specifier? and type_identifier
+      for (const child of baseClause.namedChildren) {
+        if (child.type === 'access_specifier') {
+          baseAccess = child.text.replace(/:$/, '').trim()
+        } else if (child.type === 'type_identifier' || child.type === 'qualified_identifier') {
+          baseClass = child.text
+        }
+      }
+    }
+
     const publicMembers: SemanticNode[] = []
     const privateMembers: SemanticNode[] = []
+    const protectedMembers: SemanticNode[] = []
     let currentAccess = 'private' // default access in class
 
     if (bodyNode) {
       for (const child of bodyNode.namedChildren) {
         if (child.type === 'access_specifier') {
-          currentAccess = child.text.trim()
+          const accessText = child.text.replace(/:$/, '').trim()
+          currentAccess = accessText
           continue
         }
         const lifted = liftClassMember(child, className, ctx)
         if (lifted) {
-          if (currentAccess === 'public') publicMembers.push(lifted)
+          if (currentAccess === 'public' || currentAccess === 'public:') publicMembers.push(lifted)
+          else if (currentAccess === 'protected' || currentAccess === 'protected:') protectedMembers.push(lifted)
           else privateMembers.push(lifted)
         }
       }
     }
 
-    return createNode('cpp_class_def', { name: className }, {
+    const props: Record<string, string> = { name: className }
+    if (baseClass) {
+      props.base_class = baseClass
+      props.base_access = baseAccess
+    }
+
+    return createNode('cpp_class_def', props, {
       public: publicMembers,
+      protected: protectedMembers,
       private: privateMembers,
     })
   })

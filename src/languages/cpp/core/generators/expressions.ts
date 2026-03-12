@@ -1,5 +1,5 @@
 import type { NodeGenerator } from '../../../../core/projection/code-generator'
-import { generateExpression, generateBody, indented } from '../../../../core/projection/code-generator'
+import { generateExpression, generateBody, indented, indent } from '../../../../core/projection/code-generator'
 import type { SemanticNode } from '../../../../core/types'
 
 /** C++ operator precedence data (higher = binds tighter). */
@@ -224,6 +224,27 @@ export function registerExpressionGenerators(g: Map<string, NodeGenerator>): voi
     const sizeNodes = node.children.size ?? []
     const size = sizeNodes.length > 0 ? generateExpression(sizeNodes[0], ctx) : '1'
     return `(${type})malloc(${size} * sizeof(${sizeofType}))`
+  })
+
+  g.set('cpp_struct_member_access', (node) => {
+    const obj = node.properties.obj ?? 'obj'
+    const member = node.properties.member ?? 'field'
+    return `${obj}.${member}`
+  })
+
+  g.set('cpp_struct_pointer_access', (node) => {
+    const ptr = node.properties.ptr ?? 'ptr'
+    const member = node.properties.member ?? 'field'
+    return `${ptr}->${member}`
+  })
+
+  g.set('cpp_method_call_expr', (node, ctx) => {
+    const obj = node.properties.obj ?? 'obj'
+    const method = node.properties.method ?? 'method'
+    const args = (node.children.args ?? []).map(a => generateExpression(a, ctx))
+    const expr = `${obj}.${method}(${args.join(', ')})`
+    if (ctx.isExpression) return expr
+    return `${indent(ctx)}${expr};\n`
   })
 
   g.set('var_declare_expr', (node, ctx) => {

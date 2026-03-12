@@ -365,15 +365,30 @@ export function registerStatementGenerators(g: Map<string, NodeGenerator>, style
     return `${indent(ctx)}free(${ptr});\n`
   })
 
+  g.set('cpp_method_call', (node, ctx) => {
+    const obj = node.properties.obj ?? 'obj'
+    const method = node.properties.method ?? 'method'
+    const args = (node.children.args ?? []).map(a => generateExpression(a, ctx))
+    return `${indent(ctx)}${obj}.${method}(${args.join(', ')});\n`
+  })
+
   // OOP concepts
   g.set('cpp_class_def', (node, ctx) => {
     const name = node.properties.name ?? 'MyClass'
+    const baseClass = node.properties.base_class ?? ''
+    const baseAccess = node.properties.base_access ?? 'public'
     const publicBody = node.children.public ?? []
+    const protectedBody = node.children.protected ?? []
     const privateBody = node.children.private ?? []
-    let code = `${indent(ctx)}class ${name}${openBrace(ctx)}\n`
+    const inheritance = baseClass ? ` : ${baseAccess} ${baseClass}` : ''
+    let code = `${indent(ctx)}class ${name}${inheritance}${openBrace(ctx)}\n`
     if (publicBody.length > 0) {
       code += `${indent(ctx)}public:\n`
       code += generateBody(publicBody, indented(ctx))
+    }
+    if (protectedBody.length > 0) {
+      code += `${indent(ctx)}protected:\n`
+      code += generateBody(protectedBody, indented(ctx))
     }
     if (privateBody.length > 0) {
       code += `${indent(ctx)}private:\n`

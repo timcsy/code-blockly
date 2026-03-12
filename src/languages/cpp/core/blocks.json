@@ -1523,18 +1523,8 @@
     "astPattern": {
       "nodeType": "struct_specifier",
       "constraints": [],
-      "fieldMappings": [
-        {
-          "semantic": "name",
-          "ast": "name",
-          "extract": "text"
-        },
-        {
-          "semantic": "members",
-          "ast": "body",
-          "extract": "liftBody"
-        }
-      ]
+      "liftStrategy": "cpp:liftStructDef",
+      "fieldMappings": []
     }
   },
   {

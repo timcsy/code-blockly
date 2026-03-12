@@ -108,4 +108,18 @@ export function registerFunctionExecutors(register: (concept: string, executor: 
   register('forward_decl', async () => {
     // no-op: forward function declaration
   })
+
+  // OOP concepts — noop in interpreter (no OOP runtime)
+  register('cpp_struct_declare', async () => {})
+  register('cpp_struct_member_access', async () => {})
+  register('cpp_struct_pointer_access', async () => {})
+  register('cpp_class_def', async () => {})
+  register('cpp_constructor', async () => {})
+  register('cpp_destructor', async () => {})
+  register('cpp_virtual_method', async () => {})
+  register('cpp_pure_virtual', async () => {})
+  register('cpp_override_method', async () => {})
+  register('cpp_operator_overload', async () => {})
+  register('cpp_method_call', async () => {})
+  register('cpp_method_call_expr', async () => {})
 }

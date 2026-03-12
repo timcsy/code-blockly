@@ -77,8 +77,7 @@ describe('Round-trip: C++ OOP concepts', () => {
       expect(findConcept(tree!, 'cpp_struct_declare')).toBe(true)
     })
 
-    // Known issue: cpp_struct_declare generates as /* unknown concept */
-    it.fails('struct generates back (known issue: no generator)', () => {
+    it('struct generates back', () => {
       const code = `struct Point {
     int x;
     int y;
@@ -325,6 +324,109 @@ private:
       expect(result).toContain('Container(int size)')
       expect(result).toContain('~Container()')
       expect(result).toContain('private:')
+    })
+  })
+
+  // ---- 11. inheritance: class with base class ----
+  describe('cpp_class_def with inheritance', () => {
+    it('class inheriting from base class', () => {
+      const code = `class Animal {
+public:
+    virtual void speak() {
+        int x = 0;
+    }
+};`
+      const result = roundTripCode(code)
+      expect(result).toContain('class Animal')
+    })
+
+    it('class with public inheritance', () => {
+      const code = `class Dog : public Animal {
+public:
+    void speak() override {
+        int x = 1;
+    }
+};`
+      const result = roundTripCode(code)
+      expect(result).toContain('class Dog : public Animal')
+      expect(result).toContain('override')
+    })
+  })
+
+  // ---- 12. struct member access ----
+  describe('cpp_struct_member_access and cpp_struct_pointer_access', () => {
+    it('struct declaration generates back', () => {
+      const code = `struct Point {
+    int x;
+    int y;
+};`
+      const result = roundTripCode(code)
+      expect(result).toContain('struct Point')
+      expect(result).toContain('int x;')
+      expect(result).toContain('int y;')
+    })
+  })
+
+  // ---- 13. reference declare ----
+  describe('cpp_ref_declare', () => {
+    it('reference declaration generates back', () => {
+      const code = `#include <iostream>
+using namespace std;
+int main() {
+    int x = 10;
+    int& ref = x;
+    cout << ref << endl;
+    return 0;
+}`
+      const result = roundTripCode(code)
+      expect(result).toContain('int& ref')
+    })
+  })
+
+  // ---- 14. constructor-style initialization ----
+  describe('constructor-style initialization', () => {
+    it('Type name(args) generates with constructor syntax', () => {
+      const code = `Counter c(10);`
+      const result = roundTripCode(code)
+      expect(result).toContain('Counter c(10);')
+    })
+
+    it('constructor call with float arg', () => {
+      const code = `Circle c(5.0);`
+      const result = roundTripCode(code)
+      expect(result).toContain('Circle c(5.0);')
+    })
+
+    it('constructor call with multiple args', () => {
+      const code = `Point p(3, 4);`
+      const result = roundTripCode(code)
+      expect(result).toContain('Point p(3, 4);')
+    })
+
+    it('constructor call is P1 stable', () => {
+      const code = `Circle c(5.0);`
+      const tree1 = liftCode(code)
+      expect(tree1).not.toBeNull()
+      const gen1 = generateCode(tree1!, 'cpp', style)
+      const tree2 = liftCode(gen1)
+      expect(tree2).not.toBeNull()
+      const gen2 = generateCode(tree2!, 'cpp', style)
+      expect(gen1).toBe(gen2)
+    })
+  })
+
+  // ---- 15. method call as statement ----
+  describe('method call statement', () => {
+    it('obj.method() generates with indent and semicolons', () => {
+      const code = `c.inc();`
+      const result = roundTripCode(code)
+      expect(result).toContain('c.inc();')
+    })
+
+    it('obj.method(arg) generates correctly', () => {
+      const code = `v.push_back(10);`
+      const result = roundTripCode(code)
+      expect(result).toContain('push_back')
     })
   })
 

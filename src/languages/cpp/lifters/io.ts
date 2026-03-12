@@ -48,14 +48,11 @@ function tryMethodCallLift(
       return createNode('cpp_string_c_str', { obj })
   }
 
-  // No-arg method calls → expression
-  if (argChildren.length === 0) {
-    return createNode('cpp_method_call_expr', { obj, method, args: '' })
-  }
-
-  // Generic method call with args as text
-  const argsText = argsNode ? argsNode.namedChildren.map(a => a.text).join(', ') : ''
-  return createNode('cpp_method_call_expr', { obj, method, args: argsText })
+  // Generic method call — lift args as children for proper round-trip
+  const liftedArgs = argChildren
+    .map(a => ctx.lift(a))
+    .filter((n): n is NonNullable<typeof n> => n !== null)
+  return createNode('cpp_method_call_expr', { obj, method }, { args: liftedArgs })
 }
 
 /** Map method names from field_expression to concept IDs */
