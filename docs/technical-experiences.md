@@ -31,6 +31,7 @@
 18. [加入新語言的完整清單](#18-加入新語言的完整清單)
 19. [常見陷阱與解法](#19-常見陷阱與解法)
 20. [概念五層完備性：cmath 執行層遺漏的教訓](#20-概念五層完備性cmath-執行層遺漏的教訓)
+21. [三模式 ArgSlot 的 extraState 契約不一致：cin >> s 變成 cin >> x](#21-三模式-argslot-的-extrastate-契約不一致cin--s-變成-cin--x)
 
 ---
 
@@ -952,3 +953,107 @@ Semorphe 的「執行」按鈕不是呼叫 C++ 編譯器——它使用 `Semanti
 | 語義樹工具函式 | `src/core/semantic-tree.ts` |
 | Interpreter | `src/interpreter/interpreter.ts` |
 | 第一性原理 | `docs/first-principles.md` |
+
+---
+
+## 21. 三模式 ArgSlot 的 extraState 契約不一致：cin >> s 變成 cin >> x
+
+### 現象
+
+使用者在積木面板建立了 `cin >> s` 的輸入積木，點擊「積木→程式碼」轉換後，產生的程式碼變成 `cin >> x`。變數名稱在轉換過程中消失了。
+
+### 根本原因：四層靜默降級的連鎖
+
+這不是單一 bug，而是四層防線都有缺陷，且每一層都「靜默」降級為預設值 `'x'`，沒有任何錯誤訊息。
+
+**第一層：`u_input_expr` 的 `saveExtraState` 與 `u_input` 不一致**
+
+`u_input`（語句版）的 `saveExtraState` 正確地讀取 Blockly 欄位值：
+```typescript
+// u_input — 正確
+const val = this.getFieldValue(`SEL_${i}`)
+args.push({ mode: 'select', text: val })
+```
+
+但 `u_input_expr`（表達式版）直接複製內部狀態：
+```typescript
+// u_input_expr — 有問題
+return { args: this.argSlots_.map(s => ({ ...s })) }
+```
+
+問題在於 dropdown validator 寫入的是 `selectedVar`，不是 `text`：
+```typescript
+block.argSlots_[idx] = { mode: 'select', selectedVar: newVal }
+// 注意：沒有 text 欄位！
+```
+
+結果：`saveExtraState` 回傳 `{ mode: 'select', selectedVar: 's' }` — 有 `selectedVar` 但沒有 `text`。
+
+**第二層：Extractor 只檢查 `text`，忽略 `selectedVar`**
+
+```typescript
+if (a.mode === 'select' && a.text) varNames.push(a.text)
+// a.text 是 undefined → 不加入 → varNames 為空
+```
+
+**第三層：Extractor fallback 用了不存在的欄位名**
+
+```typescript
+const singleVar = block.getFieldValue('VAR') ?? 'x'
+// 積木上沒有 'VAR' 欄位！正確名稱是 'SEL_0'
+// getFieldValue('VAR') 永遠回傳 null → 降級為 'x'
+```
+
+**第四層：Generator 硬編碼 fallback**
+
+```typescript
+const vars = valueNodes.length > 0
+  ? valueNodes.map(v => generateExpression(v, ctx))
+  : ['x']  // 不看 node.properties.variable
+```
+
+### 修復
+
+四層同時修復：
+1. `u_input_expr` 的 `saveExtraState` 改為與 `u_input` 一致，讀取 `getFieldValue('SEL_i')`
+2. Extractor 同時檢查 `a.text` 和 `a.selectedVar`
+3. Extractor fallback 用正確的欄位名 `'SEL_0'` → `'NAME'` → `'x'`
+4. Generator/Renderer fallback 改用 `node.properties.variable ?? 'x'`
+
+### 教訓
+
+#### 教訓 1：Statement/Expression 雙版本必須共享 extraState 契約
+
+這是 §8（雙角色概念）的延伸。`u_input` 和 `u_input_expr` 是同一概念的語句版和表達式版，但 `saveExtraState`/`loadExtraState` 的實作完全不同。任何涉及 `expressionCounterpart` 的積木，兩個版本的序列化格式必須**完全相同**。
+
+**守則**：新增雙版本積木時，將 `saveExtraState`/`loadExtraState` 抽成共用函式，而非各自實作。
+
+#### 教訓 2：靜默降級是 Bug 的藏身之處
+
+四層 fallback 都靜默降級為 `'x'`，沒有 console.warn、沒有 annotation、沒有任何可觀察的信號。從使用者角度，程式碼「就是錯了」，但系統沒有任何提示。
+
+**守則**：fallback 值只在「確實沒有更好的選擇」時使用。如果 `saveExtraState` 回傳了 args 但裡面沒有 text，這不是「沒有輸入」，而是「資料格式不符預期」——應該嘗試恢復（如讀 `selectedVar`），而非直接用預設值。
+
+#### 教訓 3：Extractor 的欄位名必須與積木定義同步
+
+`getFieldValue('VAR')` 是想像中的欄位名，真實的積木用的是 `'SEL_0'`（動態 dropdown）或 `'NAME'`（JSON blockDef）。這類不匹配在靜態分析中很難發現，因為 `getFieldValue` 不存在的欄位只是回傳 null，不會報錯。
+
+**守則**：Extractor 測試應覆蓋「欄位名正確性」——用 mock block 驗證 extractor 讀取的欄位名確實存在於積木定義中。
+
+#### 教訓 4：Template Generator 與 Hand-written Generator 的雙軌制增加除錯難度
+
+`input` 概念同時有 universal template（`universal-templates.json`）和 hand-written generator（`iostream/generators.ts`）。在真實 app 中 template 優先，但在測試中（未載入 template）hand-written 優先。這導致測試通過但實際行為不同。
+
+**守則**：如果概念同時有 template 和 hand-written generator，測試應覆蓋兩種路徑。或者，優先移除 hand-written generator，讓 template 成為唯一來源（減少雙真相源）。
+
+### 相關檔案
+
+| 項目 | 路徑 |
+|------|------|
+| u_input 積木定義 | `src/ui/block-registrar.ts`（搜尋 `u_input`） |
+| u_input_expr 積木定義 | `src/ui/block-registrar.ts`（搜尋 `u_input_expr`） |
+| Input Extractor | `src/languages/cpp/extractors/register.ts`（`extractInput`） |
+| Input Generator | `src/languages/cpp/std/iostream/generators.ts` |
+| Input Render Strategy | `src/languages/cpp/renderers/strategies.ts`（`cpp:renderInput`） |
+| Input Universal Template | `src/languages/cpp/templates/universal-templates.json` |
+| Dropdown validator 行為 | `src/ui/block-registrar.ts`（`buildArgSlot` 中的 `setValidator`） |
