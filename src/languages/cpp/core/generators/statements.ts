@@ -247,11 +247,10 @@ export function registerStatementGenerators(g: Map<string, NodeGenerator>, style
     const name = node.properties.name ?? 'x'
     const op = node.properties.operator ?? '+='
     const vals = node.children.value ?? []
-    if (vals.length > 0) {
-      const val = generateExpression(vals[0], ctx)
-      return `${indent(ctx)}${name} ${op} ${val};\n`
-    }
-    return `${indent(ctx)}${name} ${op} 0;\n`
+    const val = vals.length > 0 ? generateExpression(vals[0], ctx) : '0'
+    const expr = `${name} ${op} ${val}`
+    if (ctx.isExpression) return expr
+    return `${indent(ctx)}${expr};\n`
   })
 
   g.set('cpp_increment', (node, ctx) => {
@@ -262,15 +261,13 @@ export function registerStatementGenerators(g: Map<string, NodeGenerator>, style
     const indexNodes = node.children.index ?? []
     if (indexNodes.length > 0) {
       const idx = generateExpression(indexNodes[0], ctx)
-      if (pos === 'prefix') {
-        return `${indent(ctx)}${op}${name}[${idx}];\n`
-      }
-      return `${indent(ctx)}${name}[${idx}]${op};\n`
+      const expr = pos === 'prefix' ? `${op}${name}[${idx}]` : `${name}[${idx}]${op}`
+      if (ctx.isExpression) return expr
+      return `${indent(ctx)}${expr};\n`
     }
-    if (pos === 'prefix') {
-      return `${indent(ctx)}${op}${name};\n`
-    }
-    return `${indent(ctx)}${name}${op};\n`
+    const expr = pos === 'prefix' ? `${op}${name}` : `${name}${op}`
+    if (ctx.isExpression) return expr
+    return `${indent(ctx)}${expr};\n`
   })
 
   g.set('cpp_do_while', (node, ctx) => {

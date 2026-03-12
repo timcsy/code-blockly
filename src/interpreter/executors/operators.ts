@@ -129,6 +129,24 @@ export function registerOperatorExecutors(register: (concept: string, executor: 
     return val
   })
 
+  // C++ named casts behave the same as C-style cast at runtime
+  for (const castConcept of ['cpp_static_cast', 'cpp_dynamic_cast', 'cpp_reinterpret_cast', 'cpp_const_cast']) {
+    register(castConcept, async (node, ctx) => {
+      const targetType = String(node.properties.target_type ?? 'int')
+      const valueNodes = node.children.value ?? []
+      if (valueNodes.length === 0) return { type: 'int', value: 0 }
+      const val = await ctx.evaluate(valueNodes[0])
+      const num = ctx.toNumber(val)
+      if (targetType === 'int' || targetType === 'long' || targetType === 'short' || targetType === 'char') {
+        return { type: 'int', value: Math.trunc(num) }
+      }
+      if (targetType === 'double' || targetType === 'float') {
+        return { type: 'double', value: num }
+      }
+      return val
+    })
+  }
+
   register('cpp_comma_expr', async (node, ctx) => {
     const exprs = node.children.exprs ?? []
     let last: import('../types').RuntimeValue = { type: 'int', value: 0 }

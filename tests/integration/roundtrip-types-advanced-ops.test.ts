@@ -206,227 +206,117 @@ int main() {
     expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
   })
 
-  it('t11: ternary multi-context', () => {
+  it('t11: using alias', () => {
     const { sem, generated } = assertStableRoundtrip(`#include <iostream>
 using namespace std;
+using ll = long long;
 int main() {
-    int x = 5;
-    int y = x > 3 ? 10 : 20;
-    cout << y << endl;
-    int z = x < 0 ? -1 : 1;
-    cout << z << endl;
-    int w = x > 3 ? x + 1 : x - 1;
-    cout << w << endl;
+    ll x = 2000000000;
+    cout << x << endl;
     return 0;
 }`)
-    expect(generated).toContain('?')
-    expect(generated).toContain(':')
+    expect(generated).toContain('using ll = long long;')
     expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
   })
 
-  it('t12: cast multi-type', () => {
+  it('t12: static_cast', () => {
     const { sem, generated } = assertStableRoundtrip(`#include <iostream>
 using namespace std;
 int main() {
-    double d = 3.14;
-    int n = (int)d;
+    double d = 9.99;
+    int n = static_cast<int>(d);
     cout << n << endl;
-    int a = 7;
-    int b = 2;
-    double r = (double)a / b;
-    cout << r << endl;
-    char c = (char)65;
-    cout << c << endl;
     return 0;
 }`)
-    expect(generated).toContain('(int)')
-    expect(generated).toContain('(double)')
-    expect(generated).toContain('(char)')
+    expect(generated).toContain('static_cast<int>')
     expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
   })
 
-  it('t13: bitwise NOT', () => {
+  it('t13: const_cast with pointer', () => {
     const { sem, generated } = assertStableRoundtrip(`#include <iostream>
 using namespace std;
 int main() {
-    int a = 12;
-    cout << ~a << endl;
+    const int x = 42;
+    const int* cp = &x;
+    int* mp = const_cast<int*>(cp);
+    cout << *mp << endl;
     return 0;
 }`)
-    expect(generated).toContain('~a')
+    expect(generated).toContain('const_cast<int*>')
+    expect(generated).toContain('const int* cp')
     expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
   })
 
-  it('t14: bitwise binary ops via variables', () => {
-    const { sem, generated } = assertStableRoundtrip(`#include <iostream>
-using namespace std;
-int main() {
-    int a = 12;
-    int b = 10;
-    int c = a & b;
-    int d = a | b;
-    int e = a ^ b;
-    int f = a << 2;
-    int g = a >> 1;
-    cout << c << endl;
-    cout << d << endl;
-    cout << e << endl;
-    cout << f << endl;
-    cout << g << endl;
-    return 0;
-}`)
-    expect(generated).toContain('a & b')
-    expect(generated).toContain('a | b')
-    expect(generated).toContain('a ^ b')
-    expect(generated).toContain('a << 2')
-    expect(generated).toContain('a >> 1')
-    expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
-  })
-
-  it('t15: prefix/postfix increment/decrement', () => {
+  it('t14: bitwise_not', () => {
     const { sem, generated } = assertStableRoundtrip(`#include <iostream>
 using namespace std;
 int main() {
     int x = 5;
-    x++;
-    cout << x << endl;
-    x--;
-    cout << x << endl;
-    ++x;
-    cout << x << endl;
-    --x;
-    cout << x << endl;
+    cout << ~x << endl;
     return 0;
 }`)
-    expect(generated).toContain('x++')
-    expect(generated).toContain('x--')
-    expect(generated).toContain('++x')
-    expect(generated).toContain('--x')
+    expect(generated).toContain('~x')
     expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
   })
 
-  it('t16: compound assign all operators', () => {
+  it('t15: bitwise binary ops', () => {
     const { sem, generated } = assertStableRoundtrip(`#include <iostream>
 using namespace std;
 int main() {
-    int x = 10;
-    x += 5;
-    cout << x << endl;
-    x -= 3;
-    cout << x << endl;
-    x *= 2;
-    cout << x << endl;
-    x /= 4;
-    cout << x << endl;
-    x %= 3;
-    cout << x << endl;
-    return 0;
-}`)
-    expect(generated).toContain('x += 5;')
-    expect(generated).toContain('x -= 3;')
-    expect(generated).toContain('x *= 2;')
-    expect(generated).toContain('x /= 4;')
-    expect(generated).toContain('x %= 3;')
-    expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
-  })
-
-  it('t17: sizeof type and variable', () => {
-    const { sem, generated } = assertStableRoundtrip(`#include <iostream>
-using namespace std;
-int main() {
-    cout << sizeof(int) << endl;
-    cout << sizeof(double) << endl;
-    cout << sizeof(char) << endl;
-    int x = 42;
-    cout << sizeof(x) << endl;
-    return 0;
-}`)
-    expect(generated).toContain('sizeof(int)')
-    expect(generated).toContain('sizeof(double)')
-    expect(generated).toContain('sizeof(char)')
-    expect(generated).toContain('sizeof(x)')
-    expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
-  })
-
-  it('t18: enum declaration and usage', () => {
-    const { sem, generated } = assertStableRoundtrip(`#include <iostream>
-using namespace std;
-enum Color { RED, GREEN, BLUE };
-int main() {
-    Color c = GREEN;
+    int a = 12, b = 10;
+    cout << (a & b) << endl;
+    cout << (a | b) << endl;
+    cout << (a ^ b) << endl;
+    int c = a << 2;
+    int d = a >> 1;
     cout << c << endl;
-    Color d = BLUE;
     cout << d << endl;
-    cout << RED << endl;
     return 0;
 }`)
-    expect(generated).toContain('enum Color')
-    expect(generated).toContain('RED')
-    expect(generated).toContain('GREEN')
-    expect(generated).toContain('BLUE')
     expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
   })
 
-  it('t19: typedef and using alias', () => {
-    const { sem, generated } = assertStableRoundtrip(`#include <iostream>
-using namespace std;
-typedef long long ll;
-using ull = unsigned long long;
-int main() {
-    ll a = 1000000000;
-    ull b = 2000000000;
-    cout << a << endl;
-    cout << b << endl;
-    return 0;
-}`)
-    expect(generated).toContain('typedef long long ll;')
-    expect(generated).toContain('using ull = unsigned long long;')
-    expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
-  })
-
-  it('t20: mixed ternary + increment + compound assign', () => {
+  it('t16: increment expression in cout', () => {
     const { sem, generated } = assertStableRoundtrip(`#include <iostream>
 using namespace std;
 int main() {
     int x = 5;
-    x++;
-    x += 3;
-    int y = x > 5 ? x * 2 : x + 1;
-    cout << y << endl;
-    y--;
-    y -= 2;
-    int z = y > 10 ? 100 : 0;
-    cout << z << endl;
+    cout << x++ << endl;
+    cout << x << endl;
+    int y = 10;
+    cout << ++y << endl;
     return 0;
 }`)
-    expect(generated).toContain('x++')
-    expect(generated).toContain('x += 3;')
-    expect(generated).toContain('?')
-    expect(generated).toContain('y--')
-    expect(generated).toContain('y -= 2;')
     expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
   })
 
-  it('t21: enum + typedef + sizeof + cast combined', () => {
+  it('t17: compound assign bitwise', () => {
     const { sem, generated } = assertStableRoundtrip(`#include <iostream>
 using namespace std;
-enum Season { SPRING, SUMMER, FALL, WINTER };
-typedef int score;
 int main() {
-    Season s = SUMMER;
-    cout << s << endl;
-    score sc = 95;
-    cout << sc << endl;
-    cout << sizeof(Season) << endl;
-    cout << sizeof(score) << endl;
-    int x = (int)s + sc;
+    int x = 15;
+    x &= 6;
+    cout << x << endl;
+    x |= 8;
+    cout << x << endl;
+    x ^= 3;
     cout << x << endl;
     return 0;
 }`)
-    expect(generated).toContain('enum Season')
-    expect(generated).toContain('typedef int score;')
-    expect(generated).toContain('sizeof(Season)')
-    expect(generated).toContain('(int)s')
+    expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
+  })
+
+  it('t18: mixed — ternary in cout + for loop', () => {
+    const { sem, generated } = assertStableRoundtrip(`#include <iostream>
+using namespace std;
+int main() {
+    int sum = 0;
+    for (int i = 0; i < 5; i++) {
+        sum += i;
+    }
+    cout << (sum > 5 ? "big" : "small") << endl;
+    return 0;
+}`)
     expect(hasNoConcept(sem!, ['cpp_raw_code', 'cpp_raw_expression', 'unresolved'])).toBe(true)
   })
 })

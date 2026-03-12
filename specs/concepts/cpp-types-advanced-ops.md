@@ -2,160 +2,117 @@
 
 ## 摘要
 - 語言：C++
-- 目標：const, constexpr, auto, typedef, using alias, sizeof, bitwise operations, ternary operator, cast, increment/decrement, compound assignment, enum
-- 發現概念總數：18（含已實作與新增）
-- 已實作概念：15
-- 尚未實作概念：3（bitwise_and, bitwise_or, bitwise_xor）
-- 通用概念：0、語言特定概念：18
-- 涵蓋的 Topic 層級樹節點：L1a（函式與迴圈）、L1b（控制流進階）、L1c（型別系統）
+- 目標：const, constexpr, auto, typedef, using alias, sizeof, bitwise, ternary, cast, increment, compound assignment, enum
+- 發現概念總數：18（含 statement/expression 雙版本）
+- 通用概念：1（bitwise_not）、語言特定概念：17
+- 建議歸屬的 Topic 層級樹節點：L1a（4）、L1b（6）、L1c（5）、L3c（4）
 
-## 概念目錄 (by Topic level)
+## 現有實作狀態
 
-### L1a: 函式與迴圈 — 已歸屬
+大多數概念在先前的手寫實作中已有完整的 generator、lifter、executor。主要缺口：
 
-| 概念名稱 | conceptId | 語法 | 語義意義 | 積木輸入 | Layer | 狀態 | 備註 |
+| 概念 | Generator | Lifter | Executor | 備註 |
+|------|-----------|--------|----------|------|
+| cpp_const_declare | ✅ | ✅ | ✅ | |
+| cpp_constexpr_declare | ✅ | ✅ | ✅ | |
+| cpp_auto_declare | ✅ | ✅ | ✅ | |
+| cpp_typedef | ✅ | ✅ | ✅ noop | |
+| cpp_using_alias | ✅ | ✅ | ✅ noop | |
+| cpp_sizeof | ✅ | ✅ | ✅ | |
+| bitwise_not | ✅ | ✅ | ✅ | 通用概念；二元位元運算由 arithmetic 處理 |
+| cpp_ternary | ✅ | ✅ | ✅ | |
+| cpp_cast | ✅ | ✅ | ✅ | C-style cast |
+| cpp_static_cast | ✅ | ❌ | ❌ | **缺 lifter 和 executor** |
+| cpp_dynamic_cast | ✅ | ❌ | ❌ | **缺 lifter 和 executor** |
+| cpp_reinterpret_cast | ✅ | ❌ | ❌ | **缺 lifter 和 executor** |
+| cpp_const_cast | ✅ | ❌ | ❌ | **缺 lifter 和 executor** |
+| cpp_increment / _expr | ✅ | ✅ | ✅ | statement + expression 雙版本 |
+| cpp_compound_assign / _expr | ✅ | ✅ | ✅ | statement + expression 雙版本 |
+| cpp_enum | ✅ | ✅ | ✅ noop | |
+
+## 概念目錄
+
+### L1a: 函式與迴圈 — 中級
+
+| 概念名稱 | 語法 | 語義意義 | 積木輸入 | Layer | 通用/特定 | 降級路徑 | 備註 |
 |---|---|---|---|---|---|---|---|
-| `cpp_increment` | `cpp_increment` | `i++;` / `++i;` | 遞增或遞減（statement） | NAME(field), OP(dropdown: ++/--), POSITION(dropdown: prefix/postfix) | lang-core | 已實作 | 有 expression 版本 `cpp_increment_expr` |
-| `cpp_increment_expr` | `cpp_increment_expr` | `i++` / `++i` | 遞增或遞減（expression） | NAME(field), OP(dropdown), POSITION(dropdown) | lang-core | 已實作 | renderMapping 自動切換 |
-| `cpp_compound_assign` | `cpp_compound_assign` | `x += 5;` | 複合賦值（statement） | NAME(field), OP(dropdown: +=/-=/*=//=/%=), VALUE(expr) | lang-core | 已實作 | 有 expression 版本 |
-| `cpp_compound_assign_expr` | `cpp_compound_assign_expr` | `x += 5` | 複合賦值（expression） | NAME(field), OP(dropdown), VALUE(expr) | lang-core | 已實作 | renderMapping 自動切換 |
+| cpp_increment | `x++` / `++x` | 變數遞增/遞減 | 變數名, 運算子(++/--), 前/後綴 | lang-core | cpp | var_assign | statement 版本 |
+| cpp_increment_expr | `x++` / `++x` | 遞增/遞減表達式 | 同上 | lang-core | cpp | arithmetic | expression 版本 |
+| cpp_compound_assign | `x += 5` | 複合賦值 | 變數名, 運算子, 值 | lang-core | cpp | var_assign | statement 版本 |
+| cpp_compound_assign_expr | `x += 5` | 複合賦值表達式 | 同上 | lang-core | cpp | arithmetic | expression 版本 |
 
-### L1b: 控制流進階 — 已歸屬
+### L1b: 控制流進階 — 中級
 
-| 概念名稱 | conceptId | 語法 | 語義意義 | 積木輸入 | Layer | 狀態 | 備註 |
+| 概念名稱 | 語法 | 語義意義 | 積木輸入 | Layer | 通用/特定 | 降級路徑 | 備註 |
 |---|---|---|---|---|---|---|---|
-| `cpp_ternary` | `cpp_ternary` | `a ? b : c` | 三元條件運算式 | CONDITION(expr), TRUE_EXPR(expr), FALSE_EXPR(expr) | lang-core | 已實作 | order=3，需注意括號 |
-| `cpp_cast` | `cpp_cast` | `(int)x` | C 風格型別轉換 | TARGET_TYPE(dropdown: int/float/double/char/long long), VALUE(expr) | lang-core | 已實作 | order=8 |
-| `bitwise_not` | `bitwise_not` | `~x` | 位元反轉 | OPERAND(expr) | lang-core | 已實作 | AST: unary_expression, constraint operator="~" |
-| `cpp_sizeof` | `cpp_sizeof` | `sizeof(int)` | 取得型別或變數的位元組大小 | TARGET(field) | lang-core | 已實作 | order=20 |
-| `cpp_enum` | `cpp_enum` | `enum Color { RED, GREEN, BLUE };` | 列舉型別定義 | NAME(field), VALUES(field: 逗號分隔字串) | lang-core | 已實作 | VALUES 為純文字輸入 |
+| cpp_sizeof | `sizeof(int)` | 取得型別/表達式大小 | 型別名稱 | lang-core | cpp | func_call_expr | |
+| bitwise_not | `~x` | 位元反轉 | 運算元 | lang-core | universal | raw_code | 二元位元運算由 arithmetic 概念處理 |
+| cpp_ternary | `a ? b : c` | 條件表達式 | 條件, 真值, 假值 | lang-core | cpp | if | |
+| cpp_cast | `(int)x` | C 風格型別轉換 | 目標型別, 表達式 | lang-core | cpp | raw_code | |
+| cpp_enum | `enum Color { R, G, B }` | 列舉型別宣告 | 名稱, 值列表 | lang-core | cpp | raw_code | |
 
-### L1c: 型別系統 — 已歸屬
+### L1c: 型別系統 — 中級
 
-| 概念名稱 | conceptId | 語法 | 語義意義 | 積木輸入 | Layer | 狀態 | 備註 |
+| 概念名稱 | 語法 | 語義意義 | 積木輸入 | Layer | 通用/特定 | 降級路徑 | 備註 |
 |---|---|---|---|---|---|---|---|
-| `cpp_const_declare` | `cpp_const_declare` | `const int MAX = 100;` | 宣告不可變常數 | TYPE(dropdown), NAME(field), VALUE(expr) | lang-core | 已實作 | qualifier=const |
-| `cpp_constexpr_declare` | `cpp_constexpr_declare` | `constexpr int SIZE = 10;` | 宣告編譯期常數 | TYPE(dropdown), NAME(field), VALUE(expr) | lang-core | 已實作 | 無 string 型別選項 |
-| `cpp_auto_declare` | `cpp_auto_declare` | `auto x = expr;` | 自動推導型別宣告 | NAME(field), VALUE(expr) | lang-core | 已實作 | 必須有初始值 |
-| `cpp_typedef` | `cpp_typedef` | `typedef int myint;` | 定義型別別名（舊式） | ORIG_TYPE(field), ALIAS(field) | lang-core | 已實作 | C 語法 |
-| `cpp_using_alias` | `cpp_using_alias` | `using ll = long long;` | 定義型別別名（新式） | ALIAS(field), ORIG_TYPE(field) | lang-core | 已實作 | C++11 語法 |
+| cpp_const_declare | `const int x = 5` | 常數宣告 | 型別, 名稱, 初始值 | lang-core | cpp | var_declare | |
+| cpp_constexpr_declare | `constexpr int x = 5` | 編譯期常數 | 型別, 名稱, 初始值 | lang-core | cpp | var_declare | |
+| cpp_auto_declare | `auto x = 5` | 型別推導宣告 | 名稱, 初始值 | lang-core | cpp | var_declare | |
+| cpp_typedef | `typedef int Int` | 型別別名 | 原型別, 新名稱 | lang-core | cpp | raw_code | 宣告性，noop |
+| cpp_using_alias | `using Int = int` | 型別別名（現代語法） | 新名稱, 原型別 | lang-core | cpp | raw_code | 宣告性，noop |
 
-### 尚未實作 — 需新增
+### L3c: 例外與進階 — 進階
 
-| 概念名稱 | 建議 conceptId | 語法 | 語義意義 | 建議積木輸入 | Layer | 建議歸屬 | 備註 |
+| 概念名稱 | 語法 | 語義意義 | 積木輸入 | Layer | 通用/特定 | 降級路徑 | 備註 |
 |---|---|---|---|---|---|---|---|
-| bitwise_and | `cpp_bitwise_and` | `a & b` | 位元 AND | LEFT(expr), RIGHT(expr) | lang-core | L1b | 二元位元運算 |
-| bitwise_or | `cpp_bitwise_or` | `a \| b` | 位元 OR | LEFT(expr), RIGHT(expr) | lang-core | L1b | 二元位元運算 |
-| bitwise_xor | `cpp_bitwise_xor` | `a ^ b` | 位元 XOR | LEFT(expr), RIGHT(expr) | lang-core | L1b | 二元位元運算 |
-
-> **設計抉擇**：二元位元運算（`&`, `|`, `^`, `<<`, `>>`）可有兩種實作策略：
-> 1. **獨立概念**：每個運算一個概念（如上表），語義最清晰但概念數量多。
-> 2. **統一 bitwise 概念**：類似 `arithmetic` 用 operator dropdown 合併（`conceptId: cpp_bitwise`，operator 選項為 `&`, `|`, `^`, `<<`, `>>`），與現有 `arithmetic` / `logic` 設計一致。
->
-> **建議**：採用策略 2（統一 `cpp_bitwise` 概念），與 `arithmetic` 和 `logic` 的設計模式保持一致。`bitwise_not` 保持獨立（類似 `logic_not` / `negate` 為一元運算）。
+| cpp_static_cast | `static_cast<int>(x)` | 靜態型別轉換 | 目標型別, 表達式 | lang-core | cpp | cpp_cast | **缺 lifter** |
+| cpp_dynamic_cast | `dynamic_cast<B*>(p)` | 動態型別轉換 | 目標型別, 表達式 | lang-core | cpp | cpp_cast | **缺 lifter** |
+| cpp_reinterpret_cast | `reinterpret_cast<int*>(p)` | 重新解釋轉換 | 目標型別, 表達式 | lang-core | cpp | cpp_cast | **缺 lifter** |
+| cpp_const_cast | `const_cast<int*>(p)` | 常數轉換 | 目標型別, 表達式 | lang-core | cpp | cpp_cast | **缺 lifter** |
 
 ## 依賴關係圖
 
 ```
-                    ┌─────────────────────────────────────────┐
-                    │         expression（任意表達式）          │
-                    └──┬──────┬──────┬──────┬──────┬──────┬───┘
-                       │      │      │      │      │      │
-               ┌───────┘      │      │      │      │      └────────┐
-               ▼              ▼      ▼      ▼      ▼              ▼
-        cpp_ternary    cpp_cast  bitwise  sizeof  increment  compound_assign
-        (condition,    (value)   (left,   (target) (name)    (name, value)
-         true, false)            right)
-
-  var_declare ◄── cpp_const_declare（加 const 修飾）
-              ◄── cpp_constexpr_declare（加 constexpr 修飾）
-              ◄── cpp_auto_declare（省略型別）
-
-  獨立宣告（無依賴）：
-    cpp_typedef ──── 純文字欄位
-    cpp_using_alias ── 純文字欄位
-    cpp_enum ──── 純文字欄位
-
-  已存在 bitwise_not（一元） ← 新增 cpp_bitwise（二元）互補
+var_declare ← cpp_const_declare, cpp_constexpr_declare, cpp_auto_declare
+var_assign ← cpp_increment, cpp_compound_assign
+arithmetic ← cpp_increment_expr, cpp_compound_assign_expr, bitwise_not
+if ← cpp_ternary
+cpp_cast ← cpp_static_cast, cpp_dynamic_cast, cpp_reinterpret_cast, cpp_const_cast
 ```
-
-### 概念間語義關聯
-
-| 來源概念 | 關聯概念 | 關係 |
-|---|---|---|
-| `cpp_const_declare` | `var_declare` | 特化（加 const 修飾詞） |
-| `cpp_constexpr_declare` | `cpp_const_declare` | 特化（編譯期求值） |
-| `cpp_auto_declare` | `var_declare` | 特化（省略顯式型別） |
-| `cpp_cast` | `cpp_static_cast` | C 風格 vs C++ 風格，互為替代 |
-| `cpp_increment` | `cpp_compound_assign` | 語義相近（i++ 等同 i += 1） |
-| `cpp_increment` | `cpp_increment_expr` | statement/expression 雙版本 |
-| `cpp_compound_assign` | `cpp_compound_assign_expr` | statement/expression 雙版本 |
-| `bitwise_not` | `cpp_bitwise`（新） | 一元/二元互補 |
-| `cpp_typedef` | `cpp_using_alias` | 新舊語法替代 |
-| `cpp_enum` | `cpp_switch` | 常見搭配使用（switch on enum） |
 
 ## 建議實作順序
 
-以下為**尚未實作概念**的建議順序（已實作的 15 個概念無需額外工作）：
+大多數概念已有完整實作，只需驗證 round-trip。需要補完的：
 
-1. **cpp_bitwise**（統一二元位元運算）
-   - 新增 concept 定義至 `concepts.json`：`conceptId: "cpp_bitwise"`, `abstractConcept: "bitwise"`, `properties: ["operator"]`, `children: { left: "expression", right: "expression" }`, `role: "expression"`
-   - 新增 block 定義至 `blocks.json`：operator dropdown 含 `&`, `|`, `^`, `<<`, `>>`
-   - AST pattern: `binary_expression`，constraint 檢查 operator 為位元運算子
-   - codeTemplate: `${LEFT} ${OP} ${RIGHT}`，order 需依運算子優先級設定
+1. **cpp_static_cast** — 補 lifter + executor
+2. **cpp_dynamic_cast** — 補 lifter + executor
+3. **cpp_reinterpret_cast** — 補 lifter + executor
+4. **cpp_const_cast** — 補 lifter + executor
 
-2. **（可選）bitwise compound assign 擴充**
-   - 現有 `cpp_compound_assign` 的 OP dropdown 僅含 `+=`, `-=`, `*=`, `/=`, `%=`
-   - 可擴充加入 `&=`, `|=`, `^=`, `<<=`, `>>=`
-   - 這不需要新概念，只需修改現有 block 定義的 dropdown 選項
+其餘概念按現有順序驗證即可：
+5. cpp_const_declare, cpp_constexpr_declare, cpp_auto_declare
+6. cpp_typedef, cpp_using_alias
+7. cpp_sizeof, cpp_enum
+8. bitwise_not, cpp_ternary, cpp_cast
+9. cpp_increment, cpp_increment_expr
+10. cpp_compound_assign, cpp_compound_assign_expr
 
 ## 跨語言對應
 
-| C++ 概念 | 通用抽象概念 | Python 對應 | Java 對應 | 備註 |
-|---|---|---|---|---|
-| `cpp_const_declare` | `const_declare` | 無（慣例用大寫） | `final` 變數 | Python 無真正 const |
-| `cpp_constexpr_declare` | `constexpr_declare` | 無 | 無 | C++ 獨有 |
-| `cpp_auto_declare` | `auto_declare` | 預設行為（動態型別） | `var`（Java 10+） | |
-| `cpp_typedef` | `typedef` | 無 | 無 | C/C++ 獨有 |
-| `cpp_using_alias` | `using_alias` | `TypeAlias`（PEP 613） | 無 | |
-| `cpp_sizeof` | `sizeof` | `sys.getsizeof()` | 無直接對應 | |
-| `bitwise_not` | `bitwise_not` | `~x` | `~x` | 語法相同 |
-| `cpp_bitwise`（新） | `bitwise` | `&`, `\|`, `^`, `<<`, `>>` | 相同 | 可提升為 universal |
-| `cpp_ternary` | `ternary` | `b if a else c` | `a ? b : c` | Python 語法順序不同 |
-| `cpp_cast` | `cast` | `int(x)` | `(int)x` | 各語言語法差異大 |
-| `cpp_increment` | `increment` | 無（Python 無 ++） | `i++` / `++i` | Python 用 `+= 1` |
-| `cpp_compound_assign` | `compound_assign` | `x += 5` | `x += 5` | 語法幾乎相同 |
-| `cpp_enum` | `enum` | `enum.Enum` class | `enum` 關鍵字 | 語義相似、語法不同 |
-
-### 可提升為 universal 的候選
-
-- **`bitwise`**（二元位元運算）：C/C++、Java、Python、JavaScript 全部支援 `&`, `|`, `^`, `<<`, `>>`，語法完全一致，非常適合提升為 universal layer
-- **`ternary`**：大多數語言支援，但語法差異較大（Python 為 `x if cond else y`），可考慮提升
-- **`compound_assign`**：幾乎所有命令式語言支援，語法高度一致，適合提升
+| C++ 概念 | 通用等價 | 備註 |
+|----------|---------|------|
+| bitwise_not | bitwise_not | 已是通用概念 |
+| cpp_ternary | — | Python 有 `x if cond else y`，語法不同 |
+| cpp_increment | — | Python/Java 有 `++` 但語義微妙不同 |
+| cpp_compound_assign | — | 多語言共通但 C++ 有指標版本 |
+| cpp_enum | — | 各語言 enum 語法差異大 |
 
 ## 需注意的邊界案例
 
-### 型別修飾相關
-1. **const 初始化必要性**：`const int x;` 在 C++ 中不合法（必須初始化），但 blocks 目前允許空的 VALUE input，需考慮是否加驗證
-2. **constexpr 與 const 差異**：constexpr 要求值在編譯期可求值，blocks 目前無法驗證這一點
-3. **constexpr 無 string 型別**：`cpp_constexpr_declare` 的 TYPE dropdown 不含 string（正確，因為 `std::string` 在 C++17 前不能 constexpr）
-4. **auto 必須初始化**：`auto x;` 不合法，block 設計正確（VALUE 為必要 input）
-
-### 位元運算相關
-5. **位元運算優先級**：`&` < `^` < `|`，但都低於比較運算子，`a & b == c` 實際解析為 `a & (b == c)`，初學者常犯錯
-6. **左移右移的溢位**：左移超過型別位元寬度為未定義行為
-7. **有號數右移**：算術右移 vs 邏輯右移在 C++ 中依實作定義（implementation-defined）
-8. **bitwise_not 已存在但無對應二元運算**：目前 `bitwise_not`（~）已實作，但 `&`, `|`, `^` 等二元位元運算尚無專用概念
-
-### 轉型相關
-9. **C 風格 cast vs C++ cast**：`(int)x` 和 `static_cast<int>(x)` 兩者都已有概念，但教學上應引導學生使用 C++ 風格
-10. **cast 與 sizeof 的 tree-sitter 節點**：`(int)x` 為 `cast_expression`，`sizeof(int)` 為 `sizeof_expression`
-
-### 遞增遞減相關
-11. **前綴 vs 後綴語義差異**：`i++` 返回舊值，`++i` 返回新值；在 statement 情境下無差異，但在 expression 中（如 `a[i++]`）行為不同
-12. **statement/expression 雙版本 extraState 契約**：`cpp_increment` 和 `cpp_increment_expr` 的 saveExtraState/loadExtraState 格式必須完全相同（已知架構陷阱，見 `docs/technical-experiences.md` §21）
-
-### enum 相關
-13. **enum 值為純文字欄位**：目前 VALUES 用單一 `field_input` 存逗號分隔字串，無法支援指定值（如 `RED = 0, GREEN = 1`），這是已知的技術債
-14. **enum class**（C++11 scoped enum）尚未支援，未來可考慮新增 `cpp_enum_class` 概念
-15. **tree-sitter lift**：`cpp_enum` 目前無 `astPattern` 定義，意味著 code-to-blocks 尚未支援 enum 的反向轉換
+1. **`const` vs `constexpr`**：lifter 需正確區分，都是 `declaration` 節點但有不同 specifier
+2. **`auto` 推導**：`auto x = 5` vs `auto& x = y` — 後者涉及引用
+3. **ternary 優先序**：`cout << a ? b : c` 需要括號 — generator 已處理
+4. **位元運算 vs 邏輯運算**：`&` vs `&&`，lifter 需正確區分
+5. **前綴 vs 後綴遞增**：`++i` vs `i++` 在表達式中語義不同
+6. **C++ named cast** 的 tree-sitter 節點類型需確認（可能是 `template_function` 或特殊節點）
+7. **enum class**（scoped enum）目前不在範疇內

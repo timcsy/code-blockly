@@ -353,7 +353,11 @@ export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void 
     const values = listNode
       ? listNode.namedChildren
           .filter(c => c.type === 'enumerator')
-          .map(e => e.namedChildren[0]?.text ?? '')
+          .map(e => {
+            const eName = e.childForFieldName('name')?.text ?? ''
+            const eValue = e.childForFieldName('value')?.text
+            return eValue ? `${eName} = ${eValue}` : eName
+          })
           .join(', ')
       : ''
     return createNode('cpp_enum', { name, values })
@@ -409,12 +413,14 @@ export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void 
 
     // const/constexpr declaration
     if (qualifier === 'const' || qualifier === 'constexpr') {
-      const decl = node.namedChildren.find(c => c.type === 'init_declarator' || c.type === 'identifier')
+      const decl = node.namedChildren.find(c => c.type === 'init_declarator' || c.type === 'identifier' || c.type === 'pointer_declarator')
       if (decl) {
         const lifted = liftSingleDeclarator(decl, type, ctx)
         const conceptId = qualifier === 'const' ? 'cpp_const_declare' : 'cpp_constexpr_declare'
+        // Use type from lifted node (may include * for pointers)
+        const liftedType = (lifted.properties.type as string) ?? type
         return createNode(conceptId, {
-          type,
+          type: liftedType,
           name: lifted.properties.name as string ?? 'x',
         }, {
           initializer: lifted.children.initializer ?? [],
