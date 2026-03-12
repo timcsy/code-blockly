@@ -62,6 +62,7 @@ export class PatternLifter {
         unwrapChild: ap.unwrapChild,
         contextTransform: ap.contextTransform,
         multiResult: ap.multiResult,
+        liftStrategy: ap.liftStrategy,
       }
 
       this.addPattern(ap.nodeType, entry)

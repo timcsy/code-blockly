@@ -23,6 +23,11 @@ export function registerDeclarationGenerators(g: Map<string, NodeGenerator>): vo
     const name = node.properties.name ?? 'x'
     const inits = node.children.initializer ?? []
     if (inits.length > 0) {
+      // Constructor-style initialization: Type name(args)
+      if (node.properties.init_style === 'constructor') {
+        const args = inits.map(a => generateExpression(a, ctx))
+        return `${indent(ctx)}${type} ${name}(${args.join(', ')});\n`
+      }
       const val = generateExpression(inits[0], ctx)
       return `${indent(ctx)}${type} ${name} = ${val};\n`
     }
@@ -209,5 +214,19 @@ export function registerDeclarationGenerators(g: Map<string, NodeGenerator>): vo
     const alias = node.properties.alias ?? 'll'
     const origType = node.properties.orig_type ?? 'long long'
     return `${indent(ctx)}using ${alias} = ${origType};\n`
+  })
+
+  g.set('cpp_struct_declare', (node, ctx) => {
+    const name = node.properties.name ?? 'MyStruct'
+    const members = node.children.members ?? []
+    let code = `${indent(ctx)}struct ${name} {\n`
+    code += generateBody(members, indented(ctx))
+    code += `${indent(ctx)}};\n`
+    return code
+  })
+
+  g.set('_multi_field', (node, ctx) => {
+    const fields = node.children.fields ?? []
+    return generateBody(fields, ctx)
   })
 }
