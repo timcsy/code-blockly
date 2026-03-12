@@ -37,9 +37,6 @@
               "array_declare", "array_access",
               "cpp_string_declare",
               "cpp_strlen", "cpp_strcmp", "cpp_strcpy",
-              "cpp_string_length", "cpp_string_substr", "cpp_string_find",
-              "cpp_string_append", "cpp_string_c_str",
-              "cpp_getline", "cpp_to_string", "cpp_stoi", "cpp_stod",
               "comment", "doc_comment", "block_comment",
               "cpp_raw_code", "cpp_raw_expression"
             ],
@@ -56,9 +53,9 @@
           "cpp_do_while", "cpp_ternary", "cpp_cast",
           "bitwise_not",
           "cpp_printf", "cpp_scanf", "cpp_scanf_expr",
-          "cpp_lambda", "cpp_namespace_def",
-          "cpp_static_cast", "cpp_dynamic_cast",
-          "cpp_reinterpret_cast", "cpp_const_cast"
+          "cpp_rand", "cpp_srand", "cpp_abs", "cpp_exit",
+          "cpp_isalpha", "cpp_isdigit", "cpp_toupper", "cpp_tolower",
+          "cpp_swap"
         ],
         "children": [
           {
@@ -85,16 +82,9 @@
               "cpp_template_function",
               "cpp_method_call", "cpp_method_call_expr",
               "cpp_vector_declare", "cpp_vector_push_back", "cpp_vector_size",
-              "cpp_vector_pop_back", "cpp_vector_clear", "cpp_vector_empty", "cpp_vector_back",
               "cpp:vector_push_back", "cpp:vector_size",
-              "cpp_map_declare",
-              "cpp_map_access", "cpp_map_erase", "cpp_map_count", "cpp_map_empty",
-              "cpp_set_declare",
-              "cpp_set_insert", "cpp_set_erase", "cpp_set_count", "cpp_set_empty",
-              "cpp_stack_declare",
-              "cpp_stack_push", "cpp_stack_pop", "cpp_stack_top", "cpp_stack_empty",
-              "cpp_queue_declare",
-              "cpp_queue_push", "cpp_queue_pop", "cpp_queue_front", "cpp_queue_empty",
+              "cpp_map_declare", "cpp_set_declare",
+              "cpp_stack_declare", "cpp_queue_declare",
               "cpp_sort", "cpp:sort", "cpp:find",
               "cpp:math_binary"
             ],
