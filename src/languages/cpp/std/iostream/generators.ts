@@ -3,10 +3,28 @@ import type { NodeGenerator } from '../../../../core/projection/code-generator'
 import { indent, generateExpression } from '../../../../core/projection/code-generator'
 
 export function registerIostreamGenerators(g: Map<string, NodeGenerator>, style: StylePreset): void {
+  // Concepts that need parentheses in cout << chain due to lower precedence than <<
+  const COUT_NEEDS_PARENS = new Set([
+    'cpp_ternary', 'cpp_comma_expr', 'cpp_compound_assign_expr',
+  ])
+  // Bitwise/comparison/logic operators have lower precedence than <<
+  const LOW_PREC_OPS = new Set(['&', '|', '^', '&&', '||', '>', '<', '>=', '<=', '==', '!='])
+
+  function needsParensInCout(v: import('../../../../core/types').SemanticNode): boolean {
+    if (COUT_NEEDS_PARENS.has(v.concept)) return true
+    if ((v.concept === 'arithmetic' || v.concept === 'compare' || v.concept === 'logic') &&
+        LOW_PREC_OPS.has(String(v.properties.operator ?? ''))) return true
+    return false
+  }
+
   g.set('print', (node, ctx) => {
     const values = node.children.values ?? []
     if (style.io_style === 'cout') {
-      const parts = values.map(v => generateExpression(v, ctx))
+      const parts = values.map(v => {
+        const expr = generateExpression(v, ctx)
+        if (needsParensInCout(v)) return `(${expr})`
+        return expr
+      })
       return `${indent(ctx)}cout << ${parts.join(' << ')};\n`
     }
     // printf mode: embed string_literal values into format, use %d for expressions
