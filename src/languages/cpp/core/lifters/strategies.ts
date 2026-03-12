@@ -83,7 +83,139 @@ function liftSingleDeclarator(decl: AstNode, type: string, ctx: LiftContext): Se
   return createNode('var_declare', { name, type })
 }
 
+/** Lift a class member (function_definition, field_declaration) into a semantic node */
+function liftClassMember(node: AstNode, className: string, ctx: LiftContext): SemanticNode | null {
+  if (node.type === 'function_definition') {
+    const declNode = node.childForFieldName('declarator')
+    const typeNode = node.childForFieldName('type')
+    const bodyNode = node.childForFieldName('body')
+    const nameNode = declNode?.childForFieldName('declarator')
+    const isVirtual = node.children.some(c => !c.isNamed && c.text === 'virtual')
+
+    // Constructor: function_definition where declarator name matches class name
+    if (nameNode?.type === 'identifier' && nameNode.text === className) {
+      const paramList = declNode?.childForFieldName('parameters') ?? null
+      const params = liftParamList(paramList, ctx)
+      const initListNode = node.namedChildren.find(c => c.type === 'field_initializer_list')
+      const initList = initListNode ? initListNode.text.replace(/^:\s*/, '') : ''
+      const body = extractBody(bodyNode, ctx)
+      return createNode('cpp_constructor', { class_name: className, init_list: initList }, { params, body })
+    }
+
+    // Destructor: function_definition where declarator is destructor_name
+    if (nameNode?.type === 'destructor_name') {
+      const body = extractBody(bodyNode, ctx)
+      return createNode('cpp_destructor', { class_name: className }, { body })
+    }
+
+    // Operator overload: function_definition where declarator is operator_name
+    if (nameNode?.type === 'operator_name') {
+      const op = nameNode.text.replace(/^operator/, '').trim()
+      const returnType = typeNode?.text ?? 'void'
+      const paramList = declNode?.childForFieldName('parameters')
+      let paramType = ''
+      let paramName = ''
+      if (paramList) {
+        const firstParam = paramList.namedChildren.find(c => c.type === 'parameter_declaration')
+        if (firstParam) {
+          const parsed = parseParamDeclaration(firstParam)
+          paramType = parsed.type
+          paramName = parsed.name
+        }
+      }
+      const body = extractBody(bodyNode, ctx)
+      return createNode('cpp_operator_overload', { return_type: returnType, operator: op, param_type: paramType, param_name: paramName }, { body })
+    }
+
+    // Virtual method with body
+    if (isVirtual) {
+      const methodName = nameNode?.text ?? 'method'
+      const returnType = typeNode?.text ?? 'void'
+      const paramList = declNode?.childForFieldName('parameters') ?? null
+      const params = liftParamList(paramList, ctx)
+      // Check for override keyword
+      const hasOverride = node.text.includes('override')
+      const body = extractBody(bodyNode, ctx)
+      if (hasOverride) {
+        return createNode('cpp_override_method', { return_type: returnType, name: methodName }, { params, body })
+      }
+      return createNode('cpp_virtual_method', { return_type: returnType, name: methodName }, { params, body })
+    }
+
+    // Regular member function → lift as func_def
+    return ctx.lift(node)
+  }
+
+  if (node.type === 'field_declaration') {
+    // Pure virtual: virtual void method() = 0;
+    const isVirtual = node.children.some(c => !c.isNamed && c.text === 'virtual')
+    const defaultVal = node.childForFieldName('default_value')
+    if (isVirtual && defaultVal?.text === '0') {
+      const typeNode = node.childForFieldName('type')
+      const declNode = node.childForFieldName('declarator')
+      const methodName = declNode?.childForFieldName('declarator')?.text ?? declNode?.namedChildren[0]?.text ?? 'method'
+      const returnType = typeNode?.text ?? 'void'
+      const paramList = declNode?.childForFieldName('parameters') ?? null
+      const params = liftParamList(paramList, ctx)
+      return createNode('cpp_pure_virtual', { return_type: returnType, name: methodName }, { params })
+    }
+
+    // Regular field declaration: type name; → var_declare
+    const typeNode = node.childForFieldName('type')
+    const declNode = node.childForFieldName('declarator')
+    const type = typeNode?.text ?? 'int'
+    const name = declNode?.text ?? 'x'
+    return createNode('var_declare', { type, name })
+  }
+
+  // Fallback: try generic lift
+  return ctx.lift(node)
+}
+
+/** Extract parameters from a parameter_list node */
+function liftParamList(paramList: AstNode | null, _ctx: LiftContext): SemanticNode[] {
+  if (!paramList) return []
+  const params: SemanticNode[] = []
+  for (const p of paramList.namedChildren) {
+    if (p.type === 'parameter_declaration') {
+      const { type, name } = parseParamDeclaration(p)
+      params.push(createNode('param_decl', { type, name }))
+    }
+  }
+  return params
+}
+
 export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void {
+  // class_specifier: class Name { public: ... private: ... };
+  registry.register('cpp:liftClassDef', (node, ctx) => {
+    const nameNode = node.childForFieldName('name')
+    const className = nameNode?.text ?? 'MyClass'
+    const bodyNode = node.childForFieldName('body')
+
+    const publicMembers: SemanticNode[] = []
+    const privateMembers: SemanticNode[] = []
+    let currentAccess = 'private' // default access in class
+
+    if (bodyNode) {
+      for (const child of bodyNode.namedChildren) {
+        if (child.type === 'access_specifier') {
+          currentAccess = child.text.trim()
+          continue
+        }
+        const lifted = liftClassMember(child, className, ctx)
+        if (lifted) {
+          if (currentAccess === 'public') publicMembers.push(lifted)
+          else privateMembers.push(lifted)
+        }
+      }
+    }
+
+    return createNode('cpp_class_def', { name: className }, {
+      public: publicMembers,
+      private: privateMembers,
+    })
+  })
+
   // doc comment: /** ... */ → doc_comment with structured properties
   registry.register('cpp:liftDocComment', (node) => {
     const props = parseDocComment(node.text)

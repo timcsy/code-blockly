@@ -671,5 +671,87 @@
       "value": "expression"
     },
     "role": "statement"
+  },
+  {
+    "conceptId": "cpp_constructor",
+    "layer": "lang-core",
+    "abstractConcept": "constructor",
+    "properties": [
+      "class_name",
+      "init_list"
+    ],
+    "children": {
+      "params": "statements",
+      "body": "statements"
+    },
+    "role": "statement"
+  },
+  {
+    "conceptId": "cpp_destructor",
+    "layer": "lang-core",
+    "abstractConcept": "destructor",
+    "properties": [
+      "class_name"
+    ],
+    "children": {
+      "body": "statements"
+    },
+    "role": "statement"
+  },
+  {
+    "conceptId": "cpp_virtual_method",
+    "layer": "lang-core",
+    "abstractConcept": "virtual_method",
+    "properties": [
+      "return_type",
+      "name"
+    ],
+    "children": {
+      "params": "statements",
+      "body": "statements"
+    },
+    "role": "statement"
+  },
+  {
+    "conceptId": "cpp_pure_virtual",
+    "layer": "lang-core",
+    "abstractConcept": "pure_virtual",
+    "properties": [
+      "return_type",
+      "name"
+    ],
+    "children": {
+      "params": "statements"
+    },
+    "role": "statement"
+  },
+  {
+    "conceptId": "cpp_override_method",
+    "layer": "lang-core",
+    "abstractConcept": "override_method",
+    "properties": [
+      "return_type",
+      "name"
+    ],
+    "children": {
+      "params": "statements",
+      "body": "statements"
+    },
+    "role": "statement"
+  },
+  {
+    "conceptId": "cpp_operator_overload",
+    "layer": "lang-core",
+    "abstractConcept": "operator_overload",
+    "properties": [
+      "return_type",
+      "operator",
+      "param_type",
+      "param_name"
+    ],
+    "children": {
+      "body": "statements"
+    },
+    "role": "statement"
   }
 ]

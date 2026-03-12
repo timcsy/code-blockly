@@ -345,4 +345,106 @@ export function registerStatementGenerators(g: Map<string, NodeGenerator>, style
     }
     return `${indent(ctx)}*${ptrName} = 0;\n`
   })
+
+  // OOP concepts
+  g.set('cpp_class_def', (node, ctx) => {
+    const name = node.properties.name ?? 'MyClass'
+    const publicBody = node.children.public ?? []
+    const privateBody = node.children.private ?? []
+    let code = `${indent(ctx)}class ${name}${openBrace(ctx)}\n`
+    if (publicBody.length > 0) {
+      code += `${indent(ctx)}public:\n`
+      code += generateBody(publicBody, indented(ctx))
+    }
+    if (privateBody.length > 0) {
+      code += `${indent(ctx)}private:\n`
+      code += generateBody(privateBody, indented(ctx))
+    }
+    code += `${indent(ctx)}};\n`
+    return code
+  })
+
+  const formatParams = (paramChildren: { properties: Record<string, unknown> }[]) =>
+    paramChildren.map(p => {
+      const t = String(p.properties.type ?? 'int')
+      const n = String(p.properties.name ?? '')
+      return n ? `${t} ${n}` : t
+    }).join(', ')
+
+  g.set('cpp_constructor', (node, ctx) => {
+    const className = node.properties.class_name ?? 'MyClass'
+    const paramChildren = node.children.params ?? []
+    const initList = node.properties.init_list ?? ''
+    const body = node.children.body ?? []
+    const paramStr = formatParams(paramChildren)
+    const initStr = initList ? ` : ${initList}` : ''
+    const header = `${indent(ctx)}${className}(${paramStr})${initStr}${openBrace(ctx)}\n`
+    trackOwnText(ctx, header)
+    let code = header
+    code += generateBody(body, indented(ctx))
+    code += `${indent(ctx)}}\n`
+    return code
+  })
+
+  g.set('cpp_destructor', (node, ctx) => {
+    const className = node.properties.class_name ?? 'MyClass'
+    const body = node.children.body ?? []
+    const header = `${indent(ctx)}~${className}()${openBrace(ctx)}\n`
+    trackOwnText(ctx, header)
+    let code = header
+    code += generateBody(body, indented(ctx))
+    code += `${indent(ctx)}}\n`
+    return code
+  })
+
+  g.set('cpp_virtual_method', (node, ctx) => {
+    const returnType = node.properties.return_type ?? 'void'
+    const name = node.properties.name ?? 'method'
+    const paramChildren = node.children.params ?? []
+    const body = node.children.body ?? []
+    const paramStr = formatParams(paramChildren)
+    const header = `${indent(ctx)}virtual ${returnType} ${name}(${paramStr})${openBrace(ctx)}\n`
+    trackOwnText(ctx, header)
+    let code = header
+    code += generateBody(body, indented(ctx))
+    code += `${indent(ctx)}}\n`
+    return code
+  })
+
+  g.set('cpp_pure_virtual', (node, ctx) => {
+    const returnType = node.properties.return_type ?? 'void'
+    const name = node.properties.name ?? 'method'
+    const paramChildren = node.children.params ?? []
+    const paramStr = formatParams(paramChildren)
+    return `${indent(ctx)}virtual ${returnType} ${name}(${paramStr}) = 0;\n`
+  })
+
+  g.set('cpp_override_method', (node, ctx) => {
+    const returnType = node.properties.return_type ?? 'void'
+    const name = node.properties.name ?? 'method'
+    const paramChildren = node.children.params ?? []
+    const body = node.children.body ?? []
+    const paramStr = formatParams(paramChildren)
+    const header = `${indent(ctx)}${returnType} ${name}(${paramStr}) override${openBrace(ctx)}\n`
+    trackOwnText(ctx, header)
+    let code = header
+    code += generateBody(body, indented(ctx))
+    code += `${indent(ctx)}}\n`
+    return code
+  })
+
+  g.set('cpp_operator_overload', (node, ctx) => {
+    const returnType = node.properties.return_type ?? 'void'
+    const op = node.properties.operator ?? '+'
+    const paramType = node.properties.param_type ?? ''
+    const paramName = node.properties.param_name ?? ''
+    const body = node.children.body ?? []
+    const paramStr = paramType ? (paramName ? `${paramType} ${paramName}` : paramType) : ''
+    const header = `${indent(ctx)}${returnType} operator${op}(${paramStr})${openBrace(ctx)}\n`
+    trackOwnText(ctx, header)
+    let code = header
+    code += generateBody(body, indented(ctx))
+    code += `${indent(ctx)}}\n`
+    return code
+  })
 }
