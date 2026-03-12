@@ -102,9 +102,9 @@ export class App {
     this.topicRegistry.register(cppBeginnerTopic as Topic)
     this.topicRegistry.register(cppCompetitiveTopic as Topic)
 
-    // Default topic and branches (root enabled)
+    // Default topic and branches (only root level enabled for simplest starting point)
     this.currentTopic = this.topicRegistry.getDefault('cpp')!
-    this.enabledBranches = new Set(flattenLevelTree(this.currentTopic.levelTree).map(n => n.id))
+    this.enabledBranches = new Set([this.currentTopic.levelTree.id])
   }
 
   async init(): Promise<void> {
