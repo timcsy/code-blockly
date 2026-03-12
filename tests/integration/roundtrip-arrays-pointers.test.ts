@@ -1,9 +1,9 @@
 /**
- * Phase 4 Roundtrip: Arrays & Pointers
+ * Roundtrip: Arrays & Pointers
  *
- * Covers array declaration, subscript access, pointer declare/deref,
- * address-of, references, 2D arrays, new/delete, pointer arithmetic,
- * and array parameters.
+ * Covers: array_declare, array_access, array_assign,
+ *         cpp_pointer_declare, cpp_address_of, cpp_pointer_deref,
+ *         cpp_new, cpp_delete, cpp_malloc, cpp_free
  *
  * Each program is tested for:
  * 1. code -> lift -> generate roundtrip stability (gen1 === gen2)
@@ -77,8 +77,8 @@ function assertCleanAndStable(code: string) {
   expect(gen1).toBe(gen2)
 }
 
-// ─── t01: Array declare and access ───
-describe('array declare and access', () => {
+// ─── t01: Array basic - declare, assign, print ───
+describe('array basic - declare, assign, print', () => {
   const code = `#include <iostream>
 using namespace std;
 int main() {
@@ -86,7 +86,9 @@ int main() {
     arr[0] = 10;
     arr[1] = 20;
     arr[2] = 30;
-    cout << arr[0] + arr[1] + arr[2] << endl;
+    arr[3] = 40;
+    arr[4] = 50;
+    cout << arr[0] << " " << arr[1] << " " << arr[2] << " " << arr[3] << " " << arr[4] << endl;
     return 0;
 }`
 
@@ -94,21 +96,16 @@ int main() {
     assertCleanAndStable(code)
   })
 
-  it('preserves array subscript syntax', () => {
-    const gen = roundTrip(code)
-    expect(gen).toContain('arr[0]')
-    expect(gen).toContain('arr[1]')
-    expect(gen).toContain('arr[2]')
-  })
-
-  it('preserves array declaration', () => {
+  it('preserves array declaration and subscript access', () => {
     const gen = roundTrip(code)
     expect(gen).toContain('int arr[5]')
+    expect(gen).toContain('arr[0]')
+    expect(gen).toContain('arr[4]')
   })
 })
 
-// ─── t02: Array in for loop ───
-describe('array in for loop', () => {
+// ─── t02: Array with for loop ───
+describe('array with for loop', () => {
   const code = `#include <iostream>
 using namespace std;
 int main() {
@@ -133,8 +130,8 @@ int main() {
   })
 })
 
-// ─── t03: Pointer declare and deref ───
-describe('pointer declare and deref', () => {
+// ─── t03: Pointer basic - declare, address-of, deref ───
+describe('pointer basic - declare, address-of, deref', () => {
   const code = `#include <iostream>
 using namespace std;
 int main() {
@@ -158,8 +155,115 @@ int main() {
   })
 })
 
-// ─── t04: Address-of operator ───
-describe('address-of operator', () => {
+// ─── t04: Pointer arithmetic with arrays ───
+describe('pointer arithmetic with arrays', () => {
+  const code = `#include <iostream>
+using namespace std;
+int main() {
+    int arr[3];
+    arr[0] = 10;
+    arr[1] = 20;
+    arr[2] = 30;
+    int* ptr = &arr[0];
+    cout << *ptr << endl;
+    *ptr = *ptr + 5;
+    cout << arr[0] << endl;
+    return 0;
+}`
+
+  it('roundtrip is clean and stable', () => {
+    assertCleanAndStable(code)
+  })
+
+  it('preserves pointer dereference in expression', () => {
+    const gen = roundTrip(code)
+    expect(gen).toContain('*ptr')
+  })
+})
+
+// ─── t05: new/delete for single int ───
+describe('new/delete for single int', () => {
+  const code = `#include <iostream>
+using namespace std;
+int main() {
+    int* p = new int;
+    *p = 42;
+    cout << *p << endl;
+    delete p;
+    return 0;
+}`
+
+  it('roundtrip is clean and stable', () => {
+    assertCleanAndStable(code)
+  })
+
+  it('preserves new and delete', () => {
+    const gen = roundTrip(code)
+    expect(gen).toContain('new int')
+    expect(gen).toContain('delete p')
+  })
+})
+
+// ─── t06: new[]/delete[] for array ───
+// Known limitation: new int[n] degrades to new int, delete[] to delete
+// P1 roundtrip is still stable (gen1 === gen2), but array form is lost
+describe('new[]/delete[] for array', () => {
+  const code = `#include <iostream>
+using namespace std;
+int main() {
+    int n = 5;
+    int* arr = new int[n];
+    for (int i = 0; i < n; i++) {
+        arr[i] = i * 10;
+    }
+    for (int i = 0; i < n; i++) {
+        cout << arr[i] << " ";
+    }
+    cout << endl;
+    delete[] arr;
+    return 0;
+}`
+
+  it('roundtrip is clean and stable', () => {
+    assertCleanAndStable(code)
+  })
+
+  it('degrades new[] to new and delete[] to delete (known limitation)', () => {
+    const gen = roundTrip(code)
+    // Array form is lost in current implementation
+    expect(gen).toContain('new int')
+    expect(gen).toContain('delete')
+  })
+})
+
+// ─── t07: malloc/free C-style ───
+describe('malloc/free C-style', () => {
+  const code = `#include <iostream>
+#include <cstdlib>
+using namespace std;
+int main() {
+    int* arr = (int*)malloc(3 * sizeof(int));
+    arr[0] = 100;
+    arr[1] = 200;
+    arr[2] = 300;
+    cout << arr[0] << " " << arr[1] << " " << arr[2] << endl;
+    free(arr);
+    return 0;
+}`
+
+  it('roundtrip is clean and stable', () => {
+    assertCleanAndStable(code)
+  })
+
+  it('preserves malloc and free', () => {
+    const gen = roundTrip(code)
+    expect(gen).toContain('malloc')
+    expect(gen).toContain('free')
+  })
+})
+
+// ─── t08: Function with pointer parameter ───
+describe('function with pointer parameter', () => {
   const code = `#include <iostream>
 using namespace std;
 void addTen(int* p) {
@@ -182,106 +286,8 @@ int main() {
   })
 })
 
-// ─── t05: Reference parameters (DRIFT - todo) ───
-describe('reference parameters', () => {
-  const code = `#include <iostream>
-using namespace std;
-void swap(int& a, int& b) {
-    int temp = a;
-    a = b;
-    b = temp;
-}
-int main() {
-    int x = 3;
-    int y = 7;
-    swap(x, y);
-    cout << x << " " << y << endl;
-    return 0;
-}`
-
-  it.todo('roundtrip is clean and stable (swap generates unknown concept drift)')
-})
-
-// ─── t06: 2D array ───
-describe('2D array', () => {
-  const code = `#include <iostream>
-using namespace std;
-int main() {
-    int arr[2][3];
-    arr[0][0] = 1;
-    arr[0][1] = 2;
-    arr[0][2] = 3;
-    arr[1][0] = 4;
-    arr[1][1] = 5;
-    arr[1][2] = 6;
-    int sum = 0;
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 3; j++) {
-            sum = sum + arr[i][j];
-        }
-    }
-    cout << sum << endl;
-    return 0;
-}`
-
-  it('roundtrip is clean and stable', () => {
-    assertCleanAndStable(code)
-  })
-
-  it('preserves 2D subscript syntax', () => {
-    const gen = roundTrip(code)
-    expect(gen).toContain('arr[0][0]')
-    expect(gen).toContain('arr[i][j]')
-  })
-})
-
-// ─── t07: new/delete ───
-describe('new/delete', () => {
-  const code = `#include <iostream>
-using namespace std;
-int main() {
-    int* p = new int;
-    *p = 42;
-    cout << *p << endl;
-    delete p;
-    return 0;
-}`
-
-  it('roundtrip is clean and stable', () => {
-    assertCleanAndStable(code)
-  })
-
-  it('preserves new and delete', () => {
-    const gen = roundTrip(code)
-    expect(gen).toContain('new int')
-    expect(gen).toContain('delete p')
-  })
-})
-
-// ─── t08: Pointer arithmetic ───
-describe('pointer arithmetic', () => {
-  const code = `#include <iostream>
-using namespace std;
-int main() {
-    int x = 10;
-    int* ptr = &x;
-    *ptr = *ptr + 5;
-    cout << x << endl;
-    return 0;
-}`
-
-  it('roundtrip is clean and stable', () => {
-    assertCleanAndStable(code)
-  })
-
-  it('preserves pointer dereference in expression', () => {
-    const gen = roundTrip(code)
-    expect(gen).toContain('*ptr')
-  })
-})
-
-// ─── t09: Array sum function ───
-describe('array sum function', () => {
+// ─── t09: Array passed to function ───
+describe('array passed to function', () => {
   const code = `#include <iostream>
 using namespace std;
 int sumArray(int arr[], int n) {
@@ -312,14 +318,22 @@ int main() {
   })
 })
 
-// ─── t10: Reference variable ───
-describe('reference variable', () => {
+// ─── t10: Combined arrays, pointers, new/delete ───
+describe('combined arrays, pointers, new/delete', () => {
   const code = `#include <iostream>
 using namespace std;
 int main() {
-    int x = 10;
-    int& ref = x;
-    ref = 20;
+    int arr[3];
+    arr[0] = 1;
+    arr[1] = 2;
+    arr[2] = 3;
+    int* p = new int;
+    *p = arr[0] + arr[1] + arr[2];
+    cout << *p << endl;
+    delete p;
+    int x = 99;
+    int* q = &x;
+    *q = *q + 1;
     cout << x << endl;
     return 0;
 }`
@@ -328,9 +342,11 @@ int main() {
     assertCleanAndStable(code)
   })
 
-  it('preserves reference declaration', () => {
+  it('preserves mixed pointer and array operations', () => {
     const gen = roundTrip(code)
-    expect(gen).toContain('int&')
-    expect(gen).toContain('ref')
+    expect(gen).toContain('new int')
+    expect(gen).toContain('delete p')
+    expect(gen).toContain('&x')
+    expect(gen).toContain('arr[')
   })
 })

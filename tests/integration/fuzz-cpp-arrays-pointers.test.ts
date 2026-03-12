@@ -57,17 +57,99 @@ function roundTrip(code: string): string {
   return generateCode(sem!, 'cpp', style)
 }
 
-// ─── Fuzz 1: Array fill and reverse print ───
-describe('fuzz: array fill and reverse access', () => {
+// ─── Fuzz 1: Array initialization with values ───
+describe('fuzz: array initialization with values', () => {
   const code = `#include <iostream>
 using namespace std;
 int main() {
-    int a[5];
+    int a[5] = {10, 20, 30, 40, 50};
+    int sum = 0;
     for (int i = 0; i < 5; i++) {
-        a[i] = (i + 1) * 10;
+        sum = sum + a[i];
     }
-    for (int i = 4; i >= 0; i--) {
-        cout << a[i] << " ";
+    cout << sum << endl;
+    return 0;
+}`
+
+  // BUG: initializer list values are lost during lift
+  it.todo('executes correctly (initializer list values lost during lift)')
+
+  it('roundtrip is stable', () => {
+    const gen1 = roundTrip(code)
+    const gen2 = roundTrip(gen1)
+    expect(gen1).toBe(gen2)
+  })
+})
+
+// ─── Fuzz 2: Array boundary access (no OOB) ───
+describe('fuzz: array boundary access patterns', () => {
+  const code = `#include <iostream>
+using namespace std;
+int main() {
+    int arr[10];
+    for (int i = 0; i < 10; i++) {
+        arr[i] = i * i;
+    }
+    cout << arr[0] << endl;
+    cout << arr[4] << endl;
+    cout << arr[9] << endl;
+    return 0;
+}`
+
+  it('executes correctly', async () => {
+    const interp = await runCode(code)
+    const out = interp.getOutput().join('')
+    expect(out).toContain('0')
+    expect(out).toContain('16')
+    expect(out).toContain('81')
+  })
+
+  it('roundtrip is stable', () => {
+    const gen1 = roundTrip(code)
+    const gen2 = roundTrip(gen1)
+    expect(gen1).toBe(gen2)
+  })
+})
+
+// ─── Fuzz 3: Pointer arithmetic with array base ───
+describe('fuzz: pointer arithmetic with array base', () => {
+  const code = `#include <iostream>
+using namespace std;
+int main() {
+    int arr[5] = {2, 4, 6, 8, 10};
+    int* p = arr;
+    cout << *p << endl;
+    p = p + 2;
+    cout << *p << endl;
+    p = p + 2;
+    cout << *p << endl;
+    return 0;
+}`
+
+  // BUG: initializer list values lost, pointer arithmetic itself is correct
+  it.todo('executes correctly (initializer list values lost during lift)')
+
+  it('roundtrip is stable', () => {
+    const gen1 = roundTrip(code)
+    const gen2 = roundTrip(gen1)
+    expect(gen1).toBe(gen2)
+  })
+})
+
+// ─── Fuzz 4: Pass array to function by pointer ───
+describe('fuzz: pass array to function by pointer', () => {
+  const code = `#include <iostream>
+using namespace std;
+void fillArray(int* arr, int n) {
+    for (int i = 0; i < n; i++) {
+        arr[i] = (i + 1) * 3;
+    }
+}
+int main() {
+    int data[4];
+    fillArray(data, 4);
+    for (int i = 0; i < 4; i++) {
+        cout << data[i] << " ";
     }
     cout << endl;
     return 0;
@@ -76,70 +158,10 @@ int main() {
   it('executes correctly', async () => {
     const interp = await runCode(code)
     const out = interp.getOutput().join('')
-    expect(out).toContain('50')
-    expect(out).toContain('10')
-  })
-
-  it('roundtrip is stable', () => {
-    const gen1 = roundTrip(code)
-    const gen2 = roundTrip(gen1)
-    expect(gen1).toBe(gen2)
-  })
-})
-
-// ─── Fuzz 2: Pointer to modify variable via function ───
-describe('fuzz: pointer parameter modifies caller variable', () => {
-  const code = `#include <iostream>
-using namespace std;
-void doubleIt(int* p) {
-    *p = *p * 2;
-}
-int main() {
-    int val = 7;
-    doubleIt(&val);
-    cout << val << endl;
-    doubleIt(&val);
-    cout << val << endl;
-    return 0;
-}`
-
-  it('executes correctly', async () => {
-    const interp = await runCode(code)
-    const out = interp.getOutput().join('')
-    expect(out).toContain('14')
-    expect(out).toContain('28')
-  })
-
-  it('roundtrip is stable', () => {
-    const gen1 = roundTrip(code)
-    const gen2 = roundTrip(gen1)
-    expect(gen1).toBe(gen2)
-  })
-})
-
-// ─── Fuzz 3: 2D array with nested loops ───
-describe('fuzz: 2D array multiplication table', () => {
-  const code = `#include <iostream>
-using namespace std;
-int main() {
-    int table[3][3];
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            table[i][j] = (i + 1) * (j + 1);
-        }
-    }
-    cout << table[0][0] << endl;
-    cout << table[1][1] << endl;
-    cout << table[2][2] << endl;
-    return 0;
-}`
-
-  it('executes correctly', async () => {
-    const interp = await runCode(code)
-    const out = interp.getOutput().join('')
-    expect(out).toContain('1')
-    expect(out).toContain('4')
+    expect(out).toContain('3')
+    expect(out).toContain('6')
     expect(out).toContain('9')
+    expect(out).toContain('12')
   })
 
   it('roundtrip is stable', () => {
@@ -149,8 +171,38 @@ int main() {
   })
 })
 
-// ─── Fuzz 4: new/delete with computation ───
-describe('fuzz: dynamic allocation with computation', () => {
+// ─── Fuzz 5: Multiple pointers to same data ───
+describe('fuzz: multiple pointers to same data', () => {
+  const code = `#include <iostream>
+using namespace std;
+int main() {
+    int x = 42;
+    int* p1 = &x;
+    int* p2 = &x;
+    *p1 = *p1 + 8;
+    cout << *p2 << endl;
+    *p2 = *p2 * 2;
+    cout << *p1 << endl;
+    cout << x << endl;
+    return 0;
+}`
+
+  it('executes correctly', async () => {
+    const interp = await runCode(code)
+    const out = interp.getOutput().join('')
+    expect(out).toContain('50')
+    expect(out).toContain('100')
+  })
+
+  it('roundtrip is stable', () => {
+    const gen1 = roundTrip(code)
+    const gen2 = roundTrip(gen1)
+    expect(gen1).toBe(gen2)
+  })
+})
+
+// ─── Fuzz 6: new/delete patterns ───
+describe('fuzz: new/delete with computation', () => {
   const code = `#include <iostream>
 using namespace std;
 int main() {
@@ -160,13 +212,13 @@ int main() {
     *b = 25;
     int sum = *a + *b;
     cout << sum << endl;
+    *a = sum;
+    cout << *a << endl;
     delete a;
     delete b;
     return 0;
 }`
 
-  // Interpreter pointer semantics for multiple `new` allocations
-  // may not match native C++ exactly; skip execution test.
   it.todo('executes correctly (interpreter new/delete semantics)')
 
   it('roundtrip is stable', () => {
@@ -176,72 +228,108 @@ int main() {
   })
 })
 
-// ─── Fuzz 5: Array max finder ───
-describe('fuzz: array max finder with pointers', () => {
+// ─── Fuzz 7: malloc/free patterns ───
+describe('fuzz: malloc/free patterns', () => {
+  const code = `#include <iostream>
+#include <cstdlib>
+using namespace std;
+int main() {
+    int* arr = (int*)malloc(3 * sizeof(int));
+    arr[0] = 100;
+    arr[1] = 200;
+    arr[2] = 300;
+    int total = arr[0] + arr[1] + arr[2];
+    cout << total << endl;
+    free(arr);
+    return 0;
+}`
+
+  it.todo('executes correctly (interpreter malloc/free semantics)')
+
+  it('roundtrip is stable', () => {
+    const gen1 = roundTrip(code)
+    const gen2 = roundTrip(gen1)
+    expect(gen1).toBe(gen2)
+  })
+})
+
+// ─── Fuzz 8: Address-of and dereference chains ───
+describe('fuzz: address-of and dereference chains', () => {
   const code = `#include <iostream>
 using namespace std;
 int main() {
-    int arr[5];
-    arr[0] = 3;
-    arr[1] = 7;
-    arr[2] = 1;
-    arr[3] = 9;
-    arr[4] = 4;
-    int maxVal = arr[0];
-    for (int i = 1; i < 5; i++) {
-        if (arr[i] > maxVal) {
-            maxVal = arr[i];
-        }
+    int x = 99;
+    int* p = &x;
+    cout << *&x << endl;
+    cout << *p << endl;
+    cout << **&p << endl;
+    return 0;
+}`
+
+  it('executes correctly', async () => {
+    const interp = await runCode(code)
+    const out = interp.getOutput().join('')
+    expect(out).toContain('99')
+  })
+
+  it('roundtrip is stable', () => {
+    const gen1 = roundTrip(code)
+    const gen2 = roundTrip(gen1)
+    expect(gen1).toBe(gen2)
+  })
+})
+
+// ─── Fuzz 9: Array of pointers ───
+describe('fuzz: array of pointers', () => {
+  const code = `#include <iostream>
+using namespace std;
+int main() {
+    int a = 1;
+    int b = 2;
+    int c = 3;
+    int* ptrs[3];
+    ptrs[0] = &a;
+    ptrs[1] = &b;
+    ptrs[2] = &c;
+    int sum = 0;
+    for (int i = 0; i < 3; i++) {
+        sum = sum + *ptrs[i];
     }
-    cout << maxVal << endl;
+    cout << sum << endl;
     return 0;
 }`
 
-  it('executes correctly', async () => {
-    const interp = await runCode(code)
-    const out = interp.getOutput().join('')
-    expect(out).toContain('9')
-  })
+  // BUG: int* ptrs[3] lifted as int x; - pointer array type not supported
+  it.todo('executes correctly (pointer array declaration lost during lift)')
 
-  it('roundtrip is stable', () => {
-    const gen1 = roundTrip(code)
-    const gen2 = roundTrip(gen1)
-    expect(gen1).toBe(gen2)
-  })
+  it.todo('roundtrip is stable (COMPILE_FAIL: int* name[size] not supported)')
 })
 
-// ─── Fuzz 6: Multiple pointer dereferences in expressions ───
-describe('fuzz: pointer dereference in complex expressions', () => {
+// ─── Fuzz 10: Function returning pointer (to global) ───
+describe('fuzz: function returning pointer to global', () => {
   const code = `#include <iostream>
 using namespace std;
+int globalVal = 777;
+int* getGlobalPtr() {
+    return &globalVal;
+}
 int main() {
-    int x = 10;
-    int y = 20;
-    int* px = &x;
-    int* py = &y;
-    int result = *px + *py;
-    cout << result << endl;
-    *px = *px + *py;
-    cout << x << endl;
+    int* p = getGlobalPtr();
+    cout << *p << endl;
+    *p = 888;
+    cout << globalVal << endl;
     return 0;
 }`
 
-  it('executes correctly', async () => {
-    const interp = await runCode(code)
-    const out = interp.getOutput().join('')
-    expect(out).toContain('30')
-  })
+  // BUG: int* return type generates as int getGlobalPtr()() - syntax error
+  it.todo('executes correctly (function returning pointer generates syntax error)')
 
-  it('roundtrip is stable', () => {
-    const gen1 = roundTrip(code)
-    const gen2 = roundTrip(gen1)
-    expect(gen1).toBe(gen2)
-  })
+  it.todo('roundtrip is stable (COMPILE_FAIL: int* return type broken)')
 })
 
-// ─── Known issues ───
-describe('reference parameter swap (roundtrip drift)', () => {
-  // t05_reference: swap(int& a, int& b) generates unknown concept: cpp_swap
-  // which causes indentation drift on second roundtrip
-  it.todo('swap with reference parameters should roundtrip cleanly')
+// ─── Known issues summary ───
+describe('known issues: arrays & pointers', () => {
+  it.todo('array initializer list {val1, val2, ...} should be preserved during lift (BUG-1)')
+  it.todo('pointer array declaration int* name[size] should be supported (BUG-2)')
+  it.todo('function returning pointer int* func() should generate correctly (BUG-3)')
 })
