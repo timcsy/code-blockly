@@ -1828,7 +1828,19 @@ export class BlockRegistrar {
           setMinusState(this, this.argCount_ <= 1)
         },
         saveExtraState: function (this: any) {
-          return { args: this.argSlots_.map((s: ArgSlotState) => ({ ...s })) }
+          const args: ArgSlotState[] = []
+          for (let i = 0; i < this.argCount_; i++) {
+            const slot = this.argSlots_[i]
+            if (slot.mode === 'select') {
+              const val = this.getFieldValue(`SEL_${i}`)
+              args.push({ mode: 'select', text: val ?? slot.selectedVar ?? 'x' })
+            } else if (slot.mode === 'custom') {
+              args.push({ mode: 'custom', text: this.getFieldValue(`TEXT_${i}`) ?? '' })
+            } else {
+              args.push({ mode: 'compose' })
+            }
+          }
+          return { args }
         },
         loadExtraState: function (this: any, state: { args?: ArgSlotState[] }) {
           const args = state.args ?? [{ mode: 'select' }]

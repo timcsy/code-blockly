@@ -18,7 +18,7 @@ export function registerCppRenderStrategies(registry: RenderStrategyRegistry): v
         varNames.push((v.properties.name as string) ?? 'x')
       }
     }
-    if (varNames.length === 0) varNames.push('x')
+    if (varNames.length === 0) varNames.push((node.properties.variable as string) ?? 'x')
 
     // Produce extraState.args matching u_input's loadExtraState format
     block.extraState = {

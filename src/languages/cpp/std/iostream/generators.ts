@@ -36,7 +36,7 @@ export function registerIostreamGenerators(g: Map<string, NodeGenerator>, style:
     const valueNodes = node.children.values ?? []
     const vars = valueNodes.length > 0
       ? valueNodes.map(v => generateExpression(v, ctx))
-      : ['x']
+      : [String(node.properties.variable ?? 'x')]
     if (style.io_style === 'cout') {
       const expr = `cin >> ${vars.join(' >> ')}`
       if (ctx.isExpression) return expr

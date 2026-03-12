@@ -302,14 +302,18 @@ export function registerCppExtractors(registry: BlockExtractorRegistry): void {
 
   const extractInput = (b: unknown, _ctx: BlockExtractContext): SemanticNode | null => {
     const block = asBlock(b)
-    const extraState = block.saveExtraState?.() as { args?: Array<{ mode: string; text?: string }> } | null
+    const extraState = block.saveExtraState?.() as { args?: Array<{ mode: string; text?: string; selectedVar?: string }> } | null
     const args = extraState?.args ?? []
     const varNames: string[] = []
     for (const a of args) {
-      if (a.mode === 'select' && a.text) varNames.push(a.text)
+      if (a.mode === 'select') {
+        const name = a.text ?? a.selectedVar
+        if (name) varNames.push(name)
+      }
     }
     if (varNames.length === 0) {
-      const singleVar = block.getFieldValue('VAR') ?? 'x'
+      // Fallback: try SEL_0 field (dynamic dropdown), then NAME field (JSON blockDef)
+      const singleVar = block.getFieldValue('SEL_0') ?? block.getFieldValue('NAME') ?? 'x'
       varNames.push(singleVar)
     }
     return createNode('input', { variable: varNames[0] }, {
