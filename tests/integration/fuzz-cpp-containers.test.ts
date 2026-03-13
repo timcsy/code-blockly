@@ -231,10 +231,44 @@ cout << st.empty() << endl;`
   it.todo('fuzz_7: map of vectors — needs cpp_map_declare concept')
 
   // ─── fuzz_8: stack-queue reversal ───
-  // EXPECTED_DEGRADATION — cpp_stack_declare now implemented, but still needs
-  // cpp_queue_declare. Enable when: queue concepts implemented in Phase 9 <queue> pipeline
+  // EXPECTED_DEGRADATION — stack/queue declare+push+pop now work, but function parameter
+  // `queue<int> q` degrades to `int q` (template_type not handled in func params).
+  // Enable when: template_type detection added for function parameters
 
-  it.todo('fuzz_8: stack-queue reversal — needs cpp_queue_declare concept')
+  it.todo('fuzz_8: stack-queue reversal — needs template_type in function parameters')
+
+  // ─── queue fuzz: FIFO drain with front/pop ───
+
+  describe('queue fuzz: FIFO drain pattern', () => {
+    const code = `queue<int> q;
+q.push(10);
+q.push(20);
+q.push(30);
+while (!q.empty()) {
+    cout << q.front() << " ";
+    q.pop();
+}
+cout << endl;`
+
+    it('should lift queue declare and FIFO operations', () => {
+      const tree = liftCode(code)
+      expect(tree).not.toBeNull()
+      const concepts = collectConcepts(tree)
+      expect(concepts.has('cpp_queue_declare')).toBe(true)
+      expect(concepts.has('cpp_stack_push')).toBe(true) // shared .push()
+      expect(concepts.has('cpp_queue_front')).toBe(true)
+      expect(concepts.has('cpp_stack_pop')).toBe(true) // shared .pop()
+    })
+
+    it('should survive P1 structural equivalence', () => {
+      const output = roundTripCode(code)
+      const tree2 = liftCode(output)
+      expect(tree2).not.toBeNull()
+      const concepts2 = collectConcepts(tree2)
+      expect(concepts2.has('cpp_queue_declare')).toBe(true)
+      expect(concepts2.has('cpp_queue_front')).toBe(true)
+    })
+  })
 
   // ─── fuzz_9: set dedup with insert ───
   // EXPECTED_DEGRADATION — cpp_set_declare not yet implemented
