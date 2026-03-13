@@ -279,11 +279,11 @@ describe('L2 Block Roundtrip', () => {
       expect(sem2!.concept).toBe('cpp_strlen')
     })
 
-    it('should generate code', () => {
+    it('should return null from TemplateGenerator (uses hand-written generator)', () => {
       const inner = createNode('var_ref', { name: 's' })
       const sem = createNode('cpp_strlen', {}, { str: [inner] })
       const code = generator.generate(sem, genCtx)
-      expect(code).toBe('strlen(s)')
+      expect(code).toBeNull()
     })
 
     it('should skip call_expression lift (handled by hand-written lifter)', () => {
@@ -306,22 +306,22 @@ describe('L2 Block Roundtrip', () => {
       expect(block!.type).toBe('c_strcmp')
     })
 
-    it('should generate code', () => {
+    it('should return null from TemplateGenerator (uses hand-written generator)', () => {
       const s1 = createNode('var_ref', { name: 'a' })
       const s2 = createNode('var_ref', { name: 'b' })
       const sem = createNode('cpp_strcmp', {}, { s1: [s1], s2: [s2] })
       const code = generator.generate(sem, genCtx)
-      expect(code).toBe('strcmp(a, b)')
+      expect(code).toBeNull()
     })
   })
 
   describe('c_strcpy', () => {
-    it('should generate code', () => {
+    it('should return null from TemplateGenerator (uses hand-written generator)', () => {
       const dest = createNode('var_ref', { name: 'dst' })
       const src = createNode('var_ref', { name: 'src' })
       const sem = createNode('cpp_strcpy', {}, { dest: [dest], src: [src] })
       const code = generator.generate(sem, genCtx)
-      expect(code).toBe('strcpy(dst, src);')
+      expect(code).toBeNull()
     })
   })
 

@@ -327,7 +327,7 @@ export function registerIOLifters(lifter: Lifter): void {
       })
     }
 
-    // cstring functions: strlen, strcmp, strcpy, strcat, strncpy, strncmp, memset, memcpy
+    // cstring functions
     if (funcName === 'strlen') {
       const str = argChildren[0] ? ctx.lift(argChildren[0]) : null
       return createNode('cpp_strlen', {}, { str: str ? [str] : [] })
@@ -341,6 +341,45 @@ export function registerIOLifters(lifter: Lifter): void {
       const dest = argChildren[0] ? ctx.lift(argChildren[0]) : null
       const src = argChildren[1] ? ctx.lift(argChildren[1]) : null
       return createNode('cpp_strcpy', {}, { dest: dest ? [dest] : [], src: src ? [src] : [] })
+    }
+    if (funcName === 'strcat') {
+      const dest = argChildren[0] ? ctx.lift(argChildren[0]) : null
+      const src = argChildren[1] ? ctx.lift(argChildren[1]) : null
+      return createNode('cpp_strcat', {}, { dest: dest ? [dest] : [], src: src ? [src] : [] })
+    }
+    if (funcName === 'strncpy' && argChildren.length === 3) {
+      const dest = argChildren[0] ? ctx.lift(argChildren[0]) : null
+      const src = argChildren[1] ? ctx.lift(argChildren[1]) : null
+      const n = argChildren[2] ? ctx.lift(argChildren[2]) : null
+      return createNode('cpp_strncpy', {}, { dest: dest ? [dest] : [], src: src ? [src] : [], n: n ? [n] : [] })
+    }
+    if (funcName === 'strncmp' && argChildren.length === 3) {
+      const s1 = argChildren[0] ? ctx.lift(argChildren[0]) : null
+      const s2 = argChildren[1] ? ctx.lift(argChildren[1]) : null
+      const n = argChildren[2] ? ctx.lift(argChildren[2]) : null
+      return createNode('cpp_strncmp', {}, { s1: s1 ? [s1] : [], s2: s2 ? [s2] : [], n: n ? [n] : [] })
+    }
+    if (funcName === 'strchr' && argChildren.length === 2) {
+      const str = argChildren[0] ? ctx.lift(argChildren[0]) : null
+      const ch = argChildren[1] ? ctx.lift(argChildren[1]) : null
+      return createNode('cpp_strchr', {}, { str: str ? [str] : [], ch: ch ? [ch] : [] })
+    }
+    if (funcName === 'strstr' && argChildren.length === 2) {
+      const haystack = argChildren[0] ? ctx.lift(argChildren[0]) : null
+      const needle = argChildren[1] ? ctx.lift(argChildren[1]) : null
+      return createNode('cpp_strstr', {}, { haystack: haystack ? [haystack] : [], needle: needle ? [needle] : [] })
+    }
+    if (funcName === 'memset' && argChildren.length === 3) {
+      const ptr = argChildren[0] ? ctx.lift(argChildren[0]) : null
+      const value = argChildren[1] ? ctx.lift(argChildren[1]) : null
+      const size = argChildren[2] ? ctx.lift(argChildren[2]) : null
+      return createNode('cpp_memset', {}, { ptr: ptr ? [ptr] : [], value: value ? [value] : [], size: size ? [size] : [] })
+    }
+    if (funcName === 'memcpy' && argChildren.length === 3) {
+      const dest = argChildren[0] ? ctx.lift(argChildren[0]) : null
+      const src = argChildren[1] ? ctx.lift(argChildren[1]) : null
+      const size = argChildren[2] ? ctx.lift(argChildren[2]) : null
+      return createNode('cpp_memcpy', {}, { dest: dest ? [dest] : [], src: src ? [src] : [], size: size ? [size] : [] })
     }
 
     // General function call
