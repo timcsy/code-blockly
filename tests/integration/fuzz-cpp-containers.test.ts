@@ -161,10 +161,50 @@ cout << rows << endl;`
   })
 
   // ─── fuzz_2: stack expression evaluator ───
-  // EXPECTED_DEGRADATION — cpp_stack_declare/push/pop not yet implemented
-  // Enable when: stack concepts implemented in Phase 9 <stack> pipeline
+  // EXPECTED_DEGRADATION — stack concepts now implemented, but program uses
+  // string array initializer list and istringstream which are not supported.
+  // Stack operations (push/pop/top) ARE correctly lifted.
 
-  it.todo('fuzz_2: stack expression evaluator — needs cpp_stack_declare/push/pop/top concepts')
+  it.todo('fuzz_2: stack expression evaluator — needs array initializer list and istringstream support')
+
+  // ─── stack fuzz: bracket matching (stack-only, P1 stable) ───
+
+  describe('stack fuzz: bracket matching (stack concepts only)', () => {
+    const code = `stack<char> st;
+string s = "([{}])";
+for (char c : s) {
+    if (c == '(' || c == '[' || c == '{') {
+        st.push(c);
+    }
+}
+cout << st.top() << endl;
+st.pop();
+cout << st.top() << endl;
+st.pop();
+cout << st.top() << endl;
+cout << st.empty() << endl;`
+
+    it('should lift stack declare, push, top, pop', () => {
+      const tree = liftCode(code)
+      expect(tree).not.toBeNull()
+      const concepts = collectConcepts(tree)
+      expect(concepts.has('cpp_stack_declare')).toBe(true)
+      expect(concepts.has('cpp_stack_push')).toBe(true)
+      expect(concepts.has('cpp_stack_top')).toBe(true)
+      expect(concepts.has('cpp_stack_pop')).toBe(true)
+    })
+
+    it('should survive P1 structural equivalence', () => {
+      const output = roundTripCode(code)
+      const tree2 = liftCode(output)
+      expect(tree2).not.toBeNull()
+      const concepts2 = collectConcepts(tree2)
+      expect(concepts2.has('cpp_stack_declare')).toBe(true)
+      expect(concepts2.has('cpp_stack_push')).toBe(true)
+      expect(concepts2.has('cpp_stack_top')).toBe(true)
+      expect(concepts2.has('cpp_stack_pop')).toBe(true)
+    })
+  })
 
   // ─── fuzz_3: map frequency counter with erase ───
   // EXPECTED_DEGRADATION — cpp_map_declare not yet implemented
@@ -191,10 +231,10 @@ cout << rows << endl;`
   it.todo('fuzz_7: map of vectors — needs cpp_map_declare concept')
 
   // ─── fuzz_8: stack-queue reversal ───
-  // EXPECTED_DEGRADATION — cpp_queue_declare, cpp_stack_declare not yet implemented
-  // Enable when: stack/queue concepts implemented in Phase 9
+  // EXPECTED_DEGRADATION — cpp_stack_declare now implemented, but still needs
+  // cpp_queue_declare. Enable when: queue concepts implemented in Phase 9 <queue> pipeline
 
-  it.todo('fuzz_8: stack-queue reversal — needs stack/queue declare concepts')
+  it.todo('fuzz_8: stack-queue reversal — needs cpp_queue_declare concept')
 
   // ─── fuzz_9: set dedup with insert ───
   // EXPECTED_DEGRADATION — cpp_set_declare not yet implemented
