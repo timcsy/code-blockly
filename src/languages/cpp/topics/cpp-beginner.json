@@ -28,6 +28,7 @@
           "var_declare_expr", "array_assign",
           "cpp:math_pow", "cpp:math_unary",
           "cpp_rand", "cpp_srand", "cpp_abs",
+          "cpp_min", "cpp_max",
           "cpp_gcd", "cpp_lcm"
         ],
         "children": [
@@ -39,6 +40,8 @@
               "array_declare", "array_access",
               "cpp_string_declare",
               "cpp_strlen", "cpp_strcmp", "cpp_strcpy",
+              "cpp_strcat", "cpp_strncpy", "cpp_strncmp",
+              "cpp_strchr", "cpp_strstr",
               "cpp_string_length", "cpp_string_substr", "cpp_string_find",
               "cpp_string_append", "cpp_string_c_str",
               "cpp_string_empty", "cpp_string_erase", "cpp_string_insert",
@@ -61,6 +64,7 @@
                   "cpp_map_access", "cpp_map_erase", "cpp_map_count", "cpp_map_empty",
                   "cpp_set_insert", "cpp_set_erase", "cpp_set_count", "cpp_set_empty",
                   "cpp_accumulate", "cpp_iota", "cpp_partial_sum",
+                  "cpp_reverse", "cpp_fill",
                   "cpp_swap", "cpp_pair_declare", "cpp_make_pair",
                   "cpp_string_replace"
                 ],
@@ -93,6 +97,7 @@
               "cpp_pointer_assign", "cpp_address_of",
               "cpp_malloc", "cpp_free",
               "cpp_ref_declare", "cpp_static_declare",
+              "cpp_memset", "cpp_memcpy",
               "cpp_include_local", "cpp_define",
               "cpp_ifdef", "cpp_ifndef", "forward_decl"
             ],
@@ -112,7 +117,7 @@
               "cpp:vector_push_back", "cpp:vector_size",
               "cpp_map_declare", "cpp_set_declare",
               "cpp_stack_declare", "cpp_queue_declare",
-              "cpp_sort", "cpp:sort", "cpp:find",
+              "cpp_sort",
               "cpp:math_binary",
               "cpp_constructor", "cpp_destructor"
             ],

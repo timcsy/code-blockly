@@ -26,12 +26,13 @@
           "count_loop", "cpp_for_loop", "break", "continue",
           "func_def", "func_call", "func_call_expr", "return",
           "logic", "logic_not", "negate",
-          "cpp_sort", "cpp:sort", "cpp:find",
+          "cpp_sort",
           "cpp:math_pow", "cpp:math_unary",
           "cpp_increment", "cpp_increment_expr",
           "cpp_compound_assign", "cpp_compound_assign_expr",
           "var_declare_expr",
           "cpp_rand", "cpp_srand", "cpp_abs", "cpp_swap",
+          "cpp_min", "cpp_max",
           "cpp_gcd", "cpp_lcm"
         ],
         "children": [
@@ -56,9 +57,12 @@
               "cpp_string_replace", "cpp_string_push_back", "cpp_string_clear",
               "cpp_getline", "cpp_to_string", "cpp_stoi", "cpp_stod",
               "cpp_strlen", "cpp_strcmp", "cpp_strcpy",
+              "cpp_strcat", "cpp_strncpy", "cpp_strncmp",
+              "cpp_strchr", "cpp_strstr",
               "cpp_method_call", "cpp_method_call_expr",
               "cpp_template_function",
               "cpp:math_binary",
+              "cpp_reverse", "cpp_fill",
               "cpp_accumulate", "cpp_iota", "cpp_partial_sum",
               "cpp_pair_declare", "cpp_make_pair",
               "cpp_array_2d_declare", "cpp_array_2d_access", "cpp_array_2d_assign",
@@ -79,7 +83,8 @@
           "cpp_char_literal",
           "cpp_range_for", "cpp_enum",
           "cpp_isalpha", "cpp_isdigit", "cpp_toupper", "cpp_tolower",
-          "cpp_const_declare", "cpp_auto_declare",
+          "cpp_exit",
+          "cpp_const_declare", "cpp_constexpr_declare", "cpp_auto_declare",
           "cpp_typedef", "cpp_using_alias",
           "cpp_ref_declare", "cpp_static_declare"
         ],
@@ -102,7 +107,14 @@
               "cpp_raw_code", "cpp_raw_expression",
               "cpp_try_catch", "cpp_throw",
               "cpp_lambda", "cpp_namespace_def",
-              "cpp_static_cast"
+              "cpp_static_cast", "cpp_dynamic_cast",
+              "cpp_reinterpret_cast", "cpp_const_cast",
+              "cpp_virtual_method", "cpp_pure_virtual",
+              "cpp_override_method", "cpp_operator_overload",
+              "cpp_static_member",
+              "cpp_memset", "cpp_memcpy",
+              "cpp_stringstream_declare",
+              "cpp_ifstream_declare", "cpp_ofstream_declare"
             ],
             "children": []
           }
