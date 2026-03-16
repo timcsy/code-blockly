@@ -32,7 +32,7 @@ export const FIELD_COMMON_MAPPINGS: Record<string, string[]> = {
   'ARGS': ['args'],
   'BOUND': ['inclusive'],
   'FORMAT': ['format'],
-  'POSITION': ['operator'],
+  'POSITION': ['position'],
 }
 
 /** Maps Blockly input names to semantic child slot names */
