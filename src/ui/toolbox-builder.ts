@@ -79,12 +79,15 @@ export function buildToolbox(config: ToolboxBuildConfig): object {
     }
     const extraReplacements = new Map<string, ToolboxEntry[]>()
     const extraAppend: ToolboxEntry[] = []
+    const extraAdded = new Set<string>()
     if (def.extraTypes) {
       for (const t of def.extraTypes) {
         if (typeof t === 'string') {
           if (!isVisible(t)) continue
-          if (!blockSet.has(t)) extraAppend.push({ kind: 'block', type: t })
-          blockSet.add(t)
+          if (!blockSet.has(t) && !extraAdded.has(t)) {
+            extraAppend.push({ kind: 'block', type: t })
+            extraAdded.add(t)
+          }
         } else {
           if (!isVisible(t.type)) continue
           if (!extraReplacements.has(t.type)) extraReplacements.set(t.type, [])
