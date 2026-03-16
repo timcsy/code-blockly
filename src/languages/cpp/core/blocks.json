@@ -1251,11 +1251,6 @@
         "INIT": "initializer"
       }
     },
-    "codeTemplate": {
-      "pattern": "${TYPE}* ${NAME};",
-      "imports": [],
-      "order": 0
-    },
     "astPattern": {
       "nodeType": "declaration",
       "constraints": [
