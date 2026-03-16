@@ -1474,6 +1474,7 @@
           "check": "Expression"
         }
       ],
+      "inputsInline": true,
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": "#9966FF",
@@ -1774,6 +1775,7 @@
           "check": "Expression"
         }
       ],
+      "inputsInline": true,
       "previousStatement": "Statement",
       "nextStatement": "Statement",
       "colour": "#9966FF",
@@ -2284,10 +2286,40 @@
       "colour": "#5B80A5",
       "tooltip": "%{BKY_C_REF_DECLARE_TOOLTIP}"
     },
+    "renderMapping": {
+      "fields": {
+        "TYPE": "type",
+        "NAME": "name"
+      },
+      "inputs": {
+        "INIT": "initializer"
+      }
+    },
     "codeTemplate": {
       "pattern": "${TYPE}& ${NAME} = ${INIT};",
       "imports": [],
       "order": 0
+    },
+    "astPattern": {
+      "nodeType": "declaration",
+      "constraints": [
+        {
+          "field": "declarator",
+          "nodeType": "reference_declarator"
+        }
+      ],
+      "fieldMappings": [
+        {
+          "semantic": "type",
+          "ast": "type",
+          "extract": "text"
+        },
+        {
+          "semantic": "name",
+          "ast": "declarator",
+          "extract": "text"
+        }
+      ]
     }
   },
   {
