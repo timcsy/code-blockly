@@ -1878,7 +1878,7 @@ export class BlockRegistrar {
           this.argCount_ = 1
           this.argSlots_ = [{ mode: 'select', selectedVar: 'x' }]
           this.appendDummyInput('FORMAT_ROW')
-            .appendField('scanf')
+            .appendField(Blockly.Msg['C_SCANF_EXPR_LABEL'] || '格式化輸入 (scanf)')
             .appendField(new Blockly.FieldTextInput('%d') as Blockly.Field, 'FORMAT')
           buildArgSlot(this, 0, 'select', {
             getVarOptions: () => self.getScanfVarOptions(),
@@ -1893,7 +1893,7 @@ export class BlockRegistrar {
           this.setInputsInline(true)
           this.setOutput(true, 'Expression')
           this.setColour(CATEGORY_COLORS.io)
-          this.setTooltip('scanf（運算式）')
+          this.setTooltip(Blockly.Msg['C_SCANF_EXPR_TOOLTIP'] || '格式化讀取輸入（運算式版本）')
           this.isArrayVar_ = isArrayVar
         },
         plus_: function (this: any) {
@@ -1972,7 +1972,7 @@ export class BlockRegistrar {
           this.setInputsInline(true)
           this.setOutput(true, 'Expression')
           this.setColour(CATEGORY_COLORS.data)
-          this.setTooltip('變數宣告（運算式）')
+          this.setTooltip(Blockly.Msg['U_VAR_DECLARE_EXPR_TOOLTIP'] || '宣告變數（運算式版本）')
         },
       }
     }
