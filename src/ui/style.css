@@ -503,15 +503,32 @@ html, body {
 }
 
 .bottom-panel-divider {
-  height: 4px;
-  background: #252526;
+  height: 6px;
+  background: #333;
   cursor: row-resize;
   flex-shrink: 0;
   transition: background 0.1s;
+  position: relative;
+}
+
+.bottom-panel-divider::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 2px;
+  background: #666;
+  border-radius: 1px;
 }
 
 .bottom-panel-divider:hover {
   background: #007acc;
+}
+
+.bottom-panel-divider:hover::after {
+  background: #fff;
 }
 
 .bottom-panel-tabs {
