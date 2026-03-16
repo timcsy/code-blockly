@@ -70,6 +70,13 @@ export class BlockRegistrar {
             if (name === null || name === undefined) break
             addOption(name)
           }
+        } else if (['c_const_declare', 'c_constexpr_declare', 'c_static_declare',
+                     'c_auto_declare', 'c_ref_declare', 'c_pointer_declare',
+                     'cpp_string_declare', 'cpp_vector_declare', 'cpp_stack_declare',
+                     'cpp_queue_declare', 'cpp_map_declare', 'cpp_set_declare',
+                     'cpp_pair_declare', 'cpp_ifstream_declare', 'cpp_ofstream_declare',
+                     'cpp_stringstream_declare'].includes(block.type)) {
+          addOption(block.getFieldValue('NAME') ?? '')
         } else if (block.type === 'c_for_loop') {
           const initBlock = block.getInputTargetBlock?.('INIT')
           if (initBlock && initBlock.type === 'c_var_declare_expr') {
