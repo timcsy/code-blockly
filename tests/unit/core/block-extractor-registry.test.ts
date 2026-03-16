@@ -1,55 +1,145 @@
 import { describe, it, expect } from 'vitest'
-import { BlockExtractorRegistry } from '../../../src/core/registry/block-extractor-registry'
-import type { BlockExtractorFn } from '../../../src/core/registry/block-extractor-registry'
 import { createNode } from '../../../src/core/semantic-tree'
-import { createCppExtractorRegistry } from '../../../src/languages/cpp/extractors/register'
+import { PatternExtractor } from '../../../src/core/projection/pattern-extractor'
+import type { ExtractStrategyFn, BlockState } from '../../../src/core/projection/pattern-extractor'
+import { registerCppExtractStrategies } from '../../../src/languages/cpp/extractors/extract-strategies'
 
-describe('BlockExtractorRegistry', () => {
-  it('should register and retrieve extractors', () => {
-    const registry = new BlockExtractorRegistry()
-    const fn: BlockExtractorFn = () => createNode('test', {})
-    registry.register('u_test', fn)
-    expect(registry.get('u_test')).toBe(fn)
-    expect(registry.has('u_test')).toBe(true)
-    expect(registry.has('u_nonexistent')).toBe(false)
+describe('PatternExtractor — extractStrategy', () => {
+  it('should register and invoke extraction strategies', () => {
+    const extractor = new PatternExtractor()
+    const fn: ExtractStrategyFn = () => createNode('test', {})
+    extractor.registerExtractStrategy('u_test', fn)
+
+    const block: BlockState = {
+      type: 'u_test',
+      id: 'b1',
+      fields: {},
+      inputs: {},
+    }
+    const result = extractor.extract(block)
+    expect(result).not.toBeNull()
+    expect(result!.concept).toBe('test')
   })
 
-  it('should return null for unregistered types', () => {
-    const registry = new BlockExtractorRegistry()
-    expect(registry.get('not_registered')).toBeNull()
+  it('should return null for block types without strategy or spec', () => {
+    const extractor = new PatternExtractor()
+    const block: BlockState = {
+      type: 'not_registered',
+      id: 'b1',
+      fields: {},
+      inputs: {},
+    }
+    expect(extractor.extract(block)).toBeNull()
   })
 
-  it('should report size correctly', () => {
-    const registry = new BlockExtractorRegistry()
-    expect(registry.size).toBe(0)
-    registry.register('a', () => createNode('test', {}))
-    registry.register('b', () => createNode('test', {}))
-    expect(registry.size).toBe(2)
+  it('strategy takes priority over auto-derive spec', () => {
+    const extractor = new PatternExtractor()
+    // Load a spec that would auto-derive
+    extractor.loadBlockSpecs([{
+      blockDef: { type: 'u_test', args0: [{ type: 'field_input', name: 'NAME' }] },
+      concept: { conceptId: 'test', properties: ['name'], children: {} },
+    }])
+    // Register strategy that returns different concept
+    extractor.registerExtractStrategy('u_test', () => createNode('strategy_wins', {}))
+
+    const block: BlockState = {
+      type: 'u_test',
+      id: 'b1',
+      fields: { NAME: 'hello' },
+      inputs: {},
+    }
+    const result = extractor.extract(block)
+    expect(result!.concept).toBe('strategy_wins')
   })
 })
 
-describe('C++ ExtractorRegistry — remaining hand-written extractors', () => {
-  it('should have extractors for blocks that require special logic', () => {
-    const registry = createCppExtractorRegistry()
-    // These blocks need hand-written extractors due to complex logic
-    // that cannot be expressed as declarative dynamicRules:
+describe('C++ extract strategies on PatternExtractor', () => {
+  it('should register strategies for blocks with complex logic', () => {
+    const extractor = new PatternExtractor()
+    registerCppExtractStrategies(extractor)
+
+    // Verify each block type produces a valid result with minimal input
     const specialTypes = [
-      'u_var_declare',     // multi-variable with items array
-      'u_if',              // elseif chain flattening
-      'u_if_else',         // same as u_if
-      'u_input',           // select mode fallback (SEL_0/NAME)
-      'u_input_expr',      // same as u_input
-      'c_comment_doc',     // flat property model for params
-      'c_var_declare_expr', // expression version of var_declare
+      'u_var_declare',
+      'u_if',
+      'u_if_else',
+      'u_input',
+      'u_input_expr',
+      'c_comment_doc',
+      'c_var_declare_expr',
     ]
     for (const type of specialTypes) {
-      expect(registry.has(type), `Missing extractor for ${type}`).toBe(true)
+      const block: BlockState = {
+        type,
+        id: `test_${type}`,
+        fields: {},
+        inputs: {},
+      }
+      const result = extractor.extract(block)
+      expect(result, `Strategy for ${type} should produce a node`).not.toBeNull()
     }
   })
 
-  it('should have correct number of remaining extractors', () => {
-    const registry = createCppExtractorRegistry()
-    // 7 blocks still use hand-written extractors; the rest use PatternExtractor + dynamicRules
-    expect(registry.size).toBe(7)
+  it('u_var_declare strategy extracts multi-variable declarations', () => {
+    const extractor = new PatternExtractor()
+    registerCppExtractStrategies(extractor)
+
+    const block: BlockState = {
+      type: 'u_var_declare',
+      id: 'b1',
+      fields: { TYPE: 'int', NAME_0: 'a', NAME_1: 'b' },
+      inputs: {},
+      extraState: { items: ['var', 'var'] },
+    }
+    const result = extractor.extract(block)!
+    expect(result.concept).toBe('var_declare')
+    expect(result.properties.type).toBe('int')
+    expect(result.children.declarators).toHaveLength(2)
+    expect(result.children.declarators![0].properties.name).toBe('a')
+    expect(result.children.declarators![1].properties.name).toBe('b')
+  })
+
+  it('u_if strategy extracts if with else-if chain', () => {
+    const extractor = new PatternExtractor()
+    registerCppExtractStrategies(extractor)
+    // Also register var_ref strategy so condition extraction works
+    extractor.loadBlockSpecs([{
+      blockDef: { type: 'u_var_ref', args0: [{ type: 'field_input', name: 'NAME' }], output: 'any' },
+      concept: { conceptId: 'var_ref', properties: ['name'], children: {} },
+    }])
+
+    const block: BlockState = {
+      type: 'u_if',
+      id: 'b1',
+      fields: {},
+      inputs: {
+        CONDITION: { block: { type: 'u_var_ref', id: 'c1', fields: { NAME: 'x' }, inputs: {} } },
+        ELSEIF_CONDITION_0: { block: { type: 'u_var_ref', id: 'c2', fields: { NAME: 'y' }, inputs: {} } },
+      },
+      extraState: { elseifCount: 1 },
+    }
+    const result = extractor.extract(block)!
+    expect(result.concept).toBe('if')
+    expect(result.children.condition![0].properties.name).toBe('x')
+    expect(result.children.else_body).toHaveLength(1)
+    expect(result.children.else_body![0].concept).toBe('if')
+    expect(result.children.else_body![0].properties.isElseIf).toBe('true')
+  })
+
+  it('u_input strategy extracts select-mode variables from extraState', () => {
+    const extractor = new PatternExtractor()
+    registerCppExtractStrategies(extractor)
+
+    const block: BlockState = {
+      type: 'u_input',
+      id: 'b1',
+      fields: {},
+      inputs: {},
+      extraState: { args: [{ mode: 'select', text: 'myVar' }] },
+    }
+    const result = extractor.extract(block)!
+    expect(result.concept).toBe('input')
+    expect(result.properties.variable).toBe('myVar')
+    expect(result.children.values![0].properties.name).toBe('myVar')
   })
 })
