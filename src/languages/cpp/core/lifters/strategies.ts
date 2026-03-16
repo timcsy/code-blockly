@@ -29,6 +29,20 @@ function liftSingleDeclarator(decl: AstNode, type: string, ctx: LiftContext): Se
     return createNode('var_declare', { name: decl.text, type })
   }
 
+  // Bare pointer declarator without init: int* ptr;
+  if (decl.type === 'pointer_declarator') {
+    const ptrIdent = decl.namedChildren.find(c => c.type === 'identifier')
+    const name = ptrIdent?.text ?? 'ptr'
+    return createNode('cpp_pointer_declare', { name, type })
+  }
+
+  // Bare reference declarator without init: int& ref; (rare, usually has init)
+  if (decl.type === 'reference_declarator') {
+    const refIdent = decl.namedChildren.find(c => c.type === 'identifier')
+    const name = refIdent?.text ?? 'ref'
+    return createNode('cpp_ref_declare', { name, type })
+  }
+
   // init_declarator: name = value
   const nameNode = decl.childForFieldName('declarator') ?? decl.namedChildren[0]
   let name = nameNode?.text ?? 'x'
@@ -50,16 +64,16 @@ function liftSingleDeclarator(decl: AstNode, type: string, ctx: LiftContext): Se
   // Pointer declarator: int* ptr = &x
   if (nameNode?.type === 'pointer_declarator') {
     // Extract the actual identifier from pointer_declarator
-    const ptrIdent = nameNode.namedChildren[0]
+    const ptrIdent = nameNode.namedChildren.find(c => c.type === 'identifier')
     name = ptrIdent?.text ?? 'ptr'
     const valueNode = decl.childForFieldName('value')
     if (valueNode) {
       const value = ctx.lift(valueNode)
-      return createNode('var_declare', { name, type: type + '*' }, {
+      return createNode('cpp_pointer_declare', { name, type }, {
         initializer: value ? [value] : [],
       })
     }
-    return createNode('var_declare', { name, type: type + '*' })
+    return createNode('cpp_pointer_declare', { name, type })
   }
 
   // Array init_declarator: int arr[10] = {...}
@@ -530,8 +544,9 @@ export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void 
       if (decl) {
         const lifted = liftSingleDeclarator(decl, type, ctx)
         const conceptId = qualifier === 'const' ? 'cpp_const_declare' : 'cpp_constexpr_declare'
-        // Use type from lifted node (may include * for pointers)
-        const liftedType = (lifted.properties.type as string) ?? type
+        // Use type from lifted node; append * for pointer concepts
+        let liftedType = (lifted.properties.type as string) ?? type
+        if (lifted.concept === 'cpp_pointer_declare') liftedType += '*'
         return createNode(conceptId, {
           type: liftedType,
           name: lifted.properties.name as string ?? 'x',
@@ -587,7 +602,8 @@ export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void 
     }
 
     const declarators = node.namedChildren.filter(c =>
-      c.type === 'init_declarator' || c.type === 'identifier' || c.type === 'array_declarator'
+      c.type === 'init_declarator' || c.type === 'identifier' || c.type === 'array_declarator' ||
+      c.type === 'pointer_declarator' || c.type === 'reference_declarator'
     )
 
     if (declarators.length === 0) {

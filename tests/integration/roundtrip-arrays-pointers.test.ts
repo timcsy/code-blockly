@@ -389,11 +389,14 @@ int main() {
 }
 `.trim()
 
-  // Pre-existing lifter issue: uninitialized pointer declaration (int* ptr;)
-  // doesn't round-trip correctly — the pointer_declarator without value
-  // falls through to a different code path in strategies.ts.
-  // This is outside the scope of US1 (which adds init slot to BlockSpec).
-  it.todo('preserves uninitialized pointer declaration (pre-existing lifter issue)')
+  it('roundtrip is clean and stable', () => {
+    assertCleanAndStable(code)
+  })
+
+  it('preserves uninitialized pointer declaration', () => {
+    const gen = roundTrip(code)
+    expect(gen).toContain('int* ptr')
+  })
 })
 
 describe('Program: pointer declare with nullptr', () => {
