@@ -117,8 +117,8 @@ describe('block-renderer', () => {
     const state = renderToBlocklyState(makeProgram(print))
     const block = state.blocks.blocks[0]
     expect(block.type).toBe('u_print')
-    expect(block.inputs.EXPR0).toBeDefined()
-    expect(block.inputs.EXPR1).toBeDefined()
+    expect(block.inputs.EXPR_0).toBeDefined()
+    expect(block.inputs.EXPR_1).toBeDefined()
   })
 
   it('should render cpp_printf with format and args', () => {

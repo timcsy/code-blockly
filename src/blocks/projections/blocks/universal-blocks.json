@@ -603,15 +603,23 @@
       "tooltip": "%{BKY_U_FUNC_DEF_TOOLTIP}"
     },
     "renderMapping": {
-      "fields": { "NAME": "name", "RETURN_TYPE": "return_type" },
+      "fields": {
+        "NAME": "name",
+        "RETURN_TYPE": "return_type"
+      },
       "inputs": {},
-      "statementInputs": { "BODY": "body" },
+      "statementInputs": {
+        "BODY": "body"
+      },
       "dynamicRules": [
         {
           "countSource": "paramCount",
           "childSlot": "params",
           "childConcept": "param_decl",
-          "childFields": { "TYPE_{i}": "type", "PARAM_{i}": "name" }
+          "childFields": {
+            "TYPE_{i}": "type",
+            "PARAM_{i}": "name"
+          }
         }
       ]
     }
@@ -643,7 +651,9 @@
       "tooltip": "%{BKY_U_FUNC_CALL_TOOLTIP}"
     },
     "renderMapping": {
-      "fields": { "NAME": "name" },
+      "fields": {
+        "NAME": "name"
+      },
       "inputs": {},
       "statementInputs": {},
       "dynamicRules": [
@@ -665,7 +675,9 @@
       "type": "u_func_call_expr"
     },
     "renderMapping": {
-      "fields": { "NAME": "name" },
+      "fields": {
+        "NAME": "name"
+      },
       "inputs": {},
       "statementInputs": {},
       "dynamicRules": [
@@ -729,7 +741,7 @@
         {
           "countSource": "itemCount",
           "childSlot": "values",
-          "inputPattern": "EXPR{i}"
+          "inputPattern": "EXPR_{i}"
         }
       ]
     }
@@ -780,8 +792,13 @@
           "childSlot": "values",
           "modeSource": "args[{i}].mode",
           "modes": {
-            "select": { "field": "args[{i}].text", "wrap": "var_ref" },
-            "compose": { "input": "ARG_{i}" }
+            "select": {
+              "field": "args[{i}].text",
+              "wrap": "var_ref"
+            },
+            "compose": {
+              "input": "ARG_{i}"
+            }
           }
         }
       ]

@@ -123,8 +123,8 @@ describe('Migration roundtrip: print with dynamicRules', () => {
       id: 'pr1',
       fields: {},
       inputs: {
-        EXPR0: { block: { type: 'u_string', id: 's1', fields: { TEXT: 'hello' }, inputs: {} } },
-        EXPR1: { block: { type: 'u_endl', id: 'e1', fields: {}, inputs: {} } },
+        EXPR_0: { block: { type: 'u_string', id: 's1', fields: { TEXT: 'hello' }, inputs: {} } },
+        EXPR_1: { block: { type: 'u_endl', id: 'e1', fields: {}, inputs: {} } },
       },
       extraState: { itemCount: 2 },
     }
