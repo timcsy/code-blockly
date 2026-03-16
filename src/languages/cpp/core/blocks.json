@@ -1173,7 +1173,26 @@
     "category": "operators",
     "version": "1.0.0",
     "blockDef": {
-      "type": "c_increment_expr"
+      "type": "c_increment_expr",
+      "args0": [
+        {
+          "type": "field_dropdown",
+          "name": "NAME",
+          "options": [["x", "x"]]
+        },
+        {
+          "type": "field_dropdown",
+          "name": "OP",
+          "options": [["++", "++"], ["--", "--"]]
+        },
+        {
+          "type": "field_dropdown",
+          "name": "POSITION",
+          "options": [["後置", "postfix"], ["前置", "prefix"]]
+        }
+      ],
+      "inputsInline": true,
+      "output": "Expression"
     }
   },
   {
@@ -1183,7 +1202,26 @@
     "category": "operators",
     "version": "1.0.0",
     "blockDef": {
-      "type": "c_compound_assign_expr"
+      "type": "c_compound_assign_expr",
+      "args0": [
+        {
+          "type": "field_dropdown",
+          "name": "NAME",
+          "options": [["x", "x"]]
+        },
+        {
+          "type": "field_dropdown",
+          "name": "OP",
+          "options": [["+=", "+="], ["-=", "-="], ["*=", "*="], ["/=", "/="], ["%=", "%="]]
+        },
+        {
+          "type": "input_value",
+          "name": "VALUE",
+          "check": "Expression"
+        }
+      ],
+      "inputsInline": true,
+      "output": "Expression"
     }
   },
   {
@@ -1193,7 +1231,43 @@
     "category": "variables",
     "version": "1.0.0",
     "blockDef": {
-      "type": "c_var_declare_expr"
+      "type": "c_var_declare_expr",
+      "args0": [
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            ["int", "int"],
+            ["double", "double"],
+            ["float", "float"],
+            ["char", "char"],
+            ["long long", "long long"],
+            ["string", "string"],
+            ["bool", "bool"]
+          ]
+        },
+        {
+          "type": "field_input",
+          "name": "NAME_0",
+          "text": "i"
+        },
+        {
+          "type": "input_value",
+          "name": "INIT_0",
+          "check": "Expression"
+        }
+      ],
+      "inputsInline": true,
+      "output": "Expression"
+    },
+    "renderMapping": {
+      "fields": {
+        "TYPE": "type",
+        "NAME_0": "name"
+      },
+      "inputs": {
+        "INIT_0": "initializer"
+      }
     }
   },
   {
