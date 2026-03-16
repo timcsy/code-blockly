@@ -273,7 +273,7 @@ Skill tool: skill="concept-discover", args="{lang} $ARGUMENTS"
 **pipeline 與 refactor 的分工**：
 - `/concept.pipeline` 用於**新增**概念（從零到一）
 - `/concept.refactor fix` 用於**修復**既有概念（從不完整到完整）
-- `/concept.refactor migrate` 用於**重構**既有概念（從 hand-written 到 JSON pattern）
+- `/concept.refactor migrate` 用於**重構**既有概念的 lift 路徑（從 hand-written lifter 到 JSON pattern）。注意：extract 路徑已統一由 PatternExtractor 處理（auto-derive from blockDef args + concept children），無需遷移
 
 ## 範例
 

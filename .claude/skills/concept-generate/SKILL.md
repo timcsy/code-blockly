@@ -29,10 +29,10 @@ $ARGUMENTS
 
 你正在為新的 Semorphe 概念產生完整的實作產出物。每個概念需要 6 個產出物才能端到端運作：
 
-1. **BlockSpec JSON** — 定義概念如何渲染為 Blockly 積木
+1. **BlockSpec JSON** — 定義概念如何渲染為 Blockly 積木（含 renderMapping）
 2. **程式碼產生器** — 將 SemanticNode → 目標語言原始碼
 3. **提升器（Lifter）** — 將語言 AST → SemanticNode（透過 tree-sitter）
-4. **渲染映射** — 將 SemanticNode 屬性 → 積木欄位/輸入
+4. **渲染映射** — 將 SemanticNode 屬性 → 積木欄位/輸入。**Extract 路徑由 PatternExtractor 自動從 blockDef args + concept children 推導（auto-derive），無需手寫 extractor。** 若概念有動態結構，須在 renderMapping 加入 `dynamicRules`
 5. **Interpreter Executor** — 將 SemanticNode → 執行行為（在 `src/interpreter/executors/` 中註冊）。可執行概念需實作計算邏輯，宣告性概念（如 `#include`）需註冊 noop executor。見 `docs/technical-experiences.md` §20
 6. **測試** — 基本的 round-trip 測試（含執行測試）
 
@@ -87,6 +87,13 @@ $ARGUMENTS
     "fields": { "FIELD_NAME": "property_name" },
     "inputs": { "INPUT_NAME": "child_slot" }
   }
+  // 如果概念有動態結構（repeat inputs、repeat field groups、multi-mode slots、if-elseif chains），
+  // 在 renderMapping 中加入 dynamicRules：
+  // "renderMapping": {
+  //   "fields": { ... },
+  //   "inputs": { ... },
+  //   "dynamicRules": [ { "type": "repeat", ... } ]
+  // }
 }
 ```
 
@@ -138,7 +145,7 @@ $ARGUMENTS
 - 最小化 args 數量 — 認知負載原則
 - 語句積木：設定 `previousStatement`/`nextStatement`
 - 表達式積木：設定 `output`（型別或 null 代表任意）
-- 如果概念同時有語句和表達式形式，用 `expressionCounterpart` 產生兩者。對應 P2 概念角色語境依賴（§2.2）——statement/expression 版本的 extraState 格式必須完全相同
+- 如果概念同時有語句和表達式形式，用 `expressionCounterpart` 產生兩者。對應 P2 概念角色語境依賴（§2.2）——statement/expression 版本的 extraState 格式必須完全相同。**注意：expression counterpart 積木必須有完整的 blockDef（含 args0 定義），不可只寫 `{type: "..."}`，否則 PatternExtractor auto-derive 會失敗**
 - 如果此概念在不同 Topic 下需不同積木形狀，在 Topic JSON 加 `blockOverrides`（§2.4）
 
 ### 步驟三：產生程式碼產生器
@@ -266,7 +273,7 @@ describe('{concept_name}', () => {
 |---|------|---------|---------|
 | 1 | **Lift** | lifter 檔案中有 `register('{nodeType}', ...)` 或 `lift-patterns.json` 有條目 | ❌ 阻擋 |
 | 2 | **Render** | blocks.json 中有 BlockSpec 條目，且 `renderMapping` 完整（fields + inputs 覆蓋所有語義屬性） | ❌ 阻擋 |
-| 3 | **Extract** | BlockSpec 的 `renderMapping` 可反向提取（Blockly state → SemanticNode） | ❌ 阻擋 |
+| 3 | **Extract** | BlockSpec 的 `renderMapping` 可被 PatternExtractor 自動反向提取（auto-derive from blockDef args + concept children）；若概念有動態結構，renderMapping 須包含 `dynamicRules` | ❌ 阻擋 |
 | 4 | **Generate** | generator 檔案中有 `generators.set('{concept}', ...)` | ❌ 阻擋 |
 | 5 | **Execute** | executor 檔案中有 `register('{concept}', ...)` | ❌ 阻擋 |
 | 6 | **Test** | 測試檔存在且包含 lift、generate、round-trip 三種測試 | ❌ 阻擋 |

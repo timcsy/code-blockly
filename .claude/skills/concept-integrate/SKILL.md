@@ -44,7 +44,7 @@ $ARGUMENTS
 - [ ] Block spec JSON 條目在核心 `src/languages/{lang}/core/blocks.json` 或 STD `src/languages/{lang}/std/{module}/blocks.json`
 - [ ] 程式碼產生器在 `src/languages/{lang}/core/generators/*.ts`
 - [ ] 提升器在 `src/languages/{lang}/core/lifters/*.ts`
-- [ ] 渲染映射在 block spec JSON 中（或顯式 renderStrategy）
+- [ ] 渲染映射在 block spec JSON 中（auto-derive 或顯式 renderStrategy 或 dynamicRules）
 - [ ] Interpreter executor 在 `src/interpreter/executors/*.ts` 中註冊（可執行概念需實作邏輯，宣告性概念需 noop）
 - [ ] 單元測試在 `tests/`（含執行測試）
 - [ ] 概念在核心 `src/languages/{lang}/core/concepts.json` 或 STD `src/languages/{lang}/std/{module}/concepts.json` 中註冊
@@ -74,7 +74,7 @@ grep -rn "'{concept_id}'" src/languages/{lang}/ src/interpreter/executors/ tests
 |---|------|---------|-------|
 | 1 | Lift | lifter `register()` 或 `lift-patterns.json` 條目 | |
 | 2 | Render | blocks.json 中的 BlockSpec + `renderMapping` | |
-| 3 | Extract | `renderMapping` 可反向提取（fields + inputs 覆蓋所有屬性） | |
+| 3 | Extract | PatternExtractor auto-derive 可反向提取（blockDef args + concept children）；動態概念需有 `dynamicRules`；expression counterpart 須有完整 blockDef args0 | |
 | 4 | Generate | generator `generators.set()` | |
 | 5 | Execute | executor `register()` | |
 | 6 | Test | 測試檔含 lift/generate/round-trip 測試 | |

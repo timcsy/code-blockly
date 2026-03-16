@@ -44,8 +44,8 @@ $ARGUMENTS
 
 ### 重構模式（技術債清理）
 
-- `{lang} migrate {concept}` — 將 hand-written lifter 遷移至 JSON pattern
-- `{lang} migrate all` — 遷移所有可遷移的概念
+- `{lang} migrate {concept}` — 將 hand-written lifter（AST→SemanticNode）遷移至 JSON pattern
+- `{lang} migrate all` — 遷移所有可遷移的概念（注意：此遷移僅涉及 lift 路徑，extract 路徑已統一由 PatternExtractor 處理）
 - `{lang} dedup` — 清除雙重註冊
 - `{lang} render-fix` — 修復渲染一致性問題
 - `{lang} i18n-fix` — 修復 i18n 標籤風格不一致問題
@@ -64,10 +64,11 @@ $ARGUMENTS
 
 1. **四路不完備**（P2 §2.2）：概念只有部分路徑（如有 generator 但沒 lifter），導致管線斷裂
 2. **信心等級違規**（P1 §2.1）：composite pattern 未經語義驗證就設 `high`，`warning` 從未使用
-3. **雙重註冊**：同一 AST 節點類型同時有 hand-written lifter 和 JSON pattern
+3. **雙重註冊**：同一 AST 節點類型在多個 lift 來源中重複註冊（JSON pattern + BlockSpec astPattern + liftStrategy 等）。注意：BlockExtractorRegistry 已刪除，不再有 hand-written extractors；extraction 統一由 PatternExtractor 處理
 4. **宣告式不足**：可用 JSON pattern 表達的邏輯仍在 TypeScript 中
 5. **死概念**：在 concepts.json 中註冊但完全沒有實作的概念
 6. **i18n 標籤不一致**：積木標籤風格混亂（描述式 vs 語法式、中文 vs 英文品質不一、tooltip 重複 message0）
+7. **Expression counterpart 缺失 blockDef**：expression counterpart 積木只有 `{type: "..."}` 而無完整 args0，導致 PatternExtractor auto-derive 失敗
 
 ## 前置作業
 
@@ -104,7 +105,7 @@ cat src/languages/{lang}/core/concepts.json src/languages/{lang}/std/*/concepts.
 |---|------|---------|---------|
 | 1 | **Lift** | `lifters/*.ts` + `lift-patterns.json` | grep `conceptId` 或 `createNode('{concept}')` |
 | 2 | **Render** | `blocks.json` (core + std) | grep `"conceptId": "{concept}"` |
-| 3 | **Extract** | 同上，確認 `renderMapping` 有 fields/inputs | 檢查 BlockSpec 結構 |
+| 3 | **Extract** | 同上，確認 `renderMapping` 有 fields/inputs（PatternExtractor auto-derive）；動態概念需有 `dynamicRules`；expression counterpart 需有完整 blockDef args0 | 檢查 BlockSpec 結構 |
 | 4 | **Generate** | `generators/*.ts` 或 `std/*/generators.ts` | grep `generators.set('{concept}')` |
 | 5 | **Execute** | `src/interpreter/executors/*.ts` | grep `register('{concept}')` 或 `'{concept}'` |
 | 6 | **Test** | `tests/` | grep `'{concept}'` 在 `.test.ts` 檔案中 |
@@ -148,13 +149,16 @@ cat src/languages/{lang}/core/concepts.json src/languages/{lang}/std/*/concepts.
 
 ### A3. 雙重註冊掃描
 
-掃描三個註冊來源，建立 `{nodeType → [sources]}` 映射表：
+掃描 lift 註冊來源，建立 `{nodeType → [sources]}` 映射表：
 
 | 來源 | 位置 | 優先權 |
 |------|------|--------|
-| **Hand-written** | `lifter.register(nodeType, fn)` | 最低（PatternLifter 優先） |
+| **Hand-written lifter** | `lifter.register(nodeType, fn)` | 最低（PatternLifter 優先）——用於 AST→SemanticNode 的 lift 路徑 |
 | **JSON pattern** | `lift-patterns.json` 條目 | 中（patternType + priority） |
 | **BlockSpec astPattern** | `blocks.json` 的 `astPattern` 欄位 | 最低（-5 penalty） |
+| **LiftStrategy** | `extractors/extract-strategies.ts` 中的 lift strategies | 用於 AST→SemanticNode 的複雜 lift 邏輯 |
+
+**注意**：BlockExtractorRegistry 已刪除。Block→SemanticNode 的 extraction 統一由 PatternExtractor 處理（auto-derive from blockDef args + concept children 或 dynamicRules），不再需要 hand-written extractors。此處的「雙重註冊」專指 **lift 路徑**（AST→SemanticNode）的重複，而非 extract 路徑。
 
 標記：`SHADOW`（被遮蔽）、`FALLBACK`（安全網）、`CONFLICT`（行為不同）。
 
@@ -372,6 +376,8 @@ cat src/languages/{lang}/core/concepts.json src/languages/{lang}/std/*/concepts.
 ---
 
 ## 模式三：Migrate（遷移）
+
+**注意**：此遷移僅涉及 **lift 路徑**（AST→SemanticNode 的 hand-written lifter → JSON pattern）。Extract 路徑（Block→SemanticNode）已統一由 PatternExtractor 處理，無需遷移。`extractors/extract-strategies.ts` 中的 PatternExtractor extraction strategies 操作的是 BlockState JSON（非 Blockly.Block）。
 
 ### 遷移決策樹
 

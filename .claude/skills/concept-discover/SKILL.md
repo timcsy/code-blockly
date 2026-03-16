@@ -82,7 +82,7 @@ $ARGUMENTS
 | **先備知識** | 學習者必須已經知道的概念 |
 | **錯誤模式** | 初學者常犯的錯誤 |
 
-**四路完備性 gate**：每個概念必須滿足四路完備性（lift → render → extract → generate），缺一 = 覆蓋缺口（§2.2）。當系統提供語義直譯器時，還需要第五層——**execute path**（concept → Behavior）：可執行概念需 interpreter executor，宣告性概念需 noop executor（見 `docs/technical-experiences.md` §20）。
+**四路完備性 gate**：每個概念必須滿足四路完備性（lift → render → extract → generate），缺一 = 覆蓋缺口（§2.2）。Extract 路徑由 PatternExtractor 自動從 blockDef args + concept children 推導（auto-derive），無需手寫 extractor——只需確保 blockDef 和 concept 定義正確即可。若概念有動態結構（repeat inputs、multi-mode slots 等），renderMapping 須包含 `dynamicRules`。當系統提供語義直譯器時，還需要第五層——**execute path**（concept → Behavior）：可執行概念需 interpreter executor，宣告性概念需 noop executor（見 `docs/technical-experiences.md` §20）。
 
 ### 階段三：Topic 層級樹分類
 
