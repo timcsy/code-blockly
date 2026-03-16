@@ -110,6 +110,14 @@ npm test
 
 對正在整合的概念，產生 5-10 個代表性程式並執行 round-trip 驗證（同 `/concept.roundtrip` 流程）。
 
+**概念身分驗證（必要）**：除了驗證 roundtrip 穩定性和 stdout 等價性之外，**每個測試都必須斷言語義樹中使用了正確的 conceptId**。這防止 lifter 退化到通用概念（如 `var_declare`）卻碰巧生成正確程式碼的假陽性。範例：
+```typescript
+const ptrs = findConcepts(sem!, 'cpp_pointer_declare')
+expect(ptrs.length).toBeGreaterThan(0)
+```
+
+如果語義樹中存在錯誤的概念，即使 roundtrip 程式碼正確，也應標記為 **WRONG_CONCEPT** 並視為 BUG 修復。
+
 所有程式必須 PASS 或 DEGRADED。
 
 ### 步驟四：跨概念相容性
@@ -152,6 +160,40 @@ npm test
 ```
 
 如果發現 composite pattern 無語義驗證且設為 `high`，標記為**警告**（不阻擋整合，但記錄在已知限制中）。
+
+### 步驟五之三：i18n 標籤一致性審計（強制）
+
+掃描新概念的 BlockSpec 和 i18n 條目，驗證標籤風格是否符合規範且與同類概念一致。
+
+**審計步驟**：
+
+1. **讀取新概念的 BlockSpec**——取得 `message0` 中引用的所有 `%{BKY_...}` key
+2. **讀取 i18n 檔案**——從 `src/i18n/zh-TW/blocks.json` 和 `src/i18n/en/blocks.json` 取得翻譯文字
+3. **讀取同 category 的所有 BlockSpec**——找出同分類的現有積木標籤作為參照
+4. **逐條檢查**：
+
+| 檢查項 | 通過條件 | 失敗時 |
+|--------|---------|--------|
+| 中文為描述式 | 包含動詞，不含括號或原始語法 | ⚠️ 建議修改 |
+| 英文首字母大寫 | 以大寫字母開頭的動詞短語 | ⚠️ 建議修改 |
+| 函式/方法名未當標籤 | 標籤不含 `.method()` 或 `func()` 語法 | ⚠️ 建議修改 |
+| 語言關鍵字未當標籤 | 標籤不以原始語言關鍵字開頭（如 C++ 的 `const`、`virtual`、`auto`；Python 的 `def`、`class`；Java 的 `abstract`、`synchronized`） | ⚠️ 建議修改 |
+| 語法符號未當標籤 | 標籤不含語言特殊語法（如 C++ 的 `static_cast<>()`, `[&]()`, `~`；Python 的 `@decorator`） | ⚠️ 建議修改 |
+| tooltip 非重複 | tooltip 翻譯與 message0 翻譯不同 | ⚠️ 建議修改 |
+| 同類風格一致 | 與同 category 現有標籤使用相同句式 | ⚠️ 建議修改 |
+| i18n key 存在 | 所有引用的 `%{BKY_...}` key 在兩個語系檔中都有定義 | ❌ 阻擋 |
+
+**輸出**：
+```
+i18n 標籤審計：
+- 中文描述式：✅/⚠️（{問題標籤}）
+- 英文動詞短語：✅/⚠️（{問題標籤}）
+- tooltip 品質：✅/⚠️（{問題標籤}）
+- 同類一致性：✅/⚠️（{偏離的標籤 vs 參照}）
+- i18n key 完整性：✅/❌
+```
+
+**i18n key 缺失為阻擋問題**（積木會顯示原始 key 而非翻譯文字）。其餘為建議修改——自動修復後繼續整合。
 
 ### 步驟六：Pattern Priority 衝突偵測（P3 開放擴展）
 

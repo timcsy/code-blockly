@@ -214,12 +214,53 @@ export interface RenderMapping {
   strategy?: string
   /** Block type to use when this statement block appears in expression context */
   expressionCounterpart?: string
+  /** Declarative rules for dynamic block structure (variable-count inputs, multi-mode slots, etc.) */
+  dynamicRules?: DynamicRule[]
+  /** Extra state flags: set extraState[key] = true when children[childSlot] is non-empty */
+  extraStateFlags?: Record<string, string>
 }
 
 export interface DynamicInputDef {
   semanticChild: string
   inputPrefix: string
   countProperty?: string
+}
+
+// ─── Dynamic Rules (unified extract/render for dynamic blocks) ───
+
+/**
+ * A declarative rule describing how to extract/render dynamic block structure.
+ * Each rule maps a variable-count set of inputs/fields to a semantic children slot.
+ */
+export interface DynamicRule {
+  /** Path in extraState to get the element count (e.g., "argCount", "args.length") */
+  countSource: string
+  /** Semantic children slot name to populate */
+  childSlot: string
+  /** Input name pattern with {i} placeholder (e.g., "ARG_{i}") — reads input_value */
+  inputPattern?: string
+  /** Field name pattern with {i} placeholder (e.g., "TYPE_{i}") — reads field value */
+  fieldPattern?: string
+  /** Path in extraState to get each element's mode (e.g., "args[{i}].mode") */
+  modeSource?: string
+  /** Mode-specific extraction rules */
+  modes?: Record<string, ModeExtractRule>
+  /** Concept to create for each element (used with fieldPattern groups) */
+  childConcept?: string
+  /** Map of field patterns → property names for childConcept nodes */
+  childFields?: Record<string, string>
+  /** If true, the inputPattern refers to statement inputs (chains) rather than expression inputs */
+  isStatementInput?: boolean
+}
+
+/** Describes how to extract a value in a specific mode (select, input, expression, etc.) */
+export interface ModeExtractRule {
+  /** Path in extraState to read the value (for select/input modes) */
+  field?: string
+  /** Wrap the value as this concept (e.g., "var_ref", "number_literal") */
+  wrap?: string
+  /** Read from block input (for expression/compose modes) */
+  input?: string
 }
 
 // ─── Split JSON Formats (Phase 3: concept/blockDef separation) ───

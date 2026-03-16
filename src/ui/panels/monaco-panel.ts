@@ -64,7 +64,7 @@ export class MonacoPanel implements ViewHost {
       minimap: { enabled: false },
       fontSize: 14,
       lineNumbers: 'on',
-      scrollBeyondLastLine: false,
+      scrollBeyondLastLine: true,
       wordWrap: 'off',
       tabSize: 4,
       renderWhitespace: 'none',

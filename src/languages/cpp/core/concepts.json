@@ -15,7 +15,8 @@
     "abstractConcept": "increment",
     "properties": [
       "name",
-      "operator"
+      "operator",
+      "position"
     ],
     "children": {},
     "role": "statement"
@@ -143,7 +144,9 @@
       "type",
       "name"
     ],
-    "children": {},
+    "children": {
+      "initializer": "expression"
+    },
     "role": "statement"
   },
   {

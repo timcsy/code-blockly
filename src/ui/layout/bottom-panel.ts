@@ -21,7 +21,7 @@ export class BottomPanel {
   private tabs: TabDefinition[] = []
   private activeTabId: string | null = null
   private isDragging = false
-  private collapsed = false
+  private collapsed = true
   private heightRatio = 0.35
 
   constructor(container: HTMLElement) {

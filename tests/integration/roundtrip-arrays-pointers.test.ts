@@ -350,3 +350,72 @@ int main() {
     expect(gen).toContain('arr[')
   })
 })
+
+// ── US1: Pointer declaration with initialization ──
+
+describe('Program: pointer declare with init', () => {
+  const code = `
+#include <iostream>
+using namespace std;
+int main() {
+    int x = 42;
+    int* ptr = &x;
+    cout << *ptr << endl;
+    return 0;
+}
+`.trim()
+
+  it('roundtrip is clean and stable', () => {
+    assertCleanAndStable(code)
+  })
+
+  it('preserves pointer declaration with initializer', () => {
+    const gen = roundTrip(code)
+    expect(gen).toContain('int* ptr = &x')
+    expect(gen).toContain('*ptr')
+  })
+})
+
+describe('Program: pointer declare without init', () => {
+  const code = `
+#include <iostream>
+using namespace std;
+int main() {
+    int* ptr;
+    int x = 10;
+    ptr = &x;
+    cout << *ptr << endl;
+    return 0;
+}
+`.trim()
+
+  it('roundtrip is clean and stable', () => {
+    assertCleanAndStable(code)
+  })
+
+  it('preserves uninitialized pointer declaration', () => {
+    const gen = roundTrip(code)
+    expect(gen).toContain('int* ptr')
+  })
+})
+
+describe('Program: pointer declare with nullptr', () => {
+  const code = `
+#include <iostream>
+using namespace std;
+int main() {
+    int* ptr = nullptr;
+    cout << (ptr == nullptr) << endl;
+    return 0;
+}
+`.trim()
+
+  it('roundtrip is clean and stable', () => {
+    assertCleanAndStable(code)
+  })
+
+  it('preserves pointer initialized with nullptr', () => {
+    const gen = roundTrip(code)
+    expect(gen).toContain('int* ptr = nullptr')
+  })
+})

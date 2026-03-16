@@ -6,9 +6,9 @@ import { DEGRADATION_VISUALS, CONFIDENCE_VISUALS } from '../theme/category-color
 import type { BlockStylePreset } from '../../languages/style'
 import type { ViewHost, ViewCapabilities, ViewConfig, SemanticUpdateEvent, ExecutionStateEvent } from '../../core/view-host'
 import type { SemanticBus } from '../../core/semantic-bus'
-import { BlockExtractorRegistry } from '../../core/registry/block-extractor-registry'
-import type { BlockExtractContext } from '../../core/registry/block-extractor-registry'
-import { createCppExtractorRegistry } from '../../languages/cpp/extractors/register'
+import { PatternExtractor } from '../../core/projection/pattern-extractor'
+import type { BlockState as ExtractorBlockState } from '../../core/projection/pattern-extractor'
+import { registerCppExtractStrategies } from '../../languages/cpp/extractors/extract-strategies'
 import type { BlockMapping } from '../../core/projection/code-generator'
 
 export interface BlocklyPanelOptions {
@@ -38,13 +38,17 @@ export class BlocklyPanel implements ViewHost {
   private _blockMappings: BlockMapping[] = []
   private _blockIdToNodeId: Map<string, string> | null = null
   private media: string | undefined
-  private extractorRegistry: BlockExtractorRegistry
+  private patternExtractor: PatternExtractor
 
   constructor(options: BlocklyPanelOptions) {
     this.container = options.container
     this.blockSpecRegistry = options.blockSpecRegistry ?? null
     // bus stored in options for subscription setup
-    this.extractorRegistry = createCppExtractorRegistry()
+    this.patternExtractor = new PatternExtractor()
+    if (this.blockSpecRegistry) {
+      this.patternExtractor.loadBlockSpecs(this.blockSpecRegistry.getAll())
+    }
+    registerCppExtractStrategies(this.patternExtractor)
     this.media = options.media
   }
 
@@ -154,30 +158,24 @@ export class BlocklyPanel implements ViewHost {
   private extractBlock(block: Blockly.Block): SemanticNode | null {
     const node = this.extractBlockInner(block)
     if (node) {
-      // Reuse original nodeId if available (preserves identity across roundtrip)
-      const originalNodeId = this._blockIdToNodeId?.get(block.id)
-      if (originalNodeId) {
-        node.id = originalNodeId
-      }
-      this._blockMappings.push({ nodeId: node.id, blockId: block.id })
+      // Walk the extracted subtree and collect all blockId→nodeId mappings.
+      // PatternExtractor preserves block.id on each extracted node,
+      // so we can traverse the tree and build mappings for all nodes at once.
+      this.collectMappings(node)
     }
     return node
   }
 
   private extractBlockInner(block: Blockly.Block): SemanticNode | null {
-    const type = block.type
-
-    const extractor = this.extractorRegistry.get(type)
-    if (extractor) {
-      const ctx: BlockExtractContext = {
-        extractBlock: (b) => this.extractBlock(b as Blockly.Block),
-        extractStatementInput: (b, name) => this.extractStatementInput(b as Blockly.Block, name),
-        extractFuncArgs: (b) => this.extractFuncArgs(b as Blockly.Block),
-      }
-      return extractor(block, ctx)
+    // Unified path: serialize Blockly.Block → BlockState → PatternExtractor
+    // PatternExtractor checks extraction strategies first, then auto-derive + dynamicRules
+    const blockState = this.serializeBlockToState(block)
+    if (blockState) {
+      const extracted = this.patternExtractor.extract(blockState)
+      if (extracted) return extracted
     }
 
-    // P3: Open extension — use codeTemplate from JSON spec as fallback
+    // Last resort: use codeTemplate from JSON spec
     const generated = this.generateFromTemplate(block)
     if (generated !== null) {
       const node = createNode('raw_code', { code: generated })
@@ -185,8 +183,97 @@ export class BlocklyPanel implements ViewHost {
       return node
     }
     const node = createNode('raw_code', {})
-    node.metadata = { rawCode: `/* unknown: ${type} */` }
+    node.metadata = { rawCode: `/* unknown: ${block.type} */` }
     return node
+  }
+
+  /**
+   * Serialize a Blockly.Block into a BlockState JSON that PatternExtractor can process.
+   * This bridges live Blockly blocks to the unified extraction path.
+   */
+  private serializeBlockToState(block: Blockly.Block): ExtractorBlockState | null {
+    try {
+      const fields: Record<string, unknown> = {}
+      const inputs: Record<string, { block: ExtractorBlockState }> = {}
+
+      for (const input of block.inputList) {
+        // Collect fields
+        for (const field of input.fieldRow) {
+          if (field.name) {
+            fields[field.name] = field.getValue()
+          }
+        }
+        // Collect connected value/statement inputs
+        if (input.connection && input.connection.targetBlock()) {
+          const targetBlock = input.connection.targetBlock()!
+          if (input.type === 1 /* inputTypes.VALUE */) {
+            const serialized = this.serializeBlockToState(targetBlock)
+            if (serialized) {
+              inputs[input.name] = { block: serialized }
+            }
+          } else if (input.type === 3 /* inputTypes.STATEMENT */) {
+            // Statement inputs: serialize the chain
+            const chain = this.serializeStatementChain(targetBlock)
+            if (chain) {
+              inputs[input.name] = { block: chain }
+            }
+          }
+        }
+      }
+
+      const state: ExtractorBlockState = {
+        type: block.type,
+        id: block.id,
+        fields,
+        inputs,
+      }
+
+      // Include extraState if the block has it
+      if (typeof (block as unknown as { saveExtraState?: () => unknown }).saveExtraState === 'function') {
+        const extra = (block as unknown as { saveExtraState: () => unknown }).saveExtraState()
+        if (extra) state.extraState = extra as Record<string, unknown>
+      }
+
+      return state
+    } catch {
+      return null
+    }
+  }
+
+  /** Serialize a statement chain (block + next blocks) into linked BlockState */
+  private serializeStatementChain(block: Blockly.Block): ExtractorBlockState | null {
+    const state = this.serializeBlockToState(block)
+    if (!state) return null
+    const nextBlock = block.getNextBlock()
+    if (nextBlock) {
+      const nextState = this.serializeStatementChain(nextBlock)
+      if (nextState) {
+        state.next = { block: nextState }
+      }
+    }
+    return state
+  }
+
+  /**
+   * Collect blockId → nodeId mappings from a semantic subtree extracted by PatternExtractor.
+   * PatternExtractor stores sourceBlockId in metadata (node ID remains the unique truth).
+   * This method walks the tree, restores original nodeIds, and records mappings.
+   */
+  private collectMappings(node: SemanticNode): void {
+    const blockId = node.metadata?.sourceBlockId as string | undefined
+    if (blockId) {
+      // Restore original nodeId if available (preserves identity across roundtrip)
+      const originalNodeId = this._blockIdToNodeId?.get(blockId)
+      if (originalNodeId) node.id = originalNodeId
+      this._blockMappings.push({ nodeId: node.id, blockId })
+    }
+    // Recurse into children
+    for (const children of Object.values(node.children || {})) {
+      if (!Array.isArray(children)) continue
+      for (const child of children) {
+        this.collectMappings(child)
+      }
+    }
   }
 
   /**
@@ -296,19 +383,6 @@ export class BlocklyPanel implements ViewHost {
       case 'builtin_constant': return String(node.properties.value ?? 'NULL')
       default: return node.metadata?.rawCode ?? `/* ${node.concept} */`
     }
-  }
-
-  private extractFuncArgs(block: Blockly.Block): SemanticNode[] {
-    const args: SemanticNode[] = []
-    let i = 0
-    while (true) {
-      const argBlock = block.getInputTargetBlock(`ARG_${i}`) ?? block.getInputTargetBlock(`ARG${i}`)
-      if (!argBlock) break
-      const argNode = this.extractBlock(argBlock)
-      if (argNode) args.push(argNode)
-      i++
-    }
-    return args
   }
 
   private extractStatementInput(block: Blockly.Block, inputName: string): SemanticNode[] {

@@ -29,6 +29,20 @@ function liftSingleDeclarator(decl: AstNode, type: string, ctx: LiftContext): Se
     return createNode('var_declare', { name: decl.text, type })
   }
 
+  // Bare pointer declarator without init: int* ptr;
+  if (decl.type === 'pointer_declarator') {
+    const ptrIdent = decl.namedChildren.find(c => c.type === 'identifier')
+    const name = ptrIdent?.text ?? 'ptr'
+    return createNode('cpp_pointer_declare', { name, type })
+  }
+
+  // Bare reference declarator without init: int& ref; (rare, usually has init)
+  if (decl.type === 'reference_declarator') {
+    const refIdent = decl.namedChildren.find(c => c.type === 'identifier')
+    const name = refIdent?.text ?? 'ref'
+    return createNode('cpp_ref_declare', { name, type })
+  }
+
   // init_declarator: name = value
   const nameNode = decl.childForFieldName('declarator') ?? decl.namedChildren[0]
   let name = nameNode?.text ?? 'x'
@@ -50,16 +64,16 @@ function liftSingleDeclarator(decl: AstNode, type: string, ctx: LiftContext): Se
   // Pointer declarator: int* ptr = &x
   if (nameNode?.type === 'pointer_declarator') {
     // Extract the actual identifier from pointer_declarator
-    const ptrIdent = nameNode.namedChildren[0]
+    const ptrIdent = nameNode.namedChildren.find(c => c.type === 'identifier')
     name = ptrIdent?.text ?? 'ptr'
     const valueNode = decl.childForFieldName('value')
     if (valueNode) {
       const value = ctx.lift(valueNode)
-      return createNode('var_declare', { name, type: type + '*' }, {
+      return createNode('cpp_pointer_declare', { name, type }, {
         initializer: value ? [value] : [],
       })
     }
-    return createNode('var_declare', { name, type: type + '*' })
+    return createNode('cpp_pointer_declare', { name, type })
   }
 
   // Array init_declarator: int arr[10] = {...}
@@ -175,6 +189,16 @@ function liftClassMember(node: AstNode, className: string, ctx: LiftContext): Se
       const paramList = declNode?.childForFieldName('parameters') ?? null
       const params = liftParamList(paramList, ctx)
       return createNode('cpp_pure_virtual', { return_type: returnType, name: methodName }, { params })
+    }
+
+    // Static member: static int count;
+    const isStatic = node.namedChildren.some(c => c.type === 'storage_class_specifier' && c.text === 'static')
+    if (isStatic) {
+      const typeNode = node.childForFieldName('type')
+      const type = typeNode?.text ?? 'int'
+      const declNode = node.childForFieldName('declarator')
+      const name = declNode?.text ?? 'member'
+      return createNode('cpp_static_member', { type, name })
     }
 
     // Regular field declaration: type name; or type x, y;
@@ -464,7 +488,14 @@ export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void 
     const autoNode = node.namedChildren.find(c => c.type === 'placeholder_type_specifier')
 
     // Detect template_type (vector<int>, map<string,int>, etc.)
-    const templateTypeNode = node.namedChildren.find(c => c.type === 'template_type')
+    // Also check inside qualified_identifier (e.g., std::vector<int>)
+    let templateTypeNode = node.namedChildren.find(c => c.type === 'template_type')
+    if (!templateTypeNode) {
+      const qualifiedNode = node.namedChildren.find(c => c.type === 'qualified_identifier')
+      if (qualifiedNode) {
+        templateTypeNode = qualifiedNode.namedChildren.find(c => c.type === 'template_type') ?? null
+      }
+    }
     if (templateTypeNode) {
       const templateName = templateTypeNode.namedChildren.find(c => c.type === 'type_identifier')?.text ?? ''
       const templateArgs = templateTypeNode.namedChildren.find(c => c.type === 'template_argument_list')
@@ -502,6 +533,50 @@ export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void 
       // Unknown template type — fall through to var_declare with full template text
     }
 
+    // Detect non-template container/stream types (string, ifstream, ofstream, stringstream)
+    // These are type_identifier, possibly inside qualified_identifier (std::string, std::ifstream, etc.)
+    const streamConcepts: Record<string, string> = {
+      'string': 'cpp_string_declare',
+      'ifstream': 'cpp_ifstream_declare',
+      'ofstream': 'cpp_ofstream_declare',
+      'stringstream': 'cpp_stringstream_declare',
+    }
+    const typeIdentNode = node.namedChildren.find(c => c.type === 'type_identifier')
+    const qualifiedIdNode = node.namedChildren.find(c => c.type === 'qualified_identifier')
+    // Get the final type name (e.g., "string" from "std::string" or plain "string")
+    let simpleTypeName: string | null = null
+    if (typeIdentNode && streamConcepts[typeIdentNode.text]) {
+      simpleTypeName = typeIdentNode.text
+    } else if (qualifiedIdNode) {
+      // Look for type_identifier inside qualified_identifier (e.g., std::string → "string")
+      const innerTypeIdent = qualifiedIdNode.namedChildren.find(c => c.type === 'type_identifier')
+      if (innerTypeIdent && streamConcepts[innerTypeIdent.text]) {
+        simpleTypeName = innerTypeIdent.text
+      }
+    }
+    if (simpleTypeName && streamConcepts[simpleTypeName]) {
+      const conceptId = streamConcepts[simpleTypeName]
+      const decl = node.namedChildren.find(c => c.type === 'init_declarator' || c.type === 'identifier')
+      const name = decl?.type === 'identifier'
+        ? decl.text
+        : (decl?.childForFieldName('declarator') ?? decl?.namedChildren[0])?.text ?? 'x'
+      // For stream types with constructor args (e.g., ifstream fin("input.txt"))
+      if (decl?.type === 'init_declarator') {
+        const valueNode = decl.childForFieldName('value')
+        if (valueNode?.type === 'argument_list') {
+          const args = valueNode.namedChildren
+            .map(a => ctx.lift(a))
+            .filter((n): n is NonNullable<typeof n> => n !== null)
+          return createNode(conceptId, { name }, { initializer: args })
+        }
+        if (valueNode) {
+          const value = ctx.lift(valueNode)
+          return createNode(conceptId, { name }, { initializer: value ? [value] : [] })
+        }
+      }
+      return createNode(conceptId, { name })
+    }
+
     const typeNode = node.namedChildren.find(c =>
       c.type === 'primitive_type' || c.type === 'type_identifier' ||
       c.type === 'qualified_identifier' || c.type === 'sized_type_specifier' ||
@@ -530,8 +605,9 @@ export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void 
       if (decl) {
         const lifted = liftSingleDeclarator(decl, type, ctx)
         const conceptId = qualifier === 'const' ? 'cpp_const_declare' : 'cpp_constexpr_declare'
-        // Use type from lifted node (may include * for pointers)
-        const liftedType = (lifted.properties.type as string) ?? type
+        // Use type from lifted node; append * for pointer concepts
+        let liftedType = (lifted.properties.type as string) ?? type
+        if (lifted.concept === 'cpp_pointer_declare') liftedType += '*'
         return createNode(conceptId, {
           type: liftedType,
           name: lifted.properties.name as string ?? 'x',
@@ -587,7 +663,8 @@ export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void 
     }
 
     const declarators = node.namedChildren.filter(c =>
-      c.type === 'init_declarator' || c.type === 'identifier' || c.type === 'array_declarator'
+      c.type === 'init_declarator' || c.type === 'identifier' || c.type === 'array_declarator' ||
+      c.type === 'pointer_declarator' || c.type === 'reference_declarator'
     )
 
     if (declarators.length === 0) {
@@ -664,6 +741,30 @@ export function registerCppLiftStrategies(registry: LiftStrategyRegistry): void 
     return createNode('cpp_template_function', {
       t, return_type: returnType, func_name: funcName,
     }, { params, body })
+  })
+
+  // cast_expression: (Type*)malloc(size) → cpp_malloc; fallback → cpp_cast
+  registry.register('cpp:liftCastExpression', (node, ctx) => {
+    const typeNode = node.childForFieldName('type')
+    const valueNode = node.childForFieldName('value')
+    const targetType = typeNode?.text ?? 'int'
+
+    // Check for (Type*)malloc(...) pattern → cpp_malloc
+    if (valueNode?.type === 'call_expression') {
+      const funcNode = valueNode.childForFieldName('function')
+      if (funcNode?.text === 'malloc') {
+        const argsNode = valueNode.childForFieldName('arguments')
+        const argChildren = argsNode?.namedChildren ?? []
+        const size = argChildren[0] ? ctx.lift(argChildren[0]) : null
+        return createNode('cpp_malloc', { type: targetType }, { size: size ? [size] : [] })
+      }
+    }
+
+    // Default: regular cast
+    const value = valueNode ? ctx.lift(valueNode) : null
+    return createNode('cpp_cast', { target_type: targetType }, {
+      value: value ? [value] : [],
+    })
   })
 
   registry.register('cpp:liftNewExpression', (node) => {

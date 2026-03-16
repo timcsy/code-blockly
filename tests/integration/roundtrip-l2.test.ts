@@ -14,6 +14,9 @@ import type { BlockSpec, LiftPattern, UniversalTemplate, ConceptDefJSON, BlockPr
 import type { AstNode, LiftContext } from '../../src/core/lift/types'
 import { LiftContextData } from '../../src/core/lift/lift-context'
 import { BlockSpecRegistry } from '../../src/core/block-spec-registry'
+import { generateCode } from '../../src/core/projection/code-generator'
+import { registerCppLanguage } from '../../src/languages/cpp/generators'
+import type { StylePreset } from '../../src/core/types'
 
 import universalConcepts from '../../src/blocks/semantics/universal-concepts.json'
 import universalBlocks from '../../src/blocks/projections/blocks/universal-blocks.json'
@@ -51,11 +54,19 @@ describe('L2 Block Roundtrip', () => {
   let renderer: PatternRenderer
   let extractor: PatternExtractor
 
+  const style: StylePreset = {
+    id: 'apcs', name: { 'zh-TW': 'APCS', en: 'APCS' },
+    io_style: 'cout', naming_convention: 'camelCase',
+    indent_size: 4, brace_style: 'K&R',
+    namespace_style: 'using', header_style: 'individual',
+  }
+
   beforeAll(() => {
     lifter = new PatternLifter()
     generator = new TemplateGenerator()
     renderer = new PatternRenderer()
     extractor = new PatternExtractor()
+    registerCppLanguage()
 
     const registry = new BlockSpecRegistry()
     const allConcepts = [...universalConcepts as unknown as ConceptDefJSON[], ...coreConcepts, ...allStdModules.flatMap(m => m.concepts)]
@@ -110,10 +121,12 @@ describe('L2 Block Roundtrip', () => {
       expect(sem2!.properties.name).toBe('ptr')
     })
 
-    it('should generate code', () => {
+    it('should generate code (via hand-written generator, no codeTemplate)', () => {
       const sem = createNode('cpp_pointer_declare', { type: 'int', name: 'ptr' })
-      const code = generator.generate(sem, genCtx)
-      expect(code).toBe('int* ptr;')
+      // cpp_pointer_declare uses hand-written generator (declarations.ts)
+      // because codeTemplate can't express optional initializer
+      const code = generateCode(sem, 'cpp', style)
+      expect(code).toContain('int* ptr')
     })
   })
 
