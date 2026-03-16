@@ -9,6 +9,7 @@ import type { SemanticBus } from '../../core/semantic-bus'
 import { BlockExtractorRegistry } from '../../core/registry/block-extractor-registry'
 import type { BlockExtractContext } from '../../core/registry/block-extractor-registry'
 import { createCppExtractorRegistry } from '../../languages/cpp/extractors/register'
+import { PatternExtractor } from '../../core/projection/pattern-extractor'
 import type { BlockMapping } from '../../core/projection/code-generator'
 
 export interface BlocklyPanelOptions {
@@ -39,12 +40,17 @@ export class BlocklyPanel implements ViewHost {
   private _blockIdToNodeId: Map<string, string> | null = null
   private media: string | undefined
   private extractorRegistry: BlockExtractorRegistry
+  private patternExtractor: PatternExtractor
 
   constructor(options: BlocklyPanelOptions) {
     this.container = options.container
     this.blockSpecRegistry = options.blockSpecRegistry ?? null
     // bus stored in options for subscription setup
     this.extractorRegistry = createCppExtractorRegistry()
+    this.patternExtractor = new PatternExtractor()
+    if (this.blockSpecRegistry) {
+      this.patternExtractor.loadBlockSpecs(this.blockSpecRegistry.getAll())
+    }
     this.media = options.media
   }
 
@@ -177,7 +183,14 @@ export class BlocklyPanel implements ViewHost {
       return extractor(block, ctx)
     }
 
-    // P3: Open extension — use codeTemplate from JSON spec as fallback
+    // Unified fallback: serialize Blockly.Block → BlockState → PatternExtractor
+    const blockState = this.serializeBlockToState(block)
+    if (blockState) {
+      const extracted = this.patternExtractor.extract(blockState)
+      if (extracted) return extracted
+    }
+
+    // Last resort: use codeTemplate from JSON spec
     const generated = this.generateFromTemplate(block)
     if (generated !== null) {
       const node = createNode('raw_code', { code: generated })
@@ -187,6 +200,67 @@ export class BlocklyPanel implements ViewHost {
     const node = createNode('raw_code', {})
     node.metadata = { rawCode: `/* unknown: ${type} */` }
     return node
+  }
+
+  /**
+   * Serialize a Blockly.Block into a BlockState JSON that PatternExtractor can process.
+   * This bridges live Blockly blocks to the unified extraction path.
+   */
+  private serializeBlockToState(block: Blockly.Block): Record<string, unknown> | null {
+    try {
+      const fields: Record<string, unknown> = {}
+      const inputs: Record<string, unknown> = {}
+
+      for (const input of block.inputList) {
+        // Collect fields
+        for (const field of input.fieldRow) {
+          if (field.name) {
+            fields[field.name] = field.getValue()
+          }
+        }
+        // Collect connected value/statement inputs
+        if (input.connection && input.connection.targetBlock()) {
+          const targetBlock = input.connection.targetBlock()!
+          if (input.type === Blockly.inputTypes.VALUE) {
+            inputs[input.name] = { block: this.serializeBlockToState(targetBlock) }
+          } else if (input.type === Blockly.inputTypes.STATEMENT) {
+            // Statement inputs: serialize the chain
+            const chain = this.serializeStatementChain(targetBlock)
+            if (chain) {
+              inputs[input.name] = { block: chain }
+            }
+          }
+        }
+      }
+
+      const state: Record<string, unknown> = {
+        type: block.type,
+        id: block.id,
+        fields,
+        inputs,
+      }
+
+      // Include extraState if the block has it
+      if (typeof (block as unknown as { saveExtraState?: () => unknown }).saveExtraState === 'function') {
+        const extra = (block as unknown as { saveExtraState: () => unknown }).saveExtraState()
+        if (extra) state.extraState = extra
+      }
+
+      return state
+    } catch {
+      return null
+    }
+  }
+
+  /** Serialize a statement chain (block + next blocks) into linked BlockState */
+  private serializeStatementChain(block: Blockly.Block): Record<string, unknown> | null {
+    const state = this.serializeBlockToState(block)
+    if (!state) return null
+    const nextBlock = block.getNextBlock()
+    if (nextBlock) {
+      state.next = { block: this.serializeStatementChain(nextBlock) }
+    }
+    return state
   }
 
   /**

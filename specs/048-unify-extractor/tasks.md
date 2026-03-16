@@ -19,8 +19,8 @@
 
 **Purpose**: 確認基線狀態，確保重構不破壞現有行為
 
-- [ ] T001 確認基線：`npm test` 全部通過，記錄測試數量
-- [ ] T002 確認基線：`npx tsc --noEmit` 無錯誤
+- [x] T001 確認基線：`npm test` 全部通過，記錄測試數量
+- [x] T002 確認基線：`npx tsc --noEmit` 無錯誤
 
 **Checkpoint**: 基線綠燈
 
@@ -32,9 +32,9 @@
 
 **⚠️ CRITICAL**: 型別定義是所有 story 的共用基礎
 
-- [ ] T003 在 `src/core/types.ts` 中定義 `DynamicRule` 和 `ModeExtractRule` 介面，擴充 `RenderMapping` 介面加入 `dynamicRules?: DynamicRule[]`
-- [ ] T004 在 `src/core/projection/common-mappings.ts` 中新增動態路徑解析工具函式（從 extraState 中用 dotpath 取值，如 `args[0].mode`）
-- [ ] T005 驗證：`npx tsc --noEmit` 通過
+- [x] T003 在 `src/core/types.ts` 中定義 `DynamicRule` 和 `ModeExtractRule` 介面，擴充 `RenderMapping` 介面加入 `dynamicRules?: DynamicRule[]`
+- [x] T004 在 `src/core/projection/common-mappings.ts` 中新增動態路徑解析工具函式（從 extraState 中用 dotpath 取值，如 `args[0].mode`）
+- [x] T005 驗證：`npx tsc --noEmit` 通過
 
 **Checkpoint**: DynamicRule 型別可用
 
@@ -48,14 +48,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T006 [US1] 新增測試 `tests/integration/unified-extractor.test.ts`：驗證 BlockState → PatternExtractor 能正確提取 `c_const_declare`、`c_pointer_declare`、`c_ref_declare` 等靜態積木（模擬 Blockly 序列化 JSON 輸入）
+- [x] T006 [US1] 新增測試 `tests/integration/unified-extractor.test.ts`：驗證 BlockState → PatternExtractor 能正確提取 `c_const_declare`、`c_pointer_declare`、`c_ref_declare` 等靜態積木（模擬 Blockly 序列化 JSON 輸入）
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] 在 `src/ui/panels/blockly-panel.ts` 中加入 PatternExtractor 實例，`loadBlockSpecs` 與 BlocklyPanel 的 blockSpecRegistry 同步
-- [ ] T008 [US1] 修改 `blockly-panel.ts` 的 `extractBlockInner`：在 BlockExtractorRegistry 查詢之後、`generateFromTemplate` 之前，插入 PatternExtractor fallback 路徑——將 Blockly.Block 序列化為 BlockState（`{ type, id, fields, inputs, extraState }`）後交給 PatternExtractor
-- [ ] T009 [US1] 實作 `serializeBlockToState(block: Blockly.Block): BlockState` 工具函式：遍歷 block 的 fields、inputs、extraState 產生 PatternExtractor 需要的 JSON 格式
-- [ ] T010 [US1] 驗證：`npm test` 通過，UI 上 `c_const_declare` 積木的 VALUE input 能正確提取為 `initializer` children
+- [x] T007 [US1] 在 `src/ui/panels/blockly-panel.ts` 中加入 PatternExtractor 實例，`loadBlockSpecs` 與 BlocklyPanel 的 blockSpecRegistry 同步
+- [x] T008 [US1] 修改 `blockly-panel.ts` 的 `extractBlockInner`：在 BlockExtractorRegistry 查詢之後、`generateFromTemplate` 之前，插入 PatternExtractor fallback 路徑——將 Blockly.Block 序列化為 BlockState（`{ type, id, fields, inputs, extraState }`）後交給 PatternExtractor
+- [x] T009 [US1] 實作 `serializeBlockToState(block: Blockly.Block): BlockState` 工具函式：遍歷 block 的 fields、inputs、extraState 產生 PatternExtractor 需要的 JSON 格式
+- [x] T010 [US1] 驗證：`npm test` 通過，UI 上 `c_const_declare` 積木的 VALUE input 能正確提取為 `initializer` children
 
 **Checkpoint**: 靜態積木的 UI 提取與測試走同一條路徑
 
