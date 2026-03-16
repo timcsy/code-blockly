@@ -2,7 +2,7 @@ import type { SemanticNode, BlockSpec, RenderMapping, DynamicRule } from '../typ
 import { createNode } from '../semantic-tree'
 import { FIELD_COMMON_MAPPINGS, INPUT_COMMON_MAPPINGS, resolvePath, resolvePattern } from './common-mappings'
 
-interface BlockState {
+export interface BlockState {
   type: string
   id: string
   fields: Record<string, unknown>
@@ -10,6 +10,13 @@ interface BlockState {
   next?: { block: BlockState }
   extraState?: Record<string, unknown>
 }
+
+export interface ExtractContext {
+  extract(block: BlockState): SemanticNode | null
+  extractStatementChain(block: BlockState): SemanticNode[]
+}
+
+export type ExtractStrategyFn = (block: BlockState, ctx: ExtractContext) => SemanticNode | null
 
 interface ExtractSpec {
   conceptId: string
@@ -19,9 +26,11 @@ interface ExtractSpec {
 /**
  * JSON-driven pattern extractor engine.
  * Extracts SemanticNodes from Blockly block state using renderMapping (reverse direction).
+ * Supports hand-written extraction strategies for blocks with complex logic.
  */
 export class PatternExtractor {
   private extractSpecs = new Map<string, ExtractSpec>()
+  private extractStrategies = new Map<string, ExtractStrategyFn>()
 
   /** Load block specs and build blockType → ExtractSpec index */
   loadBlockSpecs(specs: BlockSpec[]): void {
@@ -51,8 +60,28 @@ export class PatternExtractor {
     }
   }
 
+  /** Register a hand-written extraction strategy for a specific block type */
+  registerExtractStrategy(blockType: string, fn: ExtractStrategyFn): void {
+    this.extractStrategies.set(blockType, fn)
+  }
+
   /** Extract a SemanticNode from a BlockState. Returns null if no extract spec found. */
   extract(block: BlockState): SemanticNode | null {
+    // Check for hand-written extraction strategy FIRST
+    const strategy = this.extractStrategies.get(block.type)
+    if (strategy) {
+      const ctx: ExtractContext = {
+        extract: (b) => this.extract(b),
+        extractStatementChain: (b) => this.extractStatementChain(b),
+      }
+      const result = strategy(block, ctx)
+      if (result) {
+        if (block.id) result.metadata = { ...result.metadata, sourceBlockId: block.id }
+        return result
+      }
+      // Strategy returned null — fall through to auto-derive
+    }
+
     const spec = this.extractSpecs.get(block.type)
     if (!spec) return null
 
@@ -91,7 +120,10 @@ export class PatternExtractor {
       this.extractDynamicRules(block, spec.mapping.dynamicRules, children)
     }
 
-    return createNode(spec.conceptId, props, children)
+    const node = createNode(spec.conceptId, props, children)
+    // Store the source block ID as metadata (not as node.id — node ID is the unique truth)
+    if (block.id) node.metadata = { ...node.metadata, sourceBlockId: block.id }
+    return node
   }
 
   /** Process dynamicRules to extract dynamic children from block extraState and inputs/fields */

@@ -158,12 +158,10 @@ export class BlocklyPanel implements ViewHost {
   private extractBlock(block: Blockly.Block): SemanticNode | null {
     const node = this.extractBlockInner(block)
     if (node) {
-      // Reuse original nodeId if available (preserves identity across roundtrip)
-      const originalNodeId = this._blockIdToNodeId?.get(block.id)
-      if (originalNodeId) {
-        node.id = originalNodeId
-      }
-      this._blockMappings.push({ nodeId: node.id, blockId: block.id })
+      // Walk the extracted subtree and collect all blockId→nodeId mappings.
+      // PatternExtractor preserves block.id on each extracted node,
+      // so we can traverse the tree and build mappings for all nodes at once.
+      this.collectMappings(node)
     }
     return node
   }
@@ -174,12 +172,7 @@ export class BlocklyPanel implements ViewHost {
     const blockState = this.serializeBlockToState(block)
     if (blockState) {
       const extracted = this.patternExtractor.extract(blockState)
-      if (extracted) {
-        // Build blockId → nodeId mappings for child nodes extracted by PatternExtractor
-        // (PatternExtractor recurses internally, so extractBlock's mapping isn't called for children)
-        this.buildChildMappings(blockState, extracted)
-        return extracted
-      }
+      if (extracted) return extracted
     }
 
     // Last resort: use codeTemplate from JSON spec
@@ -262,70 +255,25 @@ export class BlocklyPanel implements ViewHost {
   }
 
   /**
-   * Build blockId → nodeId mappings for child nodes extracted by PatternExtractor.
-   * PatternExtractor recurses internally on BlockState JSON, so extractBlock's
-   * mapping tracking isn't called for children. This method walks both trees
-   * in parallel to reconstruct the mappings.
+   * Collect blockId → nodeId mappings from a semantic subtree extracted by PatternExtractor.
+   * PatternExtractor stores sourceBlockId in metadata (node ID remains the unique truth).
+   * This method walks the tree, restores original nodeIds, and records mappings.
    */
-  private buildChildMappings(blockState: ExtractorBlockState, node: SemanticNode): void {
-    // Map child inputs
-    for (const [inputName, inputData] of Object.entries(blockState.inputs || {})) {
-      if (!inputData?.block) continue
-      const childBlockState = inputData.block
-      // Find the corresponding child node in the extracted semantic tree
-      const childNode = this.findChildNodeForBlock(node, childBlockState)
-      if (childNode && childBlockState.id) {
-        const originalNodeId = this._blockIdToNodeId?.get(childBlockState.id)
-        if (originalNodeId) childNode.id = originalNodeId
-        this._blockMappings.push({ nodeId: childNode.id, blockId: childBlockState.id })
-        // Recurse into child's children
-        this.buildChildMappings(childBlockState, childNode)
-      }
-      // Follow statement chains (next blocks)
-      let nextState = childBlockState.next?.block
-      while (nextState) {
-        const nextNode = this.findNodeById(node, nextState.id)
-        if (nextNode && nextState.id) {
-          const originalNodeId = this._blockIdToNodeId?.get(nextState.id)
-          if (originalNodeId) nextNode.id = originalNodeId
-          this._blockMappings.push({ nodeId: nextNode.id, blockId: nextState.id })
-          this.buildChildMappings(nextState, nextNode)
-        }
-        nextState = nextState.next?.block
-      }
+  private collectMappings(node: SemanticNode): void {
+    const blockId = node.metadata?.sourceBlockId as string | undefined
+    if (blockId) {
+      // Restore original nodeId if available (preserves identity across roundtrip)
+      const originalNodeId = this._blockIdToNodeId?.get(blockId)
+      if (originalNodeId) node.id = originalNodeId
+      this._blockMappings.push({ nodeId: node.id, blockId })
     }
-  }
-
-  /** Find a child semantic node that was extracted from a given block state */
-  private findChildNodeForBlock(parent: SemanticNode, blockState: ExtractorBlockState): SemanticNode | null {
-    for (const children of Object.values(parent.children || {})) {
+    // Recurse into children
+    for (const children of Object.values(node.children || {})) {
       if (!Array.isArray(children)) continue
       for (const child of children) {
-        // Match by concept or by position (first unmatched)
-        if (child.id === blockState.id) return child
+        this.collectMappings(child)
       }
     }
-    // Fallback: find by iterating all children depth-first
-    for (const children of Object.values(parent.children || {})) {
-      if (!Array.isArray(children)) continue
-      for (const child of children) {
-        if (child) return child  // return first available
-      }
-    }
-    return null
-  }
-
-  /** Find a node by ID in the tree */
-  private findNodeById(root: SemanticNode, id: string): SemanticNode | null {
-    if (root.id === id) return root
-    for (const children of Object.values(root.children || {})) {
-      if (!Array.isArray(children)) continue
-      for (const child of children) {
-        const found = this.findNodeById(child, id)
-        if (found) return found
-      }
-    }
-    return null
   }
 
   /**
