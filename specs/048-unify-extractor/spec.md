@@ -107,13 +107,19 @@
 
 **包含**:
 - PatternExtractor 擴充支援 extraState 和 dynamicRules
+- PatternRenderer 擴充使用同一套 dynamicRules 進行正向 render
 - BlocklyPanel 改為序列化→PatternExtractor 路徑
-- 所有手寫 extractor 轉為 JSON 宣告
+- 所有手寫 extractor 和 renderStrategy 轉為 JSON 宣告
 - 刪除 BlockExtractorRegistry
-- renderMapping 的 dynamicRules 格式設計（可擴充）
+- renderMapping 的 dynamicRules 格式設計（可擴充，雙向共用）
 
 **不包含**:
-- PatternRenderer 的重構（正向 render 已經獨立運作，不在此次範圍）
 - 新增積木概念（此次只統一提取架構）
 - 跨語言支援（目前只有 C++，但設計應語言無關）
-- Blockly mutator 的重新設計（保留現有 mutator 實作，只統一提取路徑）
+- Blockly mutator 的重新設計（保留現有 mutator 實作，只統一映射路徑）
+
+## Clarifications
+
+### Session 2026-03-16
+
+- Q: FR-007 要求 renderMapping 同時用於 render 和 extract 雙向，但 Scope 排除了 PatternRenderer 重構。是否本次同時統一？ → A: 是，本次同時統一 render 和 extract 雙向，移除 PatternRenderer 排除項。dynamicRules 作為 render 和 extract 的單一真相來源。
