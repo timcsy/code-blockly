@@ -33,6 +33,7 @@ $ARGUMENTS
 - `{lang} audit confidence` — 只審計信心等級合規性
 - `{lang} audit dedup` — 只審計雙重註冊
 - `{lang} audit render` — 只審計渲染一致性
+- `{lang} audit i18n` — 只審計 i18n 標籤風格一致性
 
 ### 醫治模式（診斷 + 修復）
 
@@ -47,6 +48,7 @@ $ARGUMENTS
 - `{lang} migrate all` — 遷移所有可遷移的概念
 - `{lang} dedup` — 清除雙重註冊
 - `{lang} render-fix` — 修復渲染一致性問題
+- `{lang} i18n-fix` — 修復 i18n 標籤風格不一致問題
 
 ### 清理模式
 
@@ -65,6 +67,7 @@ $ARGUMENTS
 3. **雙重註冊**：同一 AST 節點類型同時有 hand-written lifter 和 JSON pattern
 4. **宣告式不足**：可用 JSON pattern 表達的邏輯仍在 TypeScript 中
 5. **死概念**：在 concepts.json 中註冊但完全沒有實作的概念
+6. **i18n 標籤不一致**：積木標籤風格混亂（描述式 vs 語法式、中文 vs 英文品質不一、tooltip 重複 message0）
 
 ## 前置作業
 
@@ -162,7 +165,62 @@ cat src/languages/{lang}/core/concepts.json src/languages/{lang}/std/*/concepts.
 - 無 strategy 但 auto-derive 不足 → 可能錯誤
 - Strategy 與 generator 語義不一致 → 違反 Sc4
 
-### A5. 輸出完整審計報告
+### A5. i18n 標籤風格掃描
+
+掃描所有 BlockSpec 的 `message0` 和 `tooltip` 引用的 i18n key，對照 `src/i18n/zh-TW/blocks.json` 和 `src/i18n/en/blocks.json` 的翻譯文字，逐一檢查：
+
+**按 category 分組掃描**——同 category 的積木標籤必須使用一致的句式。
+
+| 檢查項 | 通過條件 | 嚴重度 |
+|--------|---------|--------|
+| **中文描述式** | 包含動詞，不含括號或原始函式名（如 `排序 %1` 而非 `sort( %1 )`） | ⚠️ P1 |
+| **英文動詞短語** | 以大寫字母開頭的動詞短語（如 `Sort %1` 而非 `sort( %1 )`） | ⚠️ P1 |
+| **函式名未當標籤** | message0 翻譯不等於函式呼叫語法（`.method()` 或 `func()`） | ⚠️ P1 |
+| **語言關鍵字未當標籤** | 標籤不以原始語言關鍵字開頭（C++ 的 `const`、`virtual`、`auto`、`typedef`、`using`、`override`、`constexpr`；Python 的 `def`、`class`、`lambda`；Java 的 `abstract`、`synchronized` 等） | ⚠️ P1 |
+| **語法符號未當標籤** | 標籤不含語言特殊語法（C++ 的 `static_cast<>()`, `[&]()`, `~ ClassName()`, `operator+`；Python 的 `@decorator`；Java 的 `<T>` 等） | ⚠️ P1 |
+| **tooltip 非重複** | tooltip 翻譯與 message0 翻譯不同，且提供額外說明 | ⚠️ P2 |
+| **同類風格一致** | 同 category 內所有標籤使用相同句式模式 | ⚠️ P2 |
+| **i18n key 完整** | 所有 `%{BKY_...}` key 在兩個語系檔中都有定義 | ❌ P0 |
+
+**P1 掃描必須覆蓋的模式**（缺一不可）：
+
+| 模式 | 正則/搜尋方式 | 說明 |
+|------|-------------|------|
+| `.method()` 語法 | `\.\w+\(` | 如 `%1 .push( %2 )`, `%1 .empty()`, `%1.append(%2)` |
+| `func()` 語法 | `\w+\(\s*%` | 如 `abs( %1 )`, `sizeof( %1 )`, `len(%1)` |
+| 語言關鍵字 | 依語言而定（見下方清單） | 關鍵字出現在 MSG0 值中 |
+| Lambda/閉包語法 | `\[\s*%.*\]\s*\(` 或 `lambda\s+%` | 如 `[ %1 ] ( %2 )`, `lambda %1: %2` |
+| 解構子/特殊語法 | `~\s*%` 或 `@\s*%` | 如 `~ %1 ()`, `@%1` |
+| 中英完全相同 | zh-TW 值 == en 值 | 表示中文根本沒翻譯 |
+
+**各語言關鍵字清單**（掃描 MSG0 值時使用）：
+
+| 語言 | 關鍵字正則 |
+|------|-----------|
+| C/C++ | `\b(const\|constexpr\|auto\|typedef\|using\|virtual\|override\|operator\|namespace\|sizeof\|static_cast\|dynamic_cast\|reinterpret_cast\|const_cast\|new\|delete\|template)\b` |
+| Python | `\b(def\|class\|lambda\|import\|from\|with\|yield\|async\|await\|global\|nonlocal)\b` |
+| Java | `\b(abstract\|synchronized\|implements\|extends\|instanceof\|throws\|volatile\|transient\|native)\b` |
+| JavaScript | `\b(function\|class\|async\|await\|yield\|typeof\|instanceof\|import\|export)\b` |
+
+新增語言時，將該語言的關鍵字加入此清單。
+
+```markdown
+### i18n 標籤風格報告
+
+| Category | 概念 | 中文 | 英文 | 問題 |
+|----------|------|------|------|------|
+| math | cpp_abs | `abs( %1 )` | `abs( %1 )` | ⚠️ 函式名當標籤 |
+| math | cpp_sqrt | `sqrt( %1 )` | `sqrt( %1 )` | ⚠️ 函式名當標籤 |
+| containers | cpp_vector_size | `%1 的大小` | `Size of %1` | ✅ |
+
+### 統計
+- P0（key 缺失）：{N} 個
+- P1（風格違規）：{N} 個
+- P2（品質建議）：{N} 個
+- 合格：{N} 個（{%}）
+```
+
+### A6. 輸出完整審計報告
 
 將報告儲存到 `tests/reports/refactor-audit-{lang}-{timestamp}.md`。
 
@@ -179,6 +237,7 @@ cat src/languages/{lang}/core/concepts.json src/languages/{lang}/std/*/concepts.
 - 信心合規：{PASS/FAIL}
 - 雙重註冊：{N}
 - Render 問題：{N}
+- i18n 標籤問題：{N}（P0: {N}, P1: {N}, P2: {N}）
 
 ### 四路完備性矩陣
 {表格}
@@ -190,6 +249,9 @@ cat src/languages/{lang}/core/concepts.json src/languages/{lang}/std/*/concepts.
 {表格}
 
 ### Render 一致性
+{表格}
+
+### i18n 標籤風格
 {表格}
 
 ### 建議修復優先順序
@@ -252,7 +314,7 @@ cat src/languages/{lang}/core/concepts.json src/languages/{lang}/std/*/concepts.
 **修復產出物的品質要求**（與 `/concept.generate` 相同）：
 
 - **Lifter**：必須設定正確的信心等級（見信心等級規則）
-- **BlockSpec**：必須有完整的 `renderMapping`（fields + inputs），i18n 使用 `%{BKY_...}` key
+- **BlockSpec**：必須有完整的 `renderMapping`（fields + inputs），i18n 使用 `%{BKY_...}` key，**標籤必須符合 `/concept.generate` 步驟二的 i18n 風格規範**（中文描述式、英文動詞短語、函式名不當標籤、tooltip 補充說明、同類一致句式）
 - **Generator**：必須處理缺失子節點（空字串或預設值）
 - **Executor**：可執行概念需實作邏輯，宣告性概念需 noop
 - **Test**：必須包含 lift、generate、round-trip 三種測試
@@ -394,13 +456,14 @@ npx tsc --noEmit && npm test
 依序執行：
 
 ```
-1. Audit（完整審計）     → 產出審計報告
+1. Audit（完整審計）     → 產出審計報告（含 i18n 標籤風格）
 2. Fix all（修復全部）   → 修復所有四路缺口
 3. Dedup（去重）         → 清除確認等價的雙重註冊
 4. Migrate all（遷移）   → 遷移所有 L1/L2-ready 概念
 5. Render-fix（渲染修復）→ 修復渲染一致性
-6. Purge dead（清除死概念）→ 移除無法修復的死概念
-7. 最終驗證              → npx tsc --noEmit && npm test
+6. i18n-fix（標籤修復）  → 修復 i18n 標籤風格不一致問題
+7. Purge dead（清除死概念）→ 移除無法修復的死概念
+8. 最終驗證              → npx tsc --noEmit && npm test
 ```
 
 每步之間確認測試通過。如果任何步驟失敗，停止並報告。
