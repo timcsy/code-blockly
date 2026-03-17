@@ -67,6 +67,11 @@ export class BlocklyPanel implements ViewHost {
       } finally {
         this.busUpdateInProgress = false
       }
+      // Sync blockMappings from render result so block→nodeId lookup works
+      const blockState = event.blockState as { blockMappings?: BlockMapping[] }
+      if (blockState.blockMappings) {
+        this._blockMappings = blockState.blockMappings
+      }
       // Force render after setState — dynamic blocks may not auto-render
       this.forceRenderAllBlocks()
     }
@@ -113,8 +118,8 @@ export class BlocklyPanel implements ViewHost {
           const selectEvent = event as Blockly.Events.Selected
           const selectedBlockId = selectEvent.newElementId ?? null
           this.onBlockSelectCallback?.(selectedBlockId)
-          // Emit nodeId for decoupled highlight: blockId → nodeId via lookup map
-          const nodeId = selectedBlockId ? this._blockIdToNodeId?.get(selectedBlockId) ?? null : null
+          // Emit nodeId for decoupled highlight: blockId → nodeId via block mappings
+          const nodeId = selectedBlockId ? this.getNodeIdForBlockId(selectedBlockId) : null
           this.onNodeSelectCallback?.(nodeId)
         }
         return
@@ -428,6 +433,18 @@ export class BlocklyPanel implements ViewHost {
   private getBlockIdForNodeId(nodeId: string): string | null {
     for (const m of this._blockMappings) {
       if (m.nodeId === nodeId) return m.blockId
+    }
+    return null
+  }
+
+  /** Resolve blockId → nodeId from current block mappings or lookup map */
+  private getNodeIdForBlockId(blockId: string): string | null {
+    // Try lookup map first (set by setNodeIdLookup)
+    const fromMap = this._blockIdToNodeId?.get(blockId)
+    if (fromMap) return fromMap
+    // Fall back to block mappings
+    for (const m of this._blockMappings) {
+      if (m.blockId === blockId) return m.nodeId
     }
     return null
   }
