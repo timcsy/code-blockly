@@ -360,6 +360,12 @@ export class SyncController {
         })
       }
 
+      // Downgrade concepts not in current level to universal equivalents
+      if (this.currentTopic) {
+        const visible = getVisibleConcepts(this.currentTopic, this.enabledBranches)
+        this.downgradeConceptsForLevel(fullTree, visible)
+      }
+
       // For blocks: strip scaffold if L0
       const displayTree = this.shouldStripScaffold() ? this.scaffoldNodeFilter(fullTree) : fullTree
       const renderResult = renderToBlocklyState(displayTree)
