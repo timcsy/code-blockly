@@ -27,6 +27,8 @@ export interface GeneratorContext {
   isExpression?: boolean
   _mappings?: CodeMapping[]
   _lineCount?: number
+  /** Shared mutable line counter — survives indented(ctx) spread copies */
+  _lineBox?: { value: number }
   /** Optional dependency resolver for auto-include resolution */
   dependencyResolver?: DependencyResolver
   /** Optional program scaffold for boilerplate management */
@@ -158,7 +160,8 @@ export function generateCodeWithMapping(
   const generators = factory ? factory(style) : new Map<string, NodeGenerator>()
   registerMetaConceptGenerators(generators)
   const mappings: CodeMapping[] = []
-  const ctx: GeneratorContext = { indent: 0, style, language, generators, _mappings: mappings, _lineCount: 0 }
+  const lineBox = { value: 0 }
+  const ctx: GeneratorContext = { indent: 0, style, language, generators, _mappings: mappings, _lineCount: 0, _lineBox: lineBox }
   if (globalDependencyResolver) ctx.dependencyResolver = globalDependencyResolver
   if (globalProgramScaffold) ctx.programScaffold = globalProgramScaffold
   if (globalScaffoldConfig) ctx.scaffoldConfig = globalScaffoldConfig
@@ -188,8 +191,9 @@ function wireTemplateFallbacks(ctx: GeneratorContext): void {
 export function generateNode(node: SemanticNode, ctx: GeneratorContext): string {
   const nodeId = node.id
   const tracking = ctx._mappings && nodeId
+  const box = ctx._lineBox
 
-  const lineCountBefore = ctx._lineCount ?? 0
+  const lineCountBefore = box?.value ?? ctx._lineCount ?? 0
   let startLine = 0
   if (tracking) {
     startLine = lineCountBefore
@@ -227,17 +231,18 @@ export function generateNode(node: SemanticNode, ctx: GeneratorContext): string 
     }
   }
 
-  // Update line count — use lineCountBefore + totalNewlines to avoid double-counting
-  // when child generateNode calls already incremented _lineCount during the generator
+  // Update line count via shared box (survives indented() spread copies)
   if (ctx._mappings !== undefined) {
     const newlines = countNewlines(result)
-    ctx._lineCount = lineCountBefore + newlines
+    const endCount = lineCountBefore + newlines
+    if (box) box.value = endCount
+    ctx._lineCount = endCount
 
     if (tracking) {
       ctx._mappings.push({
         nodeId: nodeId!,
         startLine,
-        endLine: ctx._lineCount - 1,
+        endLine: endCount - 1,
       })
     }
   }
@@ -251,8 +256,12 @@ export function generateNode(node: SemanticNode, ctx: GeneratorContext): string 
  * This ensures children see the correct starting line number.
  */
 export function trackOwnText(ctx: GeneratorContext, text: string): void {
+  const n = countNewlines(text)
+  if (ctx._lineBox) {
+    ctx._lineBox.value += n
+  }
   if (ctx._lineCount !== undefined) {
-    ctx._lineCount += countNewlines(text)
+    ctx._lineCount += n
   }
 }
 
