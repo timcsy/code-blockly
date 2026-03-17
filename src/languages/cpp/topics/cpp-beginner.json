@@ -11,6 +11,7 @@
     "concepts": [
       "print", "endl", "input", "var_declare", "var_assign", "var_ref",
       "number_literal", "string_literal", "arithmetic", "compare",
+      "logic", "logic_not", "negate",
       "if", "if_else", "while_loop",
       "builtin_constant", "cpp_include", "cpp_using_namespace"
     ],
@@ -22,7 +23,6 @@
         "concepts": [
           "func_def", "func_call", "func_call_expr", "return",
           "count_loop", "cpp_for_loop", "break", "continue",
-          "logic", "logic_not", "negate",
           "cpp_char_literal", "cpp_increment", "cpp_increment_expr",
           "cpp_compound_assign", "cpp_compound_assign_expr",
           "var_declare_expr", "array_assign",

@@ -37,7 +37,8 @@ describe('Topic-Based Block Visibility', () => {
       const concepts = getVisibleConcepts(topic, new Set(['L0']))
       expect(reg.isBlockVisible('u_func_def', concepts)).toBe(false)
       expect(reg.isBlockVisible('u_count_loop', concepts)).toBe(false)
-      expect(reg.isBlockVisible('u_logic', concepts)).toBe(false)
+      // logic moved to L0 — use a different L1-only concept for this test
+      expect(reg.isBlockVisible('c_increment', concepts)).toBe(false)
     })
 
     it('should show L1 concept blocks when L1a branch enabled', () => {
