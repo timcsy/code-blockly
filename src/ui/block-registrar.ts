@@ -1386,7 +1386,7 @@ export class BlockRegistrar {
             .appendField(Blockly.Msg['U_ARRAY_DECLARE_CREATE_LABEL'] || '建立')
             .appendField(self.createOpenDropdown(getArrayTypeOptions) as Blockly.Field, 'TYPE')
             .appendField(Blockly.Msg['U_ARRAY_DECLARE_ARRAY_LABEL'] || '陣列')
-            .appendField(self.createOpenDropdown(() => self.getWorkspaceArrayOptions()) as Blockly.Field, 'NAME')
+            .appendField(new Blockly.FieldTextInput('arr') as Blockly.Field, 'NAME')
           this.appendValueInput('SIZE')
             .appendField(Blockly.Msg['U_ARRAY_DECLARE_SIZE_LABEL'] || '長度')
             .setCheck('Expression')
